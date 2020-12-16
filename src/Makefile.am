@@ -82,22 +82,22 @@ TESTS =
 BENCHMARKS =
 
 if BUILD_BITCOIND
-  bin_PROGRAMS += bitcoind
+  bin_PROGRAMS += crownd
 endif
 
 if BUILD_BITCOIN_NODE
-  bin_PROGRAMS += bitcoin-node
+  bin_PROGRAMS += crown-node
 endif
 
 if BUILD_BITCOIN_CLI
-  bin_PROGRAMS += bitcoin-cli
+  bin_PROGRAMS += crown-cli
 endif
 if BUILD_BITCOIN_TX
-  bin_PROGRAMS += bitcoin-tx
+  bin_PROGRAMS += crown-tx
 endif
 if ENABLE_WALLET
 if BUILD_BITCOIN_WALLET
-  bin_PROGRAMS += bitcoin-wallet
+  bin_PROGRAMS += crown-wallet
 endif
 endif
 
@@ -596,48 +596,48 @@ bitcoin_bin_ldadd = \
 
 bitcoin_bin_ldadd += $(BOOST_LIBS) $(BDB_LIBS) $(MINIUPNPC_LIBS) $(EVENT_PTHREADS_LIBS) $(EVENT_LIBS) $(ZMQ_LIBS) $(SQLITE_LIBS)
 
-bitcoind_SOURCES = $(bitcoin_daemon_sources)
-bitcoind_CPPFLAGS = $(bitcoin_bin_cppflags)
-bitcoind_CXXFLAGS = $(bitcoin_bin_cxxflags)
-bitcoind_LDFLAGS = $(bitcoin_bin_ldflags)
-bitcoind_LDADD = $(LIBBITCOIN_SERVER) $(bitcoin_bin_ldadd)
+crownd_SOURCES = $(bitcoin_daemon_sources)
+crownd_CPPFLAGS = $(bitcoin_bin_cppflags)
+crownd_CXXFLAGS = $(bitcoin_bin_cxxflags)
+crownd_LDFLAGS = $(bitcoin_bin_ldflags)
+crownd_LDADD = $(LIBBITCOIN_SERVER) $(bitcoin_bin_ldadd)
 
-bitcoin_node_SOURCES = $(bitcoin_daemon_sources)
-bitcoin_node_CPPFLAGS = $(bitcoin_bin_cppflags)
-bitcoin_node_CXXFLAGS = $(bitcoin_bin_cxxflags)
-bitcoin_node_LDFLAGS = $(bitcoin_bin_ldflags)
-bitcoin_node_LDADD = $(LIBBITCOIN_SERVER) $(bitcoin_bin_ldadd)
+crown_node_SOURCES = $(bitcoin_daemon_sources)
+crown_node_CPPFLAGS = $(bitcoin_bin_cppflags)
+crown_node_CXXFLAGS = $(bitcoin_bin_cxxflags)
+crown_node_LDFLAGS = $(bitcoin_bin_ldflags)
+crown_node_LDADD = $(LIBBITCOIN_SERVER) $(bitcoin_bin_ldadd)
 
 # bitcoin-cli binary #
-bitcoin_cli_SOURCES = bitcoin-cli.cpp
-bitcoin_cli_CPPFLAGS = $(AM_CPPFLAGS) $(BITCOIN_INCLUDES) $(EVENT_CFLAGS)
-bitcoin_cli_CXXFLAGS = $(AM_CXXFLAGS) $(PIE_FLAGS)
-bitcoin_cli_LDFLAGS = $(RELDFLAGS) $(AM_LDFLAGS) $(LIBTOOL_APP_LDFLAGS) $(PTHREAD_FLAGS)
+crown_cli_SOURCES = bitcoin-cli.cpp
+crown_cli_CPPFLAGS = $(AM_CPPFLAGS) $(BITCOIN_INCLUDES) $(EVENT_CFLAGS)
+crown_cli_CXXFLAGS = $(AM_CXXFLAGS) $(PIE_FLAGS)
+crown_cli_LDFLAGS = $(RELDFLAGS) $(AM_LDFLAGS) $(LIBTOOL_APP_LDFLAGS) $(PTHREAD_FLAGS)
 
 if TARGET_WINDOWS
-bitcoin_cli_SOURCES += bitcoin-cli-res.rc
+crown_cli_SOURCES += bitcoin-cli-res.rc
 endif
 
-bitcoin_cli_LDADD = \
+crown_cli_LDADD = \
   $(LIBBITCOIN_CLI) \
   $(LIBUNIVALUE) \
   $(LIBBITCOIN_UTIL) \
   $(LIBBITCOIN_CRYPTO)
 
-bitcoin_cli_LDADD += $(BOOST_LIBS) $(EVENT_LIBS)
+crown_cli_LDADD += $(BOOST_LIBS) $(EVENT_LIBS)
 #
 
 # bitcoin-tx binary #
-bitcoin_tx_SOURCES = bitcoin-tx.cpp
-bitcoin_tx_CPPFLAGS = $(AM_CPPFLAGS) $(BITCOIN_INCLUDES)
-bitcoin_tx_CXXFLAGS = $(AM_CXXFLAGS) $(PIE_FLAGS)
-bitcoin_tx_LDFLAGS = $(RELDFLAGS) $(AM_LDFLAGS) $(LIBTOOL_APP_LDFLAGS) $(PTHREAD_FLAGS)
+crown_tx_SOURCES = bitcoin-tx.cpp
+crown_tx_CPPFLAGS = $(AM_CPPFLAGS) $(BITCOIN_INCLUDES)
+crown_tx_CXXFLAGS = $(AM_CXXFLAGS) $(PIE_FLAGS)
+crown_tx_LDFLAGS = $(RELDFLAGS) $(AM_LDFLAGS) $(LIBTOOL_APP_LDFLAGS) $(PTHREAD_FLAGS)
 
 if TARGET_WINDOWS
-bitcoin_tx_SOURCES += bitcoin-tx-res.rc
+crown_tx_SOURCES += bitcoin-tx-res.rc
 endif
 
-bitcoin_tx_LDADD = \
+crown_tx_LDADD = \
   $(LIBUNIVALUE) \
   $(LIBBITCOIN_COMMON) \
   $(LIBBITCOIN_UTIL) \
@@ -645,18 +645,18 @@ bitcoin_tx_LDADD = \
   $(LIBBITCOIN_CRYPTO) \
   $(LIBSECP256K1)
 
-bitcoin_tx_LDADD += $(BOOST_LIBS)
+crown_tx_LDADD += $(BOOST_LIBS)
 #
 
 # bitcoin-wallet binary #
-bitcoin_wallet_SOURCES = bitcoin-wallet.cpp
-bitcoin_wallet_CPPFLAGS = $(bitcoin_bin_cppflags)
-bitcoin_wallet_CXXFLAGS = $(bitcoin_bin_cxxflags)
-bitcoin_wallet_LDFLAGS = $(bitcoin_bin_ldflags)
-bitcoin_wallet_LDADD = $(LIBBITCOIN_WALLET_TOOL) $(bitcoin_bin_ldadd)
+crown_wallet_SOURCES = bitcoin-wallet.cpp
+crown_wallet_CPPFLAGS = $(bitcoin_bin_cppflags)
+crown_wallet_CXXFLAGS = $(bitcoin_bin_cxxflags)
+crown_wallet_LDFLAGS = $(bitcoin_bin_ldflags)
+crown_wallet_LDADD = $(LIBBITCOIN_WALLET_TOOL) $(bitcoin_bin_ldadd)
 
 if TARGET_WINDOWS
-bitcoin_wallet_SOURCES += bitcoin-wallet-res.rc
+crown_wallet_SOURCES += bitcoin-wallet-res.rc
 endif
 #
 

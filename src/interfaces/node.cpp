@@ -282,6 +282,10 @@ public:
                     /* verification progress is unused when a header was received */ 0);
             }));
     }
+    std::unique_ptr<Handler> handleNotifyAdditionalDataSyncProgressChanged(NotifyAdditionalDataSyncProgressChangedFn fn) override
+    {
+        return MakeHandler(::uiInterface.NotifyAdditionalDataSyncProgressChanged_connect(fn));
+    }
     NodeContext* context() override { return m_context; }
     void setContext(NodeContext* context) override
     {

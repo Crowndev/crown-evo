@@ -10,6 +10,9 @@
 #include <serialize.h>
 #include <uint256.h>
 
+#include <boost/shared_ptr.hpp>
+#include <mn-pos/stakepointer.h>
+
 /** Nodes collect new transactions into a block, hash them into a hash tree,
  * and scan through nonce values to make the block's hash satisfy proof-of-work
  * requirements.  When they solve the proof-of-work, they broadcast the block
@@ -50,6 +53,8 @@ public:
         return (nBits == 0);
     }
 
+    void SetProofOfStake(bool fProofOfStake);
+
     uint256 GetHash() const;
 
     int64_t GetBlockTime() const
@@ -64,6 +69,8 @@ class CBlock : public CBlockHeader
 public:
     // network and disk
     std::vector<CTransactionRef> vtx;
+    std::vector<unsigned char> vchBlockSig;
+    StakePointer stakePointer;
 
     // memory only
     mutable bool fChecked;
@@ -83,12 +90,18 @@ public:
     {
         READWRITEAS(CBlockHeader, obj);
         READWRITE(obj.vtx);
+        if (obj.IsProofOfStake()) {
+            READWRITE(obj.vchBlockSig);
+            READWRITE(obj.stakePointer);
+        }
     }
 
     void SetNull()
     {
         CBlockHeader::SetNull();
         vtx.clear();
+        vchBlockSig.clear();
+        stakePointer.SetNull();
         fChecked = false;
     }
 
@@ -103,6 +116,9 @@ public:
         block.nNonce         = nNonce;
         return block;
     }
+
+    bool IsProofOfStake() const;
+    bool IsProofOfWork() const;
 
     std::string ToString() const;
 };

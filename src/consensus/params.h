@@ -6,6 +6,7 @@
 #ifndef BITCOIN_CONSENSUS_PARAMS_H
 #define BITCOIN_CONSENSUS_PARAMS_H
 
+#include <amount.h>
 #include <uint256.h>
 #include <limits>
 
@@ -99,7 +100,9 @@ struct Params {
     int nStakePointerValidityPeriod;
     int nMaxReorgDepth;
     int nKernelModifierOffset;
-
+    unsigned int nChainStallDuration;
+    CAmount nMasternodeCollateral;
+    CAmount nSystemnodeCollateral;
 
     /** Misc/masternode parameters */
     int PoolMaxTransactions() const { return nPoolMaxTransactions; }
@@ -113,6 +116,9 @@ struct Params {
     int ValidStakePointerDuration() const { return nStakePointerValidityPeriod; }
     int MaxReorganizationDepth() const { return nMaxReorgDepth; }
     int KernelModifierOffset() const { return nKernelModifierOffset; }
+    unsigned int ChainStallDuration() const { return nChainStallDuration; }
+    CAmount MasternodeCollateral() const { return nMasternodeCollateral; }
+    CAmount SystemnodeCollateral() const { return nSystemnodeCollateral; }
 
     /**
      * Check whether or not to allow legacy blocks at the given height.

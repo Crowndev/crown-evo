@@ -68,6 +68,17 @@
 #include <typeinfo>
 #include <univalue.h>
 
+//Crown only features
+bool fMasterNode = false;
+bool fSystemNode = false;
+std::string strMasterNodePrivKey = "";
+std::string strMasterNodeAddr = "";
+std::string strSystemNodePrivKey = "";
+std::string strSystemNodeAddr = "";
+bool fLiteMode = false;
+bool fEnableInstantX = true;
+int nInstantXDepth = 5;
+
 // Application startup time (used for uptime calculation)
 const int64_t nStartupTime = GetTime();
 
@@ -1303,6 +1314,20 @@ fs::path AbsPathForConfigVal(const fs::path& path, bool net_specific)
         return path;
     }
     return fs::absolute(path, GetDataDir(net_specific));
+}
+
+fs::path GetMasternodeConfigFile()
+{
+    fs::path pathConfigFile;
+    if (!pathConfigFile.is_complete()) pathConfigFile = GetDataDir() / pathConfigFile;
+    return pathConfigFile;
+}
+
+fs::path GetSystemnodeConfigFile()
+{
+    fs::path pathConfigFile;
+    if (!pathConfigFile.is_complete()) pathConfigFile = GetDataDir() / pathConfigFile;
+    return pathConfigFile;
 }
 
 void ScheduleBatchPriority()

@@ -16,6 +16,16 @@ std::string COutPoint::ToString() const
     return strprintf("COutPoint(%s, %u)", hash.ToString().substr(0,10), n);
 }
 
+std::string COutPoint::ToStringShort() const
+{
+    return strprintf("%s-%u", hash.ToString().substr(0,64), n);
+}
+
+uint256 COutPoint::GetHash() const
+{
+    return uint256(); // TODO
+}
+
 CTxIn::CTxIn(COutPoint prevoutIn, CScript scriptSigIn, uint32_t nSequenceIn)
 {
     prevout = prevoutIn;
@@ -97,6 +107,22 @@ CAmount CTransaction::GetValueOut() const
 unsigned int CTransaction::GetTotalSize() const
 {
     return ::GetSerializeSize(*this, PROTOCOL_VERSION);
+}
+
+bool CTransaction::IsCoinBase() const
+{
+    return (vin.size() == 1 && vin[0].prevout.IsNull() && !vin[0].scriptSig.IsProofOfStakeMarker());
+}
+
+bool CTransaction::IsCoinStake() const
+{
+    if (vin.size() != 1 || vout.size() != 1)
+        return false;
+
+    if (!vin[0].prevout.IsNull())
+        return false;
+
+    return vin[0].scriptSig.IsProofOfStakeMarker();
 }
 
 std::string CTransaction::ToString() const

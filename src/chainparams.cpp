@@ -110,6 +110,8 @@ public:
         //! Misc/masternode parameters
         consensus.nPoolMaxTransactions = 3;
         consensus.strSporkKey = "0440409BDACDCE03BFB6D5F16E2D414953038996B49BEE6697CFA400A0001D0837C885C5B57DAD10E5CAAAE36EE975005CC6CBD7001A2A8DE76FF12185904A9BB1";
+        consensus.nMasternodeCollateral = 10000 * COIN;
+        consensus.nSystemnodeCollateral = 500 * COIN;
         consensus.strDevfundAddress = "16tg5tuZrPKoBwfbmj2tmiEPhVPzyn3gtP";
         consensus.strLegacySignerDummyAddress = "18WTcWvwrNnfqeQAn6th9QQ2EpnXMq5Th8";
         consensus.nStartMasternodePayments = 1403728576;
@@ -152,6 +154,8 @@ public:
         base58Prefixes[EXT_SECRET_KEY] = {0x04, 0x88, 0xAD, 0xE4};
 
         bech32_hrp = "crw";
+
+        nFulfilledRequestExpireTime = 60*60;
 
         vFixedSeeds = std::vector<SeedSpec6>(pnSeed6_main, pnSeed6_main + ARRAYLEN(pnSeed6_main));
 

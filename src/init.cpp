@@ -1356,6 +1356,7 @@ bool AppInitMain(const util::Ref& context, NodeContext& node, interfaces::BlockA
     for (const auto& client : node.chain_clients) {
         client->registerRpcs();
     }
+    g_rpc_node = &node;
 #if ENABLE_ZMQ
     RegisterZMQRPCCommands(tableRPC);
 #endif

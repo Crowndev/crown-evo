@@ -1430,6 +1430,14 @@ bool static AlreadyHaveBlock(const uint256& block_hash) EXCLUSIVE_LOCKS_REQUIRED
     return LookupBlockIndex(block_hash) != nullptr;
 }
 
+void RelayTransaction(const CInv& inv, const CConnman& connman)
+{
+    connman.ForEachNode([&inv](CNode* pnode) EXCLUSIVE_LOCKS_REQUIRED(::cs_main)
+    {
+        pnode->PushInventory(inv);
+    });
+}
+
 void RelayTransaction(const uint256& txid, const uint256& wtxid, const CConnman& connman)
 {
     connman.ForEachNode([&txid, &wtxid](CNode* pnode) EXCLUSIVE_LOCKS_REQUIRED(::cs_main) {
@@ -4613,6 +4621,24 @@ bool PeerManager::SendMessages(CNode* pto)
         }
     } // release cs_main
     return true;
+}
+
+void Misbehaving(const NodeId pnode, const int howmuch, const std::string& message)
+{
+    assert(howmuch > 0);
+
+    PeerRef peer = GetPeerRef(pnode);
+    if (peer == nullptr) return;
+
+    LOCK(peer->m_misbehavior_mutex);
+    peer->m_misbehavior_score += howmuch;
+    const std::string message_prefixed = message.empty() ? "" : (": " + message);
+    if (peer->m_misbehavior_score >= DISCOURAGEMENT_THRESHOLD && peer->m_misbehavior_score - howmuch < DISCOURAGEMENT_THRESHOLD) {
+        LogPrint(BCLog::NET, "Misbehaving: peer=%d (%d -> %d) DISCOURAGE THRESHOLD EXCEEDED%s\n", pnode, peer->m_misbehavior_score - howmuch, peer->m_misbehavior_score, message_prefixed);
+        peer->m_should_discourage = true;
+    } else {
+        LogPrint(BCLog::NET, "Misbehaving: peer=%d (%d -> %d)%s\n", pnode, peer->m_misbehavior_score - howmuch, peer->m_misbehavior_score, message_prefixed);
+    }
 }
 
 class CNetProcessingCleanup

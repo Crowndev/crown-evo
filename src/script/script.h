@@ -198,6 +198,9 @@ enum opcodetype
     OP_NOP9 = 0xb8,
     OP_NOP10 = 0xb9,
 
+    // Proof of Stake Marker
+    OP_PROOFOFSTAKE = 0xc0,
+
     // Opcode added by BIP 342 (Tapscript)
     OP_CHECKSIGADD = 0xba,
 
@@ -524,6 +527,7 @@ public:
      */
     unsigned int GetSigOpCount(const CScript& scriptSig) const;
 
+    bool IsProofOfStakeMarker() const;
     bool IsPayToScriptHash() const;
     bool IsPayToWitnessScriptHash() const;
     bool IsWitnessProgram(int& version, std::vector<unsigned char>& program) const;
@@ -551,6 +555,10 @@ public:
         CScriptBase::clear();
         shrink_to_fit();
     }
+
+    bool IsNormalPaymentScript() const;
+
+    std::string ToString() const;
 };
 
 struct CScriptWitness

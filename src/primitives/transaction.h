@@ -55,7 +55,9 @@ public:
         return !(a == b);
     }
 
+    uint256 GetHash() const;
     std::string ToString() const;
+    std::string ToStringShort() const;
 };
 
 /** An input of a transaction.  It contains the location of the previous
@@ -321,10 +323,8 @@ public:
      */
     unsigned int GetTotalSize() const;
 
-    bool IsCoinBase() const
-    {
-        return (vin.size() == 1 && vin[0].prevout.IsNull());
-    }
+    bool IsCoinBase() const;
+    bool IsCoinStake() const;
 
     friend bool operator==(const CTransaction& a, const CTransaction& b)
     {

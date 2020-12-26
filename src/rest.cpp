@@ -160,6 +160,7 @@ static bool rest_headers(const util::Ref& context,
     const RetFormat rf = ParseDataFormat(param, strURIPart);
     std::vector<std::string> path;
     boost::split(path, param, boost::is_any_of("/"));
+    const Consensus::Params& consensusParams = Params().GetConsensus();
 
     if (path.size() != 2)
         return RESTERR(req, HTTP_BAD_REQUEST, "No header count specified. Use /rest/headers/<count>/<hash>.<ext>.");
@@ -192,7 +193,7 @@ static bool rest_headers(const util::Ref& context,
     case RetFormat::BINARY: {
         CDataStream ssHeader(SER_NETWORK, PROTOCOL_VERSION);
         for (const CBlockIndex *pindex : headers) {
-            ssHeader << pindex->GetBlockHeader();
+            ssHeader << pindex->GetBlockHeader(consensusParams);
         }
 
         std::string binaryHeader = ssHeader.str();
@@ -204,7 +205,7 @@ static bool rest_headers(const util::Ref& context,
     case RetFormat::HEX: {
         CDataStream ssHeader(SER_NETWORK, PROTOCOL_VERSION);
         for (const CBlockIndex *pindex : headers) {
-            ssHeader << pindex->GetBlockHeader();
+            ssHeader << pindex->GetBlockHeader(consensusParams);
         }
 
         std::string strHex = HexStr(ssHeader) + "\n";

@@ -11,6 +11,7 @@
 #include <boost/range/algorithm.hpp>
 #include <boost/range/algorithm_ext.hpp>
 #include <consensus/validation.h>
+#include <crown/nodewallet.h>
 #include <crown/legacycalls.h>
 #include <crown/legacysigner.h>
 #include <fstream>
@@ -276,7 +277,7 @@ void CBudgetManager::SubmitBudgetDraft(CConnman& connman)
 
         if (!mapCollateralTxids.count(tempBudget.GetHash())) {
             CTransactionRef wtx;
-            if (!GetWallets()[0]->GetBudgetSystemCollateralTX(wtx, tempBudget.GetHash())) {
+            if (!currentNode.GetBudgetSystemCollateralTX(wtx, tempBudget.GetHash())) {
                 LogPrintf("CBudgetManager::SubmitBudgetDraft - Can't make collateral transaction\n");
                 return;
             }

@@ -32,7 +32,7 @@ static CBlock CreateGenesisBlock(const char* pszTimestamp, const CScript& genesi
     genesis.nTime    = nTime;
     genesis.nBits    = nBits;
     genesis.nNonce   = nNonce;
-    genesis.nVersion = nVersion;
+    genesis.nVersion.SetGenesisVersion(nVersion);
     genesis.vtx.push_back(MakeTransactionRef(std::move(txNew)));
     genesis.hashPrevBlock.SetNull();
     genesis.hashMerkleRoot = BlockMerkleRoot(genesis);
@@ -66,7 +66,7 @@ public:
         strNetworkID = CBaseChainParams::MAIN;
         consensus.signet_blocks = false;
         consensus.signet_challenge.clear();
-        consensus.nSubsidyHalvingInterval = 210000;
+        consensus.nSubsidyHalvingInterval = 2100000;
         consensus.BIP16Exception = uint256S("0x0000000000000000000000000000000000000000000000000000000000000000");
         consensus.BIP34Height = std::numeric_limits<int>::max();
         consensus.BIP34Hash = uint256S("0x0000000000000000000000000000000000000000000000000000000000000000");
@@ -166,26 +166,35 @@ public:
 
         checkpointData = {
             {
-                { 0,       uint256S("0x0000000085370d5e122f64f4ab19c68614ff3df78c8d13cb814fd7e69a1dc6da")},
-                { 100000,  uint256S("0x000000000001f9595f38d13a62f030c877717db91659157eb732e2a89c8f9c1d")},
-                { 200000,  uint256S("0x000000000000e0438b3279cecc380a96c8a7b40bceb94fc03d0a210fdda2b959")},
-                { 300000,  uint256S("0x00000000000059901c2ea32bc486d91a355a8fe362e34fc3d10c45bb5e5ca79d")},
-                { 400000,  uint256S("0x0000000000001b97fb8367b435b4554cb9d5438d28f03c4259df7ed8854fe946")},
-                { 500000,  uint256S("0xb53d68a141c9ced04eeca5624b66665a58732c48d383f81a29cf80a8a57186ff")},
-                { 600000,  uint256S("0x84e2277d1dc957ae41869498311937bdcedce7e48fa33f962b9b9e9c16df5410")},
-                { 700000,  uint256S("0x75ec82017af651ac1383b623898d6f6b57d0500137913fd000f928b8bd409146")},
-                { 800000,  uint256S("0x64412d45320a7f2394b009bcf00bc841e60c3e0680dbfc45176568699af5bdec")},
-                { 900000,  uint256S("0xbdf0bcfe3ada671b64526854af8cb7f6f52c1489446e26268e70fbee1e72be5f")},
-                { 1000000, uint256S("0xcb324809eef485d0243d2210dd15300a941fece86a19e858383429c80cf37b0b")},
-                { 1100000, uint256S("0xf172bdb7a894b9e055eae4b1b2e8d91aba9404d24fa808985346cc7c8eea35a6")},
+                { 150000, uint256S("0000000000012276edd1465babe6d059a3b65b2503b6d9bb4ae5839f5eabac06")},
+                { 300000, uint256S("00000000000059901c2ea32bc486d91a355a8fe362e34fc3d10c45bb5e5ca79d")},
+                { 450000, uint256S("0000000000001db791c8581be592b13f756913962b73514a3a636f7a1637a18f")},
+                { 600000, uint256S("84e2277d1dc957ae41869498311937bdcedce7e48fa33f962b9b9e9c16df5410")},
+                { 750000, uint256S("ac8bf6801d4e51201993d4c623f2e72000781087f508d60d4f307d7928b912d1")},
+                { 900000, uint256S("bdf0bcfe3ada671b64526854af8cb7f6f52c1489446e26268e70fbee1e72be5f")},
+                {1050000, uint256S("15c897620ab3ee017262add6a49df0510897498f71ec1bc251e3849bb44b633d")},
+                {1200000, uint256S("0000000000192aecb746b879d868c75c075d8e061bef466b3393b88062fcb362")},
+                {1350000, uint256S("af5001f0cbc13e47c7d3c6cea6f0db8dc92a03688031f3ac330c43f5b29f46b3")},
+                {1500000, uint256S("278a333b28cbfa557362ab77e83815ee203cadd79d76a7a92be1782e6e70a356")},
+                {1650000, uint256S("31885f425a43ea15804907001affd696d28d3e7b991dcadc937e71f52c09b6a7")},
+                {1800000, uint256S("9ad4a139ff2e034bafd9647cae7651a34d860afdc483925293c9b7933880a959")},
+                {1950000, uint256S("f1cdba6a857e230ffba2ac7ff6dfab66172255840f792525b758ca7a6bb1e191")},
+                {2100000, uint256S("4657b72edb700d09c6a86429fdfa668a044441b7d68b5090a450363ec6b44395")},
+                {2250000, uint256S("3eb75e85795321bbffcf1781f86fd3135fdc6a14efc71b55e41149ed2048d87d")},
+                {2400000, uint256S("5aa66e017e798454a4b9774bf6c478047e7db0c405b171e6dff2cde9fb8cdd68")},
+                {2550000, uint256S("09ba5b0cfb8aece2c08fc48c4dfc56af7a3d6e811ebf11de85e898894bd319f4")},
+                {2700000, uint256S("81f44f3061a8a61e5729b85522176a931bea90bb27d638bf892c02373c4b554d")},
+                {2850000, uint256S("c54e006c95c5412518dbd62bad1a51b308e70a0637e97bbcc53ee35b77de07a8")},
+                {3000000, uint256S("d27d72dbb83ba7662ad1a022a61ae484e3853a336cd55578dfea3144470344da")},
+                {3150000, uint256S("be94e6f027f0606739b8b7351989c06030313ae9978d8b4f56488dc75d3ec528")},
             }
         };
 
         chainTxData = ChainTxData{
             // Data from RPC: getchaintxstats 4096 0000000000000000000b9d2ec5a352ecba0592946514a92f14319dc2b367fc72
-            /* nTime    */ 1603995752,
-            /* nTxCount */ 582083445,
-            /* dTxRate  */ 3.508976121410527,
+            /* nTime    */ 1532884444,
+            /* nTxCount */ 331282217,
+            /* dTxRate  */ 2.4
         };
     }
 };

@@ -20,6 +20,20 @@
 #include <timedata.h>
 #include <util/moneystr.h>
 #include <util/system.h>
+#include <wallet/wallet.h>
+
+#include <crown/nodewallet.h>
+#include <crown/legacysigner.h>
+#include <crown/spork.h>
+#include <masternode/masternode-budget.h>
+#include <masternode/masternode-payments.h>
+#include <masternode/masternodeconfig.h>
+#include <systemnode/systemnode-payments.h>
+#include <mn-pos/stakepointer.h>
+#include <mn-pos/stakeminer.h>
+#include <mn-pos/stakevalidation.h>
+
+#include <boost/thread.hpp>
 
 #include <algorithm>
 #include <utility>
@@ -99,7 +113,7 @@ void BlockAssembler::resetBlock()
 Optional<int64_t> BlockAssembler::m_last_block_num_txs{nullopt};
 Optional<int64_t> BlockAssembler::m_last_block_weight{nullopt};
 
-std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& scriptPubKeyIn)
+std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& scriptPubKeyIn, CWallet* pwallet, bool fProofOfStake)
 {
     int64_t nTimeStart = GetTimeMicros();
 
@@ -121,12 +135,10 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
     assert(pindexPrev != nullptr);
     nHeight = pindexPrev->nHeight + 1;
 
-    pblock->nVersion = ComputeBlockVersion(pindexPrev, chainparams.GetConsensus());
-    // -regtest only: allow overriding block.nVersion with
-    // -blockversion=N to test forking scenarios
-    if (chainparams.MineBlocksOnDemand())
-        pblock->nVersion = gArgs.GetArg("-blockversion", pblock->nVersion);
-
+    /* Initialise the block version.  */
+    int32_t nChainId = Params().GetConsensus().AuxpowChainId();
+    if (nHeight > Params().GetConsensus().PoSStartHeight())
+        nChainId = Params().GetConsensus().PoSChainId();
     pblock->nTime = GetAdjustedTime();
     const int64_t nMedianTimePast = pindexPrev->GetMedianTimePast();
 
@@ -156,6 +168,7 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
 
     // Create coinbase transaction.
     CMutableTransaction coinbaseTx;
+    CMutableTransaction txCoinStake;
     coinbaseTx.vin.resize(1);
     coinbaseTx.vin[0].prevout.SetNull();
     coinbaseTx.vout.resize(1);
@@ -164,9 +177,79 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
     coinbaseTx.vin[0].scriptSig = CScript() << nHeight << OP_0;
     pblock->vtx[0] = MakeTransactionRef(std::move(coinbaseTx));
     pblocktemplate->vchCoinbaseCommitment = GenerateCoinbaseCommitment(*pblock, pindexPrev, chainparams.GetConsensus());
-    pblocktemplate->vTxFees[0] = -nFees;
+    pblock->nVersion.SetBaseVersion((uint32_t)2, nChainId);
+    if (fProofOfStake && ::ChainActive().Height() + 1 >= chainparams.GetConsensus().PoSStartHeight()) {
+        pblock->nTime = GetAdjustedTime();
+        CBlockIndex* pindexPrev = ::ChainActive().Tip();
+        pblock->nBits = GetNextWorkRequired(pindexPrev, pblock, chainparams.GetConsensus());
+        bool fStakeFound = false;
+        uint32_t nTxNewTime = 0;
+        uint32_t nTime = pblock->nTime;
+        uint32_t nBits = pblock->nBits;
+        StakePointer stakePointer;
+
+        // Slow down blocks so that the testnet chain does not burn through the stakepointers too quick
+        if (Params().NetworkIDString() == "test" && GetAdjustedTime() - ::ChainActive().Tip()->nTime < 30)
+            UninterruptibleSleep(std::chrono::milliseconds(30000));
+
+        if (currentNode.CreateCoinStake(nHeight, nBits, nTime, txCoinStake, nTxNewTime, stakePointer)) {
+            pblock->nTime = nTxNewTime;
+            pblock->vtx.clear();
+            coinbaseTx.vout[0].scriptPubKey = CScript();
+            pblock->vtx[0] = MakeTransactionRef(std::move(coinbaseTx));
+            txCoinStake.vin[0].scriptSig << nHeight << OP_0;
+            pblock->vtx[1] = MakeTransactionRef(std::move(txCoinStake));
+            pblock->stakePointer = stakePointer;
+            fStakeFound = true;
+        }
+
+        if (!fStakeFound)
+            return NULL;
+    }
 
     LogPrintf("CreateNewBlock(): block weight: %u txs: %u fees: %ld sigops %d\n", GetBlockWeight(*pblock), nBlockTx, nFees, nBlockSigOpsCost);
+
+    // Masternode and general budget payments
+    if (IsSporkActive(SPORK_4_ENABLE_MASTERNODE_PAYMENTS)) {
+        FillBlockPayee(coinbaseTx, nFees);
+        SNFillBlockPayee(coinbaseTx, nFees);
+    } else {
+        coinbaseTx.vout[0].nValue = GetBlockValue(pindexPrev->nHeight, nFees, chainparams.GetConsensus());
+    }
+
+    // Proof of stake blocks pay the mining reward in the coinstake transaction
+    if (fProofOfStake) {
+        CAmount nValueNodeRewards = 0;
+        if (coinbaseTx.vout.size() > 1)
+            nValueNodeRewards += coinbaseTx.vout[MN_PMT_SLOT].nValue;
+        if (coinbaseTx.vout.size() > 2)
+            nValueNodeRewards += coinbaseTx.vout[SN_PMT_SLOT].nValue;
+        if (!(IsSporkActive(SPORK_13_ENABLE_SUPERBLOCKS) && budget.IsBudgetPaymentBlock(pindexPrev->nHeight + 1))) {
+            //Reduce PoS reward by the node rewards
+            txCoinStake.vout[0].nValue = GetBlockValue(nHeight, nFees, chainparams.GetConsensus()) - nValueNodeRewards;
+        } else {
+            // Miner gets full block value in case of superblock
+            txCoinStake.vout[0].nValue = GetBlockValue(nHeight, nFees, chainparams.GetConsensus());
+        }
+        pblock->vtx[1] = MakeTransactionRef(std::move(txCoinStake));
+        // Make sure coinbase has null values
+        coinbaseTx.vout[0].nValue = 0;
+        coinbaseTx.vout[0].scriptPubKey = CScript();
+    }
+
+    if (!(IsSporkActive(SPORK_13_ENABLE_SUPERBLOCKS) && budget.IsBudgetPaymentBlock(pindexPrev->nHeight + 1))) {
+        // Make payee
+        if(coinbaseTx.vout.size() > 1)
+            pblock->payee = coinbaseTx.vout[MN_PMT_SLOT].scriptPubKey;
+        // Make SNpayee
+        if(coinbaseTx.vout.size() > 2)
+           pblock->payeeSN = coinbaseTx.vout[SN_PMT_SLOT].scriptPubKey;
+    }
+
+    // Compute final coinbase transaction.
+    coinbaseTx.vin[0].scriptSig = CScript() << nHeight << OP_0;
+    pblock->vtx[0] = MakeTransactionRef(std::move(coinbaseTx));
+    pblocktemplate->vTxFees[0] = -nFees;
 
     // Fill in header
     pblock->hashPrevBlock  = pindexPrev->GetBlockHash();
@@ -446,10 +529,10 @@ void IncrementExtraNonce(CBlock* pblock, const CBlockIndex* pindexPrev, unsigned
     }
     ++nExtraNonce;
     unsigned int nHeight = pindexPrev->nHeight+1; // Height first in coinbase required for block.version=2
-    CMutableTransaction txCoinbase(*pblock->vtx[0]);
-    txCoinbase.vin[0].scriptSig = (CScript() << nHeight << CScriptNum(nExtraNonce));
-    assert(txCoinbase.vin[0].scriptSig.size() <= 100);
+    CMutableTransaction coinbaseTx(*pblock->vtx[0]);
+    coinbaseTx.vin[0].scriptSig = (CScript() << nHeight << CScriptNum(nExtraNonce));
+    assert(coinbaseTx.vin[0].scriptSig.size() <= 100);
 
-    pblock->vtx[0] = MakeTransactionRef(std::move(txCoinbase));
+    pblock->vtx[0] = MakeTransactionRef(std::move(coinbaseTx));
     pblock->hashMerkleRoot = BlockMerkleRoot(*pblock);
 }

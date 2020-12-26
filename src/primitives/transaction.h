@@ -14,6 +14,11 @@
 
 #include <tuple>
 
+enum TxType : int16_t
+{
+    TRANSACTION_NORMAL = 0
+};
+
 /**
  * A flag that is ORed into the protocol version to designate that a transaction
  * should be (un)serialized without witness data.
@@ -190,7 +195,12 @@ template<typename Stream, typename TxType>
 inline void UnserializeTransaction(TxType& tx, Stream& s) {
     const bool fAllowWitness = !(s.GetVersion() & SERIALIZE_TRANSACTION_NO_WITNESS);
 
-    s >> tx.nVersion;
+    int32_t n32bitVersion = tx.nVersion | (tx.nType << 16);
+    s >> n32bitVersion;
+
+    tx.nVersion = (int16_t)(n32bitVersion & 0xffff);
+    tx.nType = (int16_t)((n32bitVersion >> 16) & 0xffff);
+
     unsigned char flags = 0;
     tx.vin.clear();
     tx.vout.clear();
@@ -223,13 +233,18 @@ inline void UnserializeTransaction(TxType& tx, Stream& s) {
         throw std::ios_base::failure("Unknown transaction optional data");
     }
     s >> tx.nLockTime;
+    if (tx.nVersion >= 3 && tx.nType != TRANSACTION_NORMAL) {
+        s >> tx.extraPayload;
+    }
 }
 
 template<typename Stream, typename TxType>
 inline void SerializeTransaction(const TxType& tx, Stream& s) {
     const bool fAllowWitness = !(s.GetVersion() & SERIALIZE_TRANSACTION_NO_WITNESS);
 
-    s << tx.nVersion;
+    int32_t n32bitVersion = tx.nVersion | (tx.nType << 16);
+    s << n32bitVersion;
+
     unsigned char flags = 0;
     // Consistency check
     if (fAllowWitness) {
@@ -252,6 +267,9 @@ inline void SerializeTransaction(const TxType& tx, Stream& s) {
         }
     }
     s << tx.nLockTime;
+    if (tx.nVersion >= 3 && tx.nType != TRANSACTION_NORMAL) {
+        s << tx.extraPayload;
+    }
 }
 
 
@@ -277,8 +295,10 @@ public:
     // structure, including the hash.
     const std::vector<CTxIn> vin;
     const std::vector<CTxOut> vout;
-    const int32_t nVersion;
+    const int16_t nVersion;
+    const int16_t nType;
     const uint32_t nLockTime;
+    const std::vector<uint8_t> extraPayload;
 
 private:
     /** Memory only. */
@@ -295,6 +315,7 @@ public:
     /** Convert a CMutableTransaction into a CTransaction. */
     explicit CTransaction(const CMutableTransaction &tx);
     CTransaction(CMutableTransaction &&tx);
+    CTransaction& operator=(const CTransaction& tx);
 
     template <typename Stream>
     inline void Serialize(Stream& s) const {
@@ -354,8 +375,10 @@ struct CMutableTransaction
 {
     std::vector<CTxIn> vin;
     std::vector<CTxOut> vout;
-    int32_t nVersion;
+    int16_t nVersion;
+    int16_t nType;
     uint32_t nLockTime;
+    std::vector<uint8_t> extraPayload;
 
     CMutableTransaction();
     explicit CMutableTransaction(const CTransaction& tx);

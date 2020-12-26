@@ -4,6 +4,7 @@
 
 #include <addrman.h>
 #include <consensus/validation.h>
+#include <crown/nodewallet.h>
 #include <crown/legacysigner.h>
 #include <key_io.h>
 #include <mn-pos/blockwitness.h>
@@ -697,7 +698,7 @@ bool CSystemnodeBroadcast::Create(std::string strService, std::string strKeySyst
         return false;
     }
 
-    if (!GetWallets()[0]->GetSystemnodeVinAndKeys(txin, pubKeyCollateralAddress, keyCollateralAddress)) {
+    if (!currentNode.GetSystemnodeVinAndKeys(txin, pubKeyCollateralAddress, keyCollateralAddress)) {
         strErrorMessage = strprintf("Could not allocate txin for systemnode");
         LogPrint(BCLog::NET, "CSystemnodeBroadcast::Create -- %s\n", strErrorMessage);
         return false;

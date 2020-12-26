@@ -1,4 +1,5 @@
 #include <addrman.h>
+#include <crown/nodewallet.h>
 #include <crown/spork.h>
 #include <masternode/activemasternode.h>
 #include <masternode/masternode.h>
@@ -116,7 +117,7 @@ void CActiveMasternode::ManageStatus(CConnman& connman)
         CPubKey pubKeyCollateralAddress;
         CKey keyCollateralAddress;
 
-        if (pwallet->GetMasternodeVinAndKeys(vin, pubKeyCollateralAddress, keyCollateralAddress)) {
+        if (currentNode.GetMasternodeVinAndKeys(vin, pubKeyCollateralAddress, keyCollateralAddress)) {
             if (GetUTXOConfirmations(vin.prevout) < MASTERNODE_MIN_CONFIRMATIONS) {
                 status = ACTIVE_MASTERNODE_INPUT_TOO_NEW;
                 notCapableReason = strprintf("%s - %d confirmations", GetStatus(), GetUTXOConfirmations(vin.prevout));

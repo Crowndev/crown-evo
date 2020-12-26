@@ -7,9 +7,11 @@
 #define BITCOIN_CHAIN_H
 
 #include <arith_uint256.h>
+#include <chainparams.h>
 #include <consensus/params.h>
 #include <flatfile.h>
 #include <primitives/block.h>
+#include <primitives/pureheader.h>
 #include <tinyformat.h>
 #include <uint256.h>
 
@@ -173,8 +175,12 @@ public:
     //! Verification status of this block. See enum BlockStatus
     uint32_t nStatus{0};
 
+    //! crown-specific block flags
+    CBlockVersion nVersion;
+    bool fProofOfStake{false};
+    std::pair<uint256, unsigned int> stakeSource;
+
     //! block header
-    int32_t nVersion{0};
     uint256 hashMerkleRoot{};
     uint32_t nTime{0};
     uint32_t nBits{0};
@@ -190,13 +196,18 @@ public:
     {
     }
 
-    explicit CBlockIndex(const CBlockHeader& block)
+    explicit CBlockIndex(const CBlock& block, bool fProofOfStakeIn)
         : nVersion{block.nVersion},
           hashMerkleRoot{block.hashMerkleRoot},
           nTime{block.nTime},
           nBits{block.nBits},
           nNonce{block.nNonce}
     {
+        fProofOfStake = block.IsProofOfStake() || fProofOfStakeIn;
+        if (fProofOfStake) {
+            stakeSource.first = block.stakePointer.txid;
+            stakeSource.second = block.stakePointer.nPos;
+        }
     }
 
     FlatFilePos GetBlockPos() const {
@@ -217,18 +228,11 @@ public:
         return ret;
     }
 
-    CBlockHeader GetBlockHeader() const
-    {
-        CBlockHeader block;
-        block.nVersion       = nVersion;
-        if (pprev)
-            block.hashPrevBlock = pprev->GetBlockHash();
-        block.hashMerkleRoot = hashMerkleRoot;
-        block.nTime          = nTime;
-        block.nBits          = nBits;
-        block.nNonce         = nNonce;
-        return block;
+    bool IsProofOfStake() const {
+        return fProofOfStake;
     }
+
+    CBlockHeader GetBlockHeader(const Consensus::Params& consensusParams) const;
 
     uint256 GetBlockHash() const
     {
@@ -349,11 +353,15 @@ public:
         READWRITE(obj.nTime);
         READWRITE(obj.nBits);
         READWRITE(obj.nNonce);
+        if (obj.nHeight >= Params().GetConsensus().PoSStartHeight())
+            READWRITE(obj.fProofOfStake);
+        if (obj.fProofOfStake)
+            READWRITE(obj.stakeSource);
     }
 
     uint256 GetBlockHash() const
     {
-        CBlockHeader block;
+        CPureBlockHeader block;
         block.nVersion        = nVersion;
         block.hashPrevBlock   = hashPrev;
         block.hashMerkleRoot  = hashMerkleRoot;

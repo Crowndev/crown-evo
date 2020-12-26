@@ -83,7 +83,10 @@ public:
     int64_t nValue;
     int64_t nTimeSigned;
 
-    uint256 GetHash();
+    uint256 GetHash() const
+    {
+        return SerializeHash(*this);
+    }
 
     SERIALIZE_METHODS(CSporkMessage, obj)
     {

@@ -1902,6 +1902,8 @@ bool AppInitMain(const util::Ref& context, NodeContext& node, interfaces::BlockA
 
     int chain_active_height;
 
+    strBudgetMode = gArgs.GetArg("-budgetvotemode", "auto");
+
     //// debug print
     {
         LOCK(cs_main);

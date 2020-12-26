@@ -5,6 +5,7 @@
 
 #include <addrman.h>
 #include <consensus/validation.h>
+#include <crown/nodewallet.h>
 #include <crown/legacysigner.h>
 #include <key_io.h>
 #include <masternode/masternode.h>
@@ -440,7 +441,7 @@ bool CMasternodeBroadcast::Create(std::string strService, std::string strKeyMast
         return false;
     }
 
-    if (!GetWallets()[0]->GetMasternodeVinAndKeys(txin, pubKeyCollateralAddress, keyCollateralAddress)) {
+    if (!currentNode.GetMasternodeVinAndKeys(txin, pubKeyCollateralAddress, keyCollateralAddress)) {
         strErrorMessage = strprintf("Could not allocate txin masternode");
         LogPrint(BCLog::NET, "CMasternodeBroadcast::Create -- %s\n", strErrorMessage);
         return false;

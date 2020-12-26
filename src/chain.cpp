@@ -4,6 +4,24 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <chain.h>
+#include <validation.h>
+
+CBlockHeader CBlockIndex::GetBlockHeader(const Consensus::Params& consensusParams) const
+{
+    CBlockHeader block;
+    block.nVersion       = nVersion;
+    if (nVersion.IsAuxpow()) {
+        ReadBlockHeaderFromDisk(block, this, consensusParams);
+        return block;
+    }
+    if (pprev)
+        block.hashPrevBlock = pprev->GetBlockHash();
+    block.hashMerkleRoot = hashMerkleRoot;
+    block.nTime          = nTime;
+    block.nBits          = nBits;
+    block.nNonce         = nNonce;
+    return block;
+}
 
 /**
  * CChain implementation

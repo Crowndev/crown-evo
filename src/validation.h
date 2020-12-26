@@ -24,6 +24,13 @@
 #include <versionbits.h>
 #include <serialize.h>
 
+#include <mn-pos/blockwitness.h>
+#include <mn-pos/kernel.h>
+#include <mn-pos/prooftracker.h>
+#include <mn-pos/stakeminer.h>
+#include <mn-pos/stakepointer.h>
+#include <mn-pos/stakevalidation.h>
+
 #include <atomic>
 #include <map>
 #include <memory>
@@ -72,7 +79,7 @@ static const int MAX_SCRIPTCHECK_THREADS = 15;
 static const int DEFAULT_SCRIPTCHECK_THREADS = 0;
 static const int64_t DEFAULT_MAX_TIP_AGE = 24 * 60 * 60;
 static const bool DEFAULT_CHECKPOINTS_ENABLED = true;
-static const bool DEFAULT_TXINDEX = false;
+static const bool DEFAULT_TXINDEX = true;
 static const char* const DEFAULT_BLOCKFILTERINDEX = "0";
 /** Default for -persistmempool */
 static const bool DEFAULT_PERSIST_MEMPOOL = true;
@@ -117,6 +124,10 @@ extern std::condition_variable g_best_block_cv;
 extern uint256 g_best_block;
 extern std::atomic_bool fImporting;
 extern std::atomic_bool fReindex;
+extern int nLastStakeAttempt;
+typedef uint256 PointerHash;
+extern std::map<PointerHash, uint256> mapUsedStakePointers; //pointer hash matched to blockhash that it is in
+extern ProofTracker* g_proofTracker;
 /** Whether there are dedicated script-checking threads running.
  * False indicates all script checking is done on the main threadMessageHandler thread.
  */
@@ -292,7 +303,7 @@ bool ReadBlockFromDisk(CBlock& block, const FlatFilePos& pos, const Consensus::P
 bool ReadBlockFromDisk(CBlock& block, const CBlockIndex* pindex, const Consensus::Params& consensusParams);
 bool ReadRawBlockFromDisk(std::vector<uint8_t>& block, const FlatFilePos& pos, const CMessageHeader::MessageStartChars& message_start);
 bool ReadRawBlockFromDisk(std::vector<uint8_t>& block, const CBlockIndex* pindex, const CMessageHeader::MessageStartChars& message_start);
-
+bool ReadBlockHeaderFromDisk(CBlockHeader& block, const CBlockIndex* pindex, const Consensus::Params& consensusParams);
 bool UndoReadFromDisk(CBlockUndo& blockundo, const CBlockIndex* pindex);
 
 /** Functions for validating blocks and updating the block tree */
@@ -312,6 +323,12 @@ void UpdateUncommittedBlockStructures(CBlock& block, const CBlockIndex* pindexPr
 
 /** Produce the necessary coinbase commitment for a block (modifies the hash, don't call for mined blocks). */
 std::vector<unsigned char> GenerateCoinbaseCommitment(CBlock& block, const CBlockIndex* pindexPrev, const Consensus::Params& consensusParams);
+
+/** Stake/stakepointer related functions. */
+bool IsStakePointerUsed(const CBlockIndex* pindexStake, const COutPoint& outpointFrom);
+bool CheckBlockProofPointer(const CBlockIndex* pindex, const CBlock& block, CPubKey& pubkeyMasternode, COutPoint& outpointStakePointer, CTransactionRef& txPayment);
+bool IsMasternodeOrSystemnodeReward(const CTransaction& tx, const COutPoint& outpoint);
+bool CheckStake(const CBlockIndex* pindex, const CBlock& block, uint256& hashProofOfStake);
 
 /** RAII wrapper for VerifyDB: Verify consistency of the block and coin databases */
 class CVerifyDB {
@@ -426,9 +443,9 @@ public:
     /** Clear all data members. */
     void Unload() EXCLUSIVE_LOCKS_REQUIRED(cs_main);
 
-    CBlockIndex* AddToBlockIndex(const CBlockHeader& block) EXCLUSIVE_LOCKS_REQUIRED(cs_main);
+    CBlockIndex* AddToBlockIndex(const CBlockHeader& block, bool fProofOfStake) EXCLUSIVE_LOCKS_REQUIRED(cs_main);
     /** Create a new block index entry for a given block hash */
-    CBlockIndex* InsertBlockIndex(const uint256& hash) EXCLUSIVE_LOCKS_REQUIRED(cs_main);
+    CBlockIndex* InsertBlockIndex(const uint256& hash, bool fProofOfStake) EXCLUSIVE_LOCKS_REQUIRED(cs_main);
 
     //! Mark one block file as pruned (modify associated database entries)
     void PruneOneBlockFile(const int fileNumber) EXCLUSIVE_LOCKS_REQUIRED(cs_main);
@@ -441,7 +458,7 @@ public:
         const CBlockHeader& block,
         BlockValidationState& state,
         const CChainParams& chainparams,
-        CBlockIndex** ppindex) EXCLUSIVE_LOCKS_REQUIRED(cs_main);
+        CBlockIndex** ppindex, bool fProofOfStake) EXCLUSIVE_LOCKS_REQUIRED(cs_main);
 
     ~BlockManager() {
         Unload();

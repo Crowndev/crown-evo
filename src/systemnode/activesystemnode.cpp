@@ -1,4 +1,5 @@
 #include <addrman.h>
+#include <crown/nodewallet.h>
 #include <crown/spork.h>
 #include <net.h>
 #include <netbase.h>
@@ -118,7 +119,7 @@ void CActiveSystemnode::ManageStatus(CConnman& connman)
         CPubKey pubKeyCollateralAddress;
         CKey keyCollateralAddress;
 
-        if (pwallet->GetSystemnodeVinAndKeys(vin, pubKeyCollateralAddress, keyCollateralAddress)) {
+        if (currentNode.GetSystemnodeVinAndKeys(vin, pubKeyCollateralAddress, keyCollateralAddress)) {
             if (GetUTXOConfirmations(vin.prevout) < SYSTEMNODE_MIN_CONFIRMATIONS) {
                 status = ACTIVE_SYSTEMNODE_INPUT_TOO_NEW;
                 notCapableReason = strprintf("%s - %d confirmations", GetStatus(), GetUTXOConfirmations(vin.prevout));

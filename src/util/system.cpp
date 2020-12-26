@@ -71,6 +71,7 @@
 //Crown only features
 bool fMasterNode = false;
 bool fSystemNode = false;
+std::string strBudgetMode = "";
 std::string strMasterNodePrivKey = "";
 std::string strMasterNodeAddr = "";
 std::string strSystemNodePrivKey = "";

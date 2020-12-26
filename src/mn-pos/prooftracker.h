@@ -1,3 +1,6 @@
+#ifndef PROOFTRACKER_H
+#define PROOFTRACKER_H
+
 #include <map>
 #include <set>
 
@@ -21,3 +24,5 @@ public:
     int GetWitnessCount(const BLOCKHASH& hashBlock) const;
     void EraseBeforeHeight(int nHeight);
 };
+
+#endif // PROOFTRACKER_H

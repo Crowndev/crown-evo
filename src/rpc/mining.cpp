@@ -824,9 +824,13 @@ static RPCHelpMan getblocktemplate()
                 // Not exposed to GBT at all
                 break;
             case ThresholdState::LOCKED_IN:
+            {
                 // Ensure bit is set in block version
-                pblock->nVersion |= VersionBitsMask(consensusParams, pos);
+                uint32_t baseVersion = pblock->nVersion.GetFullVersion();
+                baseVersion |= VersionBitsMask(consensusParams, pos);
+                pblock->nVersion.SetBaseVersion(baseVersion, Params().GetConsensus().PoSChainId());
                 // FALL THROUGH to get vbavailable set...
+            }
             case ThresholdState::STARTED:
             {
                 const struct VBDeploymentInfo& vbinfo = VersionBitsDeploymentInfo[pos];
@@ -834,7 +838,9 @@ static RPCHelpMan getblocktemplate()
                 if (setClientRules.find(vbinfo.name) == setClientRules.end()) {
                     if (!vbinfo.gbt_force) {
                         // If the client doesn't support this, don't indicate it in the [default] version
-                        pblock->nVersion &= ~VersionBitsMask(consensusParams, pos);
+                        uint32_t baseVersion = pblock->nVersion.GetFullVersion();
+                        baseVersion &= ~VersionBitsMask(consensusParams, pos);
+                        pblock->nVersion.SetBaseVersion(baseVersion, Params().GetConsensus().PoSChainId());
                     }
                 }
                 break;
@@ -855,7 +861,7 @@ static RPCHelpMan getblocktemplate()
             }
         }
     }
-    result.pushKV("version", pblock->nVersion);
+    result.pushKV("version", pblock->nVersion.GetFullVersion());
     result.pushKV("rules", aRules);
     result.pushKV("vbavailable", vbavailable);
     result.pushKV("vbrequired", int(0));

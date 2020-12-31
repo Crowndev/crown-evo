@@ -76,6 +76,8 @@ static const bool DEFAULT_UPNP = USE_UPNP;
 #else
 static const bool DEFAULT_UPNP = false;
 #endif
+/** The maximum number of entries in mapAskFor */
+static const size_t MAPASKFOR_MAX_SZ = 50000;
 /** The maximum number of peer connections to maintain. */
 static const unsigned int DEFAULT_MAX_PEER_CONNECTIONS = 125;
 /** The default for -maxuploadtarget. 0 = Unlimited */
@@ -1019,12 +1021,14 @@ public:
     std::vector<CAddress> vAddrToSend;
     std::unique_ptr<CRollingBloomFilter> m_addr_known{nullptr};
     bool fGetAddr{false};
+    bool fSyncingWith{false};
     std::chrono::microseconds m_next_addr_send GUARDED_BY(cs_sendProcessing){0};
     std::chrono::microseconds m_next_local_addr_send GUARDED_BY(cs_sendProcessing){0};
 
     // List of block ids we still have announce.
     // There is no final sorting before sending, as they are always sent immediately
     // and in the order requested.
+    std::list<CInv> listAskForBlocks;
     std::vector<CInv> vInventoryOtherToSend;
     std::vector<uint256> vInventoryBlockToSend GUARDED_BY(cs_inventory);
     Mutex cs_inventory;
@@ -1243,6 +1247,8 @@ public:
             vInventoryOtherToSend.push_back(inv);
         }
     }
+
+    void AskForBlock(const CInv& inv);
 
     void CloseSocketDisconnect();
 

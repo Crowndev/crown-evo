@@ -3065,6 +3065,13 @@ CNode::~CNode()
     CloseSocket(hSocket);
 }
 
+void CNode::AskForBlock(const CInv& inv)
+{
+    if (listAskForBlocks.size() > MAPASKFOR_MAX_SZ)
+        return;
+    listAskForBlocks.emplace_back(inv);
+}
+
 bool CConnman::NodeFullyConnected(const CNode* pnode)
 {
     return pnode && pnode->fSuccessfullyConnected && !pnode->fDisconnect;

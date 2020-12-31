@@ -199,9 +199,9 @@ bool CMessageHeader::IsCommandValid() const
 
 ServiceFlags GetDesirableServiceFlags(ServiceFlags services) {
     if ((services & NODE_NETWORK_LIMITED) && g_initial_block_download_completed) {
-        return ServiceFlags(NODE_NETWORK_LIMITED/*| NODE_WITNESS*/);
+        return ServiceFlags(NODE_NETWORK_LIMITED);
     }
-    return ServiceFlags(NODE_NETWORK/*| NODE_WITNESS*/);
+    return ServiceFlags(NODE_NETWORK);
 }
 
 void SetServiceFlagsIBDCache(bool state) {
@@ -297,5 +297,5 @@ std::vector<std::string> serviceFlagsToStr(uint64_t flags)
 GenTxid ToGenTxid(const CInv& inv)
 {
     assert(inv.IsGenTxMsg());
-    return {inv.IsMsgWtx(), inv.hash};
+    return {inv.IsMsgWtx(), inv.hash, inv.type};
 }

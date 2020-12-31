@@ -1,0 +1,22 @@
+// Copyright (c) 2014-2020 The Crown developers
+// Distributed under the MIT software license, see the accompanying
+// file COPYING or http://www.opensource.org/licenses/mit-license.php.
+
+#ifndef BITCOIN_MN_PROCESSING_H
+#define BITCOIN_MN_PROCESSING_H
+
+#include <consensus/params.h>
+#include <consensus/validation.h>
+#include <net.h>
+#include <net_processing.h>
+#include <sync.h>
+#include <validationinterface.h>
+
+class CChainParams;
+class CTxMemPool;
+
+bool AlreadyHaveMasternodeTypes(const CInv& inv, const CTxMemPool& mempool);
+void ProcessGetDataMasternodeTypes(CNode* pfrom, const CChainParams& chainparams, CConnman* connman, const CTxMemPool& mempool, const CInv& inv, bool& push) LOCKS_EXCLUDED(cs_main);
+bool ProcessMessageMasternodeTypes(CNode* pfrom, const std::string& msg_type, CDataStream& vRecv, int64_t nTimeReceived, const CChainParams& chainparams, CTxMemPool& mempool, CConnman* connman, BanMan* banman, const std::atomic<bool>& interruptMsgProc);
+
+#endif // BITCOIN_MN_PROCESSING_H

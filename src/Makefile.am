@@ -161,6 +161,7 @@ BITCOIN_CORE_H = \
   memusage.h \
   merkleblock.h \
   miner.h \
+  mn_processing.h \
   net.h \
   netfulfilledman.h \
   net_permissions.h \
@@ -339,6 +340,7 @@ libbitcoin_server_a_SOURCES = \
   mn-pos/stakeminer.h \
   mn-pos/stakepointer.h \
   mn-pos/stakevalidation.h \
+  mn_processing.cpp \
   nodeconfig.cpp \
   net.cpp \
   netfulfilledman.cpp \

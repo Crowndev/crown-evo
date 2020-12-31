@@ -1918,24 +1918,6 @@ static bool WriteUndoDataForBlock(const CBlockUndo& blockundo, BlockValidationSt
     return true;
 }
 
-static bool WriteTxIndexDataForBlock(const CBlock& block, BlockValidationState& state, CBlockIndex* pindex)
-{
-    CDiskTxPos pos(pindex->GetBlockPos(), GetSizeOfCompactSize(block.vtx.size()));
-    std::vector<std::pair<uint256, CDiskTxPos> > vPos;
-    vPos.reserve(block.vtx.size());
-    for (const CTransactionRef& tx : block.vtx)
-    {
-        vPos.push_back(std::make_pair(tx->GetHash(), pos));
-        pos.nTxOffset += ::GetSerializeSize(*tx, CLIENT_VERSION);
-    }
-
-    if (!pblocktree->WriteTxIndex(vPos)) {
-        return AbortNode(state, "Failed to write transaction index");
-    }
-
-    return true;
-}
-
 static CCheckQueue<CScriptCheck> scriptcheckqueue(128);
 
 void ThreadScriptCheck(int worker_num) {
@@ -2232,6 +2214,9 @@ bool CChainState::ConnectBlock(const CBlock& block, BlockValidationState& state,
     if (pindex->nHeight >= chainparams.GetConsensus().PoSStartHeight()) {
         if (block.IsProofOfWork())
             return state.Invalid(BlockValidationResult::BLOCK_CONSENSUS, "pow-end");
+        uint256 hashProofOfStake;
+        if (!CheckStake(pindex, block, hashProofOfStake))
+            return state.Invalid(BlockValidationResult::BLOCK_CONSENSUS, "pos-invalid");
     } else if (block.IsProofOfStake()) {
             return state.Invalid(BlockValidationResult::BLOCK_CONSENSUS, "pos-early");
     }
@@ -2447,7 +2432,8 @@ bool CChainState::ConnectBlock(const CBlock& block, BlockValidationState& state,
             return state.Invalid(BlockValidationResult::BLOCK_CONSENSUS, "bad-blk-sigops");
         }
 
-        if (!tx.IsCoinBase() && !tx.IsCoinStake())
+        txsdata.emplace_back(tx);
+        if (!tx.IsCoinBase())
         {
             std::vector<CScriptCheck> vChecks;
             bool fCacheResults = fJustCheck; /* Don't cache results if we're actually connecting blocks (still consult the cache, though) */
@@ -2463,7 +2449,7 @@ bool CChainState::ConnectBlock(const CBlock& block, BlockValidationState& state,
         }
 
         CTxUndo undoDummy;
-        if (i > 0) {
+        if (i > 0 && !tx.IsCoinStake()) {
             blockundo.vtxundo.push_back(CTxUndo());
         }
         UpdateCoins(tx, view, i == 0 ? undoDummy : blockundo.vtxundo.back(), pindex->nHeight);
@@ -2512,9 +2498,6 @@ bool CChainState::ConnectBlock(const CBlock& block, BlockValidationState& state,
         pindex->RaiseValidity(BLOCK_VALID_SCRIPTS);
         setDirtyBlockIndex.insert(pindex);
     }
-
-    if (!WriteTxIndexDataForBlock(block, state, pindex))
-        return false;
 
     assert(pindex->phashBlock);
     // add this block to the view's block chain
@@ -4118,7 +4101,7 @@ bool CChainState::AcceptBlock(const std::shared_ptr<const CBlock>& pblock, Block
         return error("%s: %s", __func__, state.ToString());
     }
 
-    if (pindex->nHeight > chainparams.GetConsensus().PoSStartHeight()) {
+    if (pindex->nHeight >= chainparams.GetConsensus().PoSStartHeight()) {
         uint256 hashProofOfStake;
         if (!CheckStake(pindex, block, hashProofOfStake))
             return error("%s: Proof of stake check failed", __func__);
@@ -5107,7 +5090,8 @@ void LoadExternalBlockFile(const CChainParams& chainparams, FILE* fileIn, FlatFi
     } catch (const std::runtime_error& e) {
         AbortNode(std::string("System error: ") + e.what());
     }
-    LogPrintf("Loaded %i blocks from external file in %dms\n", nLoaded, GetTimeMillis() - nStart);
+    if (nLoaded > 0)
+        LogPrintf("Loaded %i blocks from external file in %dms\n", nLoaded, GetTimeMillis() - nStart);
 }
 
 void CChainState::CheckBlockIndex(const Consensus::Params& consensusParams)

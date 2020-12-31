@@ -389,51 +389,34 @@ void CMasternodeSync::Process(CConnman& connman)
     }
 }
 
-void ThreadCheckMasternode(CConnman& connman)
+void ThreadCheckMasternode()
 {
-    static bool fOneThread;
-    if (fOneThread)
-        return;
-    fOneThread = true;
+    if (fReindex || fImporting)
+       return;
+    if (::ChainstateActive().IsInitialBlockDownload())
+       return;
+    if (ShutdownRequested())
+       return;
 
-    // Make this thread recognisable as the PrivateSend thread
-    util::ThreadRename("crown-privsend");
+    static unsigned int nTick = 0;
 
-    // Don't enter the loop until we are out of IBD
-    while (true) {
-        UninterruptibleSleep(std::chrono::milliseconds(1000));
-        if (fReindex)
-            continue;
-        if (!::ChainstateActive().IsInitialBlockDownload())
-            break;
-        if (ShutdownRequested())
-            break;
-    }
+    // try to sync from all available nodes, one step at a time
+    masternodeSync.Process(*g_rpc_node->connman);
 
-    unsigned int nTick = 0;
+    if (masternodeSync.IsBlockchainSynced()) {
+        nTick++;
 
-    while (true) {
-        UninterruptibleSleep(std::chrono::milliseconds(1000));
+        // make sure to check all masternodes first
+        mnodeman.Check();
 
-        // try to sync from all available nodes, one step at a time
-        masternodeSync.Process(connman);
+        // check if we should activate or ping every few minutes,
+        // start right after sync is considered to be done
+        if (nTick % MASTERNODE_PING_SECONDS == 0)
+            activeMasternode.ManageStatus(*g_rpc_node->connman);
 
-        if (masternodeSync.IsBlockchainSynced() && !ShutdownRequested()) {
-
-            nTick++;
-
-            // make sure to check all masternodes first
-            mnodeman.Check();
-
-            // check if we should activate or ping every few minutes,
-            // start right after sync is considered to be done
-            if (nTick % MASTERNODE_PING_SECONDS == 0)
-                activeMasternode.ManageStatus(connman);
-
-            if (nTick % 60 == 0) {
-                mnodeman.CheckAndRemove();
-                masternodePayments.CheckAndRemove();
-            }
+        if (nTick % 60 == 0) {
+            mnodeman.CheckAndRemove();
+            masternodePayments.CheckAndRemove();
         }
     }
 }

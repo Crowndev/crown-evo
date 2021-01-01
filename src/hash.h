@@ -187,7 +187,16 @@ public:
     }
 };
 
-/** Compute the 256-bit hash of an object's serialization. */
+/** Compute the 256-bit hash of an object's serialization (sha256). */
+template<typename T>
+uint256 SerializeHashSingle(const T& obj, int nType=SER_GETHASH, int nVersion=PROTOCOL_VERSION)
+{
+    CHashWriter ss(nType, nVersion);
+    ss << obj;
+    return ss.GetSHA256();
+}
+
+/** Compute the 256-bit hash of an object's serialization (sha256d). */
 template<typename T>
 uint256 SerializeHash(const T& obj, int nType=SER_GETHASH, int nVersion=PROTOCOL_VERSION)
 {

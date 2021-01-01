@@ -1787,6 +1787,7 @@ int ApplyTxInUndo(Coin&& undo, CCoinsViewCache& view, const COutPoint& out)
         if (!alternate.IsSpent()) {
             undo.nHeight = alternate.nHeight;
             undo.fCoinBase = alternate.fCoinBase;
+            undo.fCoinStake = alternate.fCoinStake;
         } else {
             return DISCONNECT_FAILED; // adding output for transaction without known metadata
         }
@@ -1813,7 +1814,10 @@ DisconnectResult CChainState::DisconnectBlock(const CBlock& block, const CBlockI
         return DISCONNECT_FAILED;
     }
 
-    if (blockUndo.vtxundo.size() + 1 != block.vtx.size()) {
+    unsigned int nSizeCheck = blockUndo.vtxundo.size() + 1;
+    if (block.IsProofOfStake())
+        nSizeCheck++;
+    if (nSizeCheck != block.vtx.size()) {
         error("DisconnectBlock(): block and undo data inconsistent");
         return DISCONNECT_FAILED;
     }
@@ -1823,6 +1827,7 @@ DisconnectResult CChainState::DisconnectBlock(const CBlock& block, const CBlockI
         const CTransaction &tx = *(block.vtx[i]);
         uint256 hash = tx.GetHash();
         bool is_coinbase = tx.IsCoinBase();
+        bool is_coinstake = tx.IsCoinStake();
 
         // Check that all outputs are available and match the outputs in the block itself
         // exactly.
@@ -1831,7 +1836,7 @@ DisconnectResult CChainState::DisconnectBlock(const CBlock& block, const CBlockI
                 COutPoint out(hash, o);
                 Coin coin;
                 bool is_spent = view.SpendCoin(out, &coin);
-                if (!is_spent || tx.vout[o] != coin.out || pindex->nHeight != coin.nHeight || is_coinbase != coin.fCoinBase) {
+                if (!is_spent || tx.vout[o] != coin.out || pindex->nHeight != coin.nHeight || is_coinbase != coin.fCoinBase || is_coinstake != coin.fCoinStake) {
                     fClean = false; // transaction output mismatch
                 }
             }
@@ -2214,9 +2219,6 @@ bool CChainState::ConnectBlock(const CBlock& block, BlockValidationState& state,
     if (pindex->nHeight >= chainparams.GetConsensus().PoSStartHeight()) {
         if (block.IsProofOfWork())
             return state.Invalid(BlockValidationResult::BLOCK_CONSENSUS, "pow-end");
-        uint256 hashProofOfStake;
-        if (!CheckStake(pindex, block, hashProofOfStake))
-            return state.Invalid(BlockValidationResult::BLOCK_CONSENSUS, "pos-invalid");
     } else if (block.IsProofOfStake()) {
             return state.Invalid(BlockValidationResult::BLOCK_CONSENSUS, "pos-early");
     }
@@ -2497,6 +2499,11 @@ bool CChainState::ConnectBlock(const CBlock& block, BlockValidationState& state,
     if (!pindex->IsValid(BLOCK_VALID_SCRIPTS)) {
         pindex->RaiseValidity(BLOCK_VALID_SCRIPTS);
         setDirtyBlockIndex.insert(pindex);
+    }
+
+    if (block.IsProofOfStake()) {
+        COutPoint stakeSource(block.stakePointer.txid, block.stakePointer.nPos);
+        mapUsedStakePointers.emplace(stakeSource.GetHash(), block.GetHash());
     }
 
     assert(pindex->phashBlock);
@@ -3996,7 +4003,15 @@ bool ChainstateManager::ProcessNewBlockHeaders(const std::vector<CBlockHeader>& 
         LOCK(cs_main);
         for (const CBlockHeader& header : headers) {
             CBlockIndex *pindex = nullptr; // Use a temp pindex instead of ppindex to avoid a const_cast
-            bool fProofOfStake = header.nNonce == 0;
+
+            //! no other way to know..
+            int nHeight = 0;
+            CBlockIndex *pindexTest = nullptr;
+            pindexTest = LookupBlockIndex(header.hashPrevBlock);
+            if (pindexTest)
+                nHeight = pindexTest->nHeight + 1;
+            bool fProofOfStake = nHeight >= chainparams.GetConsensus().PoSStartHeight();
+
             bool accepted = m_blockman.AcceptBlockHeader(
                 header, state, chainparams, &pindex, fProofOfStake);
             ::ChainstateActive().CheckBlockIndex(chainparams.GetConsensus());

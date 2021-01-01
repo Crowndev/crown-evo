@@ -133,6 +133,7 @@ BITCOIN_CORE_H = \
   consensus/tx_verify.h \
   core_io.h \
   core_memusage.h \
+  crown/init.h \
   crown/instantx.h \
   crown/legacycalls.h \
   crown/legacysigner.h \
@@ -299,6 +300,7 @@ libbitcoin_server_a_SOURCES = \
   blockfilter.cpp \
   chain.cpp \
   consensus/tx_verify.cpp \
+  crown/init.cpp \
   crown/instantx.cpp \
   crown/legacycalls.cpp \
   crown/legacysigner.cpp \

@@ -31,12 +31,14 @@ bool CheckProofOfStake(const CBlock& block, const CBlockIndex* prevBlock, const 
 
     // Get the correct amount for the collateral
     CAmount nAmountCollateral = 0;
-    if (outpointStakePointer.n == 1)
-        nAmountCollateral = Params().GetConsensus().nMasternodeCollateral;
-    else if (outpointStakePointer.n == 2)
-        nAmountCollateral = Params().GetConsensus().nSystemnodeCollateral;
-    else
-        return error("%s: Stake pointer is neither pos 1 or 2", __func__);
+    if (outpointStakePointer.n == 1) {
+        nAmountCollateral = Params().GetConsensus().nMasternodeCollateral / COIN;
+    } else if (outpointStakePointer.n == 2) {
+        nAmountCollateral = Params().GetConsensus().nSystemnodeCollateral / COIN;
+    } else {
+        LogPrintf("%s: Stake pointer is neither pos 1 or 2", __func__);
+        return false;
+    }
 
     // Reconstruct the kernel that created the stake
     auto pairOut = std::make_pair(outpointStakePointer.hash, outpointStakePointer.n);

@@ -4116,9 +4116,12 @@ bool CChainState::AcceptBlock(const std::shared_ptr<const CBlock>& pblock, Block
         return error("%s: %s", __func__, state.ToString());
     }
 
-    if (pindex->nHeight >= chainparams.GetConsensus().PoSStartHeight()) {
+    if (pindex->nHeight >= chainparams.GetConsensus().PoSStartHeight())
+    {
         uint256 hashProofOfStake;
-        if (!CheckStake(pindex, block, hashProofOfStake))
+        bool checkStakeResult = CheckStake(pindex, block, hashProofOfStake);
+        LogPrintf("%s - hashProof %s\n", __func__, hashProofOfStake.ToString());
+        if (!checkStakeResult)
             return error("%s: Proof of stake check failed", __func__);
 
         // Check if this proof hash has been used to package other blocks

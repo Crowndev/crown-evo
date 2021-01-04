@@ -157,6 +157,7 @@ BITCOIN_CORE_H = \
   interfaces/wallet.h \
   key.h \
   key_io.h \
+  limitedmap.h \
   logging.h \
   logging/timer.h \
   memusage.h \
@@ -223,7 +224,6 @@ BITCOIN_CORE_H = \
   timedata.h \
   torcontrol.h \
   txdb.h \
-  txrequest.h \
   txmempool.h \
   undo.h \
   util/asmap.h \
@@ -383,7 +383,6 @@ libbitcoin_server_a_SOURCES = \
   timedata.cpp \
   torcontrol.cpp \
   txdb.cpp \
-  txrequest.cpp \
   txmempool.cpp \
   validation.cpp \
   validationinterface.cpp \

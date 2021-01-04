@@ -213,7 +213,7 @@ void ProcessGetDataMasternodeTypes(CNode* pfrom, const CChainParams& chainparams
     }
 }
 
-bool ProcessMessageMasternodeTypes(CNode* pfrom, const std::string& msg_type, CDataStream& vRecv, int64_t nTimeReceived, const CChainParams& chainparams, CTxMemPool& mempool, CConnman* connman, BanMan* banman, const std::atomic<bool>& interruptMsgProc)
+bool ProcessMessageMasternodeTypes(CNode* pfrom, const std::string& msg_type, CDataStream& vRecv, const CChainParams& chainparams, CTxMemPool& mempool, CConnman* connman, BanMan* banman, const std::atomic<bool>& interruptMsgProc)
 {
     bool found = false;
     const std::vector<std::string> &allMessages = getAllNetMessageTypes();

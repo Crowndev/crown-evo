@@ -425,7 +425,7 @@ struct CNodeState {
         /* Track when to attempt download of announced transactions (process
          * time in micros -> txid)
          */
-        std::multimap<std::chrono::microseconds, GenTxid> m_tx_process_time;
+        std::multimap<std::chrono::microseconds, CInv> m_tx_process_time;
 
         //! Store all the transactions a peer has recently announced
         std::set<uint256> m_tx_announced;
@@ -828,34 +828,34 @@ static void FindNextBlocksToDownload(NodeId nodeid, unsigned int count, std::vec
     }
 }
 
-void EraseTxRequest(const GenTxid& gtxid) EXCLUSIVE_LOCKS_REQUIRED(cs_main)
+void EraseTxRequest(const uint256& txid) EXCLUSIVE_LOCKS_REQUIRED(cs_main)
 {
-    g_already_asked_for.erase(gtxid.GetHash());
+    g_already_asked_for.erase(txid);
 }
 
-std::chrono::microseconds GetTxRequestTime(const GenTxid& gtxid) EXCLUSIVE_LOCKS_REQUIRED(cs_main)
+std::chrono::microseconds GetTxRequestTime(const uint256& txid) EXCLUSIVE_LOCKS_REQUIRED(cs_main)
 {
-    auto it = g_already_asked_for.find(gtxid.GetHash());
+    auto it = g_already_asked_for.find(txid);
     if (it != g_already_asked_for.end()) {
         return it->second;
     }
     return {};
 }
 
-void UpdateTxRequestTime(const GenTxid& gtxid, std::chrono::microseconds request_time) EXCLUSIVE_LOCKS_REQUIRED(cs_main)
+void UpdateTxRequestTime(const uint256& txid, std::chrono::microseconds request_time) EXCLUSIVE_LOCKS_REQUIRED(cs_main)
 {
-    auto it = g_already_asked_for.find(gtxid.GetHash());
+    auto it = g_already_asked_for.find(txid);
     if (it == g_already_asked_for.end()) {
-        g_already_asked_for.insert(std::make_pair(gtxid.GetHash(), request_time));
+        g_already_asked_for.insert(std::make_pair(txid, request_time));
     } else {
         g_already_asked_for.update(it, request_time);
     }
 }
 
-std::chrono::microseconds CalculateTxGetDataTime(const GenTxid& gtxid, std::chrono::microseconds current_time, bool use_inbound_delay, bool use_txid_delay) EXCLUSIVE_LOCKS_REQUIRED(cs_main)
+std::chrono::microseconds CalculateTxGetDataTime(const uint256& txid, std::chrono::microseconds current_time, bool use_inbound_delay) EXCLUSIVE_LOCKS_REQUIRED(cs_main)
 {
     std::chrono::microseconds process_time;
-    const auto last_request_time = GetTxRequestTime(gtxid);
+    const auto last_request_time = GetTxRequestTime(txid);
     // First time requesting this tx
     if (last_request_time.count() == 0) {
         process_time = current_time;
@@ -871,23 +871,23 @@ std::chrono::microseconds CalculateTxGetDataTime(const GenTxid& gtxid, std::chro
     return process_time;
 }
 
-void RequestTx(CNodeState* state, const GenTxid& gtxid, std::chrono::microseconds current_time) EXCLUSIVE_LOCKS_REQUIRED(cs_main)
+void RequestTx(CNodeState* state, const CInv& inv, std::chrono::microseconds current_time) EXCLUSIVE_LOCKS_REQUIRED(cs_main)
 {
     CNodeState::TxDownloadState& peer_download_state = state->m_tx_download;
     if (peer_download_state.m_tx_announced.size() >= MAX_PEER_TX_ANNOUNCEMENTS ||
             peer_download_state.m_tx_process_time.size() >= MAX_PEER_TX_ANNOUNCEMENTS ||
-            peer_download_state.m_tx_announced.count(gtxid.GetHash())) {
+            peer_download_state.m_tx_announced.count(inv.hash)) {
         // Too many queued announcements from this peer, or we already have
         // this announcement
         return;
     }
-    peer_download_state.m_tx_announced.insert(gtxid.GetHash());
+    peer_download_state.m_tx_announced.insert(inv.hash);
 
     // Calculate the time to try requesting this transaction. Use
     // fPreferredDownload as a proxy for outbound peers.
-    const auto process_time = CalculateTxGetDataTime(gtxid, current_time, !state->fPreferredDownload, !state->m_wtxid_relay && g_wtxid_relay_peers > 0);
+    const auto process_time = CalculateTxGetDataTime(inv.hash, current_time, !state->fPreferredDownload);
 
-    peer_download_state.m_tx_process_time.emplace(process_time, gtxid);
+    peer_download_state.m_tx_process_time.emplace(process_time, inv);
 }
 
 } // namespace
@@ -1485,56 +1485,49 @@ void PeerManager::BlockChecked(const CBlock& block, const BlockValidationState& 
 //
 
 
-bool static AlreadyHaveTx(const GenTxid& gtxid, const CTxMemPool& mempool) EXCLUSIVE_LOCKS_REQUIRED(cs_main)
+bool static AlreadyHave(const CInv& inv, const CTxMemPool& mempool) EXCLUSIVE_LOCKS_REQUIRED(cs_main)
 {
-    assert(recentRejects);
-    if (::ChainActive().Tip()->GetBlockHash() != hashRecentRejectsChainTip) {
-        // If the chain tip has changed previously rejected transactions
-        // might be now valid, e.g. due to a nLockTime'd tx becoming valid,
-        // or a double-spend. Reset the rejects filter and give those
-        // txs a second chance.
-        hashRecentRejectsChainTip = ::ChainActive().Tip()->GetBlockHash();
-        recentRejects->reset();
-    }
-
-    const uint256& hash = gtxid.GetHash();
-    uint32_t type = gtxid.GetType();
-
-    //! yeah i know right
-    if (type == MSG_SPORK || type == MSG_TXLOCK_VOTE || type == MSG_TXLOCK_REQUEST || type == MSG_MASTERNODE_WINNER ||
-        type == MSG_MASTERNODE_ANNOUNCE || type == MSG_MASTERNODE_PING || type == MSG_SYSTEMNODE_WINNER ||
-        type == MSG_SYSTEMNODE_ANNOUNCE || type == MSG_SYSTEMNODE_PING || type == MSG_BUDGET_VOTE ||
-        type == MSG_BUDGET_PROPOSAL || type == MSG_BUDGET_FINALIZED_VOTE || type == MSG_BUDGET_FINALIZED)
+    switch (inv.type)
     {
-        CInv inv(type, hash);
-        return AlreadyHaveMasternodeTypes(inv, mempool);
-    }
+    case MSG_TX:
+    case MSG_WITNESS_TX:
+        {
+            assert(recentRejects);
+            if (::ChainActive().Tip()->GetBlockHash() != hashRecentRejectsChainTip)
+            {
+                // If the chain tip has changed previously rejected transactions
+                // might be now valid, e.g. due to a nLockTime'd tx becoming valid,
+                // or a double-spend. Reset the rejects filter and give those
+                // txs a second chance.
+                hashRecentRejectsChainTip = ::ChainActive().Tip()->GetBlockHash();
+                recentRejects->reset();
+            }
 
-    {
-        LOCK(g_cs_orphans);
-        if (!gtxid.IsWtxid() && mapOrphanTransactions.count(hash)) {
-            return true;
-        } else if (gtxid.IsWtxid() && g_orphans_by_wtxid.count(hash)) {
-            return true;
+            {
+                LOCK(g_cs_orphans);
+                if (mapOrphanTransactions.count(inv.hash)) return true;
+            }
+
+            {
+                LOCK(g_cs_recent_confirmed_transactions);
+                if (g_recent_confirmed_transactions->contains(inv.hash)) return true;
+            }
+
+            return recentRejects->contains(inv.hash) ||
+                   mempool.exists(inv.hash);
         }
+    case MSG_BLOCK:
+    case MSG_WITNESS_BLOCK:
+        return LookupBlockIndex(inv.hash) != nullptr;
     }
-
-    {
-        LOCK(g_cs_recent_confirmed_transactions);
-        if (g_recent_confirmed_transactions->contains(hash)) return true;
-    }
-
-    return recentRejects->contains(hash) || mempool.exists(gtxid);
+    // Try the masternode types
+    return AlreadyHaveMasternodeTypes(inv, mempool);
 }
 
-bool static AlreadyHaveBlock(const uint256& block_hash) EXCLUSIVE_LOCKS_REQUIRED(cs_main)
+void RelayTransaction(const uint256& txid, const CConnman& connman)
 {
-    return LookupBlockIndex(block_hash) != nullptr;
-}
-
-void RelayTransaction(const CInv& inv, const CConnman& connman)
-{
-    connman.ForEachNode([&inv](CNode* pnode) EXCLUSIVE_LOCKS_REQUIRED(::cs_main)
+    CInv inv(MSG_TX, txid);
+    connman.ForEachNode([&inv](CNode* pnode)
     {
         pnode->PushInventory(inv);
     });
@@ -1557,7 +1550,7 @@ void RelayTransaction(const uint256& txid, const uint256& wtxid, const CConnman&
 
 static void RelayAddress(const CAddress& addr, bool fReachable, const CConnman& connman)
 {
-    if (!fReachable && !addr.IsRelayable()) return;
+    unsigned int nRelayNodes = fReachable ? 2 : 1; // limited relaying of addresses outside our network(s)
 
     // Relay to a limited number of other nodes
     // Use deterministic randomness to send to the same nodes for 24 hours
@@ -1565,9 +1558,6 @@ static void RelayAddress(const CAddress& addr, bool fReachable, const CConnman& 
     uint64_t hashAddr = addr.GetHash();
     const CSipHasher hasher = connman.GetDeterministicRandomizer(RANDOMIZER_ID_ADDRESS_RELAY).Write(hashAddr << 32).Write((GetTime() + hashAddr) / (24 * 60 * 60));
     FastRandomContext insecure_rand;
-
-    // Relay reachable addresses to 2 peers. Unreachable addresses are relayed randomly to 1 or 2 peers.
-    unsigned int nRelayNodes = (fReachable || (hasher.Finalize() & 1)) ? 2 : 1;
 
     std::array<std::pair<uint64_t, CNode*>,2> best{{{0, nullptr}, {0, nullptr}}};
     assert(nRelayNodes <= best.size());
@@ -1788,65 +1778,52 @@ void static ProcessGetData(CNode& pfrom, Peer& peer, const CChainParams& chainpa
     // Get last mempool request time
     const std::chrono::seconds mempool_req = pfrom.m_tx_relay != nullptr ? pfrom.m_tx_relay->m_last_mempool_req.load()
                                                                           : std::chrono::seconds::min();
+    {
+        LOCK(cs_main);
 
-    // Process as many TX items from the front of the getdata queue as
-    // possible, since they're common and it's efficient to batch process
-    // them.
-    while (it != peer.m_getdata_requests.end() && it->IsGenTxMsg()) {
-        if (interruptMsgProc) return;
-        // The send buffer provides backpressure. If there's no space in
-        // the buffer, pause processing until the next call.
-        if (pfrom.fPauseSend) break;
+        // Process as many TX items from the front of the getdata queue as
+        // possible, since they're common and it's efficient to batch process
+        // them.
+        while (it != peer.m_getdata_requests.end() && (it->type == MSG_TX || it->type == MSG_WITNESS_TX)) {
+            if (interruptMsgProc)
+                return;
+            // The send buffer provides backpressure. If there's no space in
+            // the buffer, pause processing until the next call.
+            if (pfrom.fPauseSend)
+                break;
 
-        const CInv &inv = *it++;
+            const CInv &inv = *it++;
 
-        if (pfrom.m_tx_relay == nullptr) {
-            // Ignore GETDATA requests for transactions from blocks-only peers.
-            continue;
-        }
+            if (pfrom.m_tx_relay == nullptr) {
+                // Ignore GETDATA requests for transactions from blocks-only peers.
+                continue;
+            }
 
-        if(inv.IsGenTxMsg(true)) {
-            CTransactionRef tx = FindTxForGetData(mempool, pfrom, ToGenTxid(inv), mempool_req, now);
-            if (tx) {
-                // WTX and WITNESS_TX imply we serialize with witness
-                int nSendFlags = (inv.IsMsgTx() ? SERIALIZE_TRANSACTION_NO_WITNESS : 0);
-                connman.PushMessage(&pfrom, msgMaker.Make(nSendFlags, NetMsgType::TX, *tx));
-                mempool.RemoveUnbroadcastTx(tx->GetHash());
-                // As we're going to send tx, make sure its unconfirmed parents are made requestable.
-                std::vector<uint256> parent_ids_to_add;
-                {
-                    LOCK(mempool.cs);
-                    auto txiter = mempool.GetIter(tx->GetHash());
-                    if (txiter) {
-                        const CTxMemPoolEntry::Parents& parents = (*txiter)->GetMemPoolParentsConst();
-                        parent_ids_to_add.reserve(parents.size());
-                        for (const CTxMemPoolEntry& parent : parents) {
-                            if (parent.GetTime() > now - UNCONDITIONAL_RELAY_DELAY) {
-                                parent_ids_to_add.push_back(parent.GetTx().GetHash());
-                            }
-                        }
-                    }
-                }
-                for (const uint256& parent_txid : parent_ids_to_add) {
-                    // Relaying a transaction with a recent but unconfirmed parent.
-                    if (WITH_LOCK(pfrom.m_tx_relay->cs_tx_inventory, return !pfrom.m_tx_relay->filterInventoryKnown.contains(parent_txid))) {
-                        LOCK(cs_main);
-                        State(pfrom.GetId())->m_recently_announced_invs.insert(parent_txid);
-                    }
-                }
+            // Send stream from relay memory
+            bool push = false;
+            auto mi = mapRelay.find(inv.hash);
+            int nSendFlags = (inv.type == MSG_TX ? SERIALIZE_TRANSACTION_NO_WITNESS : 0);
+            if (mi != mapRelay.end()) {
+                connman.PushMessage(&pfrom, msgMaker.Make(nSendFlags, NetMsgType::TX, *mi->second));
+                push = true;
             } else {
+                auto txinfo = mempool.info(inv.hash);
+                // To protect privacy, do not answer getdata using the mempool when
+                // that TX couldn't have been INVed in reply to a MEMPOOL request,
+                // or when it's too recent to have expired from mapRelay.
+                if (txinfo.tx && (
+                     (mempool_req.count() && txinfo.m_time <= mempool_req)))
+                {
+                    connman.PushMessage(&pfrom, msgMaker.Make(nSendFlags, NetMsgType::TX, *txinfo.tx));
+                    push = true;
+                }
+            }
+            ProcessGetDataMasternodeTypes(&pfrom, chainparams, &connman, mempool, inv, push);
+            if (!push) {
                 vNotFound.push_back(inv);
             }
-        } else if(inv.IsGenTxMsg(false)) {
-           bool pushed = false;
-           ProcessGetDataMasternodeTypes(&pfrom, chainparams, &connman, mempool, inv, pushed);
-           if (!pushed) {
-               vNotFound.push_back(inv);
-           }
-        } else {
-           vNotFound.push_back(inv);
         }
-    }
+    } // release cs_main
 
     // Only process one BLOCK item per call, since they're uncommon and can be
     // expensive to process.
@@ -2787,36 +2764,19 @@ void PeerManager::ProcessMessage(CNode& pfrom, const std::string& msg_type, CDat
             return;
         }
 
-        // We won't accept tx inv's if we're in blocks-only mode, or this is a
-        // block-relay-only peer
-        bool fBlocksOnly = !g_relay_txes || (pfrom.m_tx_relay == nullptr);
-
-        // Allow peers with relay permission to send data other than blocks in blocks only mode
-        if (pfrom.HasPermission(PF_RELAY)) {
-            fBlocksOnly = false;
-        }
-
         LOCK(cs_main);
 
         const auto current_time = GetTime<std::chrono::microseconds>();
         uint256* best_block{nullptr};
+        bool willStillBeIBD = ::ChainstateActive().IsInitialBlockDownload();
 
         for (CInv& inv : vInv) {
             if (interruptMsgProc) return;
 
-            // Ignore INVs that don't match wtxidrelay setting.
-            // Note that orphan parent fetching always uses MSG_TX GETDATAs regardless of the wtxidrelay setting.
-            // This is fine as no INV messages are involved in that process.
-            if (State(pfrom.GetId())->m_wtxid_relay) {
-                if (inv.IsMsgTx()) continue;
-            } else {
-                if (inv.IsMsgWtx()) continue;
-            }
+            bool fAlreadyHave = AlreadyHave(inv, m_mempool);
+            LogPrint(BCLog::NET, "got inv: %s  %s peer=%d\n", inv.ToString(), fAlreadyHave ? "have" : "new", pfrom.GetId());
 
             if (inv.IsMsgBlk()) {
-                const bool fAlreadyHave = AlreadyHaveBlock(inv.hash);
-                LogPrint(BCLog::NET, "got inv: %s  %s peer=%d\n", inv.ToString(), fAlreadyHave ? "have" : "new", pfrom.GetId());
-
                 UpdateBlockAvailability(pfrom.GetId(), inv.hash);
                 if (m_chainman.ActiveChainstate().IsInitialBlockDownload() && pfrom.fSyncingWith && inv.hash == pairHighBlock.second) {
                     // Headers-first is the primary method of announcement on
@@ -2825,9 +2785,16 @@ void PeerManager::ProcessMessage(CNode& pfrom, const std::string& msg_type, CDat
                     // provided should be the highest, so send a getheaders and
                     // then fetch the blocks we need to catch up.
                     best_block = &inv.hash;
+                    m_connman.PushMessage(&pfrom, msgMaker.Make(NetMsgType::GETBLOCKS, ::ChainActive().GetLocator(), inv.hash));
+                    LogPrint(BCLog::NET, "getblocks (%d) %s to peer=%d\n", pindexBestHeader->nHeight, inv.hash.ToString(), pfrom.GetId());
+                } else {
+                    pfrom.AskForBlock(inv);
                 }
             } else {
-                LogPrint(BCLog::NET, "Unknown inv type \"%s\" received from peer=%d\n", inv.ToString(), pfrom.GetId());
+                pfrom.AddInventoryKnown(inv);
+                if (!fAlreadyHave && !fImporting && !fReindex && !willStillBeIBD) {
+                    RequestTx(State(pfrom.GetId()), inv, current_time);
+                }
             }
         }
 
@@ -3064,65 +3031,26 @@ void PeerManager::ProcessMessage(CNode& pfrom, const std::string& msg_type, CDat
         vRecv >> ptx;
         const CTransaction& tx = *ptx;
 
-        const uint256& txid = ptx->GetHash();
-        const uint256& wtxid = ptx->GetWitnessHash();
+        CInv inv(MSG_TX, tx.GetHash());
+        pfrom.AddInventoryKnown(inv);
 
         LOCK2(cs_main, g_cs_orphans);
 
-        CNodeState* nodestate = State(pfrom.GetId());
-
-        const uint256& hash = nodestate->m_wtxid_relay ? wtxid : txid;
-        pfrom.AddKnownTx(hash);
-        if (nodestate->m_wtxid_relay && txid != wtxid) {
-            // Insert txid into filterInventoryKnown, even for
-            // wtxidrelay peers. This prevents re-adding of
-            // unconfirmed parents to the recently_announced
-            // filter, when a child tx is requested. See
-            // ProcessGetData().
-            pfrom.AddKnownTx(txid);
-        }
-
-        for (const GenTxid& gtxid : {GenTxid(false, txid), GenTxid(true, wtxid)}) {
-            nodestate->m_tx_download.m_tx_announced.erase(gtxid.GetHash());
-            nodestate->m_tx_download.m_tx_in_flight.erase(gtxid.GetHash());
-            EraseTxRequest(gtxid);
-        }
-
-        // We do the AlreadyHaveTx() check using wtxid, rather than txid - in the
-        // absence of witness malleation, this is strictly better, because the
-        // recent rejects filter may contain the wtxid but rarely contains
-        // the txid of a segwit transaction that has been rejected.
-        // In the presence of witness malleation, it's possible that by only
-        // doing the check with wtxid, we could overlook a transaction which
-        // was confirmed with a different witness, or exists in our mempool
-        // with a different witness, but this has limited downside:
-        // mempool validation does its own lookup of whether we have the txid
-        // already; and an adversary can already relay us old transactions
-        // (older than our recency filter) if trying to DoS us, without any need
-        // for witness malleation.
-        if (AlreadyHaveTx(GenTxid(/* is_wtxid=*/true, wtxid), m_mempool)) {
-            if (pfrom.HasPermission(PF_FORCERELAY)) {
-                // Always relay transactions received from peers with forcerelay
-                // permission, even if they were already in the mempool, allowing
-                // the node to function as a gateway for nodes hidden behind it.
-                if (!m_mempool.exists(tx.GetHash())) {
-                    LogPrintf("Not relaying non-mempool transaction %s from forcerelay peer=%d\n", tx.GetHash().ToString(), pfrom.GetId());
-                } else {
-                    LogPrintf("Force relaying tx %s from peer=%d\n", tx.GetHash().ToString(), pfrom.GetId());
-                    RelayTransaction(tx.GetHash(), tx.GetWitnessHash(), m_connman);
-                }
-            }
-            return;
-        }
-
         TxValidationState state;
+
+        CNodeState* nodestate = State(pfrom.GetId());
+        nodestate->m_tx_download.m_tx_announced.erase(inv.hash);
+        nodestate->m_tx_download.m_tx_in_flight.erase(inv.hash);
+        EraseTxRequest(inv.hash);
+
         std::list<CTransactionRef> lRemovedTxn;
 
-        if (AcceptToMemoryPool(m_mempool, state, ptx, &lRemovedTxn, false /* bypass_limits */)) {
+        if (!AlreadyHave(inv, m_mempool) &&
+            AcceptToMemoryPool(m_mempool, state, ptx, &lRemovedTxn, false /* bypass_limits */, 0 /* nAbsurdFee */)) {
             m_mempool.check(&::ChainstateActive().CoinsTip());
-            RelayTransaction(tx.GetHash(), tx.GetWitnessHash(), m_connman);
+            RelayTransaction(tx.GetHash(), m_connman);
             for (unsigned int i = 0; i < tx.vout.size(); i++) {
-                auto it_by_prev = mapOrphanTransactionsByPrev.find(COutPoint(txid, i));
+                auto it_by_prev = mapOrphanTransactionsByPrev.find(COutPoint(inv.hash, i));
                 if (it_by_prev != mapOrphanTransactionsByPrev.end()) {
                     for (const auto& elem : it_by_prev->second) {
                         peer->m_orphan_work_set.insert(elem->first);
@@ -3175,7 +3103,7 @@ void PeerManager::ProcessMessage(CNode& pfrom, const std::string& msg_type, CDat
                     // protocol for getting all unconfirmed parents.
                     const GenTxid gtxid{/* is_wtxid=*/false, parent_txid};
                     pfrom.AddKnownTx(parent_txid);
-                    if (!AlreadyHaveTx(gtxid, m_mempool)) RequestTx(State(pfrom.GetId()), gtxid, current_time);
+                    if (!AlreadyHave(inv, m_mempool)) RequestTx(State(pfrom.GetId()), inv, current_time);
                 }
                 AddOrphanTx(ptx, pfrom.GetId());
 
@@ -3890,8 +3818,8 @@ void PeerManager::ProcessMessage(CNode& pfrom, const std::string& msg_type, CDat
         return;
     }
 
-    // Ignore unknown commands for extensibility
-    LogPrint(BCLog::NET, "Unknown command \"%s\" from peer=%d\n", SanitizeString(msg_type), pfrom.GetId());
+    ProcessMessageMasternodeTypes(&pfrom, msg_type, vRecv, m_chainparams, m_mempool, &m_connman, m_banman, interruptMsgProc);
+
     return;
 }
 
@@ -4526,7 +4454,6 @@ bool PeerManager::SendMessages(CNode* pto)
                         std::set<uint256>::iterator it = vInvTx.back();
                         vInvTx.pop_back();
                         uint256 hash = *it;
-                        CInv inv(state.m_wtxid_relay ? MSG_WTX : MSG_TX, hash);
                         // Remove it from the to-be-sent set
                         pto->m_tx_relay->setInventoryTxToSend.erase(it);
                         // Check if not in the filter already
@@ -4534,7 +4461,7 @@ bool PeerManager::SendMessages(CNode* pto)
                             continue;
                         }
                         // Not in the mempool anymore? don't bother sending it.
-                        auto txinfo = m_mempool.info(ToGenTxid(inv));
+                        auto txinfo = m_mempool.info(hash);
                         if (!txinfo.tx) {
                             continue;
                         }
@@ -4546,8 +4473,7 @@ bool PeerManager::SendMessages(CNode* pto)
                         }
                         if (pto->m_tx_relay->pfilter && !pto->m_tx_relay->pfilter->IsRelevantAndUpdate(*txinfo.tx)) continue;
                         // Send
-                        State(pto->GetId())->m_recently_announced_invs.insert(hash);
-                        vInv.push_back(inv);
+                        vInv.push_back(CInv(MSG_TX, hash));
                         nRelayedTransactions++;
                         {
                             // Expire old relay messages
@@ -4572,15 +4498,17 @@ bool PeerManager::SendMessages(CNode* pto)
                             vInv.clear();
                         }
                         pto->m_tx_relay->filterInventoryKnown.insert(hash);
-                        if (hash != txid) {
-                            // Insert txid into filterInventoryKnown, even for
-                            // wtxidrelay peers. This prevents re-adding of
-                            // unconfirmed parents to the recently_announced
-                            // filter, when a child tx is requested. See
-                            // ProcessGetData().
-                            pto->m_tx_relay->filterInventoryKnown.insert(txid);
+                    }
+
+                    // Send masternode inventory items
+                    for (const auto& inv : pto->vInventoryOtherToSend) {
+                        vInv.emplace_back(inv);
+                        if (vInv.size() == MAX_INV_SZ) {
+                            m_connman.PushMessage(pto, msgMaker.Make(NetMsgType::INV, vInv));
+                            vInv.clear();
                         }
                     }
+                    pto->vInventoryOtherToSend.clear();
                 }
             }
         }
@@ -4698,15 +4626,14 @@ bool PeerManager::SendMessages(CNode* pto)
 
         auto& tx_process_time = state.m_tx_download.m_tx_process_time;
         while (!tx_process_time.empty() && tx_process_time.begin()->first <= current_time && state.m_tx_download.m_tx_in_flight.size() < MAX_PEER_TX_REQUEST_IN_FLIGHT) {
-            const GenTxid gtxid = tx_process_time.begin()->second;
+            const CInv inv = tx_process_time.begin()->second;
             // Erase this entry from tx_process_time (it may be added back for
             // processing at a later time, see below)
             tx_process_time.erase(tx_process_time.begin());
-            CInv inv(gtxid.IsWtxid() ? MSG_WTX : (MSG_TX | GetFetchFlags(*pto)), gtxid.GetHash());
-            if (!AlreadyHaveTx(ToGenTxid(inv), m_mempool)) {
+            if (!AlreadyHave(inv, m_mempool)) {
                 // If this transaction was last requested more than 1 minute ago,
                 // then request.
-                const auto last_request_time = GetTxRequestTime(gtxid);
+                const auto last_request_time = GetTxRequestTime(inv.hash);
                 if (last_request_time <= current_time - GETDATA_TX_INTERVAL) {
                     LogPrint(BCLog::NET, "Requesting %s peer=%d\n", inv.ToString(), pto->GetId());
                     vGetData.push_back(inv);
@@ -4714,8 +4641,8 @@ bool PeerManager::SendMessages(CNode* pto)
                         m_connman.PushMessage(pto, msgMaker.Make(NetMsgType::GETDATA, vGetData));
                         vGetData.clear();
                     }
-                    UpdateTxRequestTime(gtxid, current_time);
-                    state.m_tx_download.m_tx_in_flight.emplace(gtxid.GetHash(), current_time);
+                    UpdateTxRequestTime(inv.hash, current_time);
+                    state.m_tx_download.m_tx_in_flight.emplace(inv.hash, current_time);
                 } else {
                     // This transaction is in flight from someone else; queue
                     // up processing to happen after the download times out
@@ -4729,13 +4656,13 @@ bool PeerManager::SendMessages(CNode* pto)
                     // would open us up to an attacker using inbound
                     // wtxid-relay to prevent us from requesting transactions
                     // from outbound txid-relay peers).
-                    const auto next_process_time = CalculateTxGetDataTime(gtxid, current_time, !state.fPreferredDownload, false);
-                    tx_process_time.emplace(next_process_time, gtxid);
+                    const auto next_process_time = CalculateTxGetDataTime(inv.hash, current_time, !state.fPreferredDownload);
+                    tx_process_time.emplace(next_process_time, inv);
                 }
             } else {
                 // We have already seen this transaction, no need to download.
-                state.m_tx_download.m_tx_announced.erase(gtxid.GetHash());
-                state.m_tx_download.m_tx_in_flight.erase(gtxid.GetHash());
+                state.m_tx_download.m_tx_announced.erase(inv.hash);
+                state.m_tx_download.m_tx_in_flight.erase(inv.hash);
             }
         }
 

@@ -41,8 +41,6 @@ public:
         SetCollateralAddress(Params().GetConsensus().LegacySignerDummyAddress());
     }
     bool SetCollateralAddress(std::string strAddress);
-    /// Is the inputs associated with this public key? (and there is enough CRW (10000 by default for checking if valid masternode)
-    bool IsVinAssociatedWithPubkey(CTxIn& vin, CPubKey& pubkey);
     /// Set the private/public key values, returns true if successful
     bool SetKey(std::string strSecret, CKey& key, CPubKey& pubkey);
     /// Sign the message, returns true if successful

@@ -106,10 +106,10 @@ int GetNextSuperblock(int height)
 bool IsBudgetCollateralValid(uint256 nTxCollateralHash, uint256 nExpectedHash, std::string& strError, int64_t& nTime, int& nConf)
 {
     uint256 nBlockHash;
-    CTransactionRef txCollateral = nullptr;
+    CTransactionRef txCollateral;
     txCollateral = GetTransaction(::ChainActive().Tip(), nullptr, nTxCollateralHash, Params().GetConsensus(), nBlockHash);
     if (!txCollateral) {
-        strError = strprintf("Can't find collateral tx %s", txCollateral->ToString());
+        strError = strprintf("Can't find collateral tx");
         LogPrintf("CBudgetProposalBroadcast::IsBudgetCollateralValid - %s\n", strError);
         return false;
     }

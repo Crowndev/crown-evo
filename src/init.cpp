@@ -2015,7 +2015,7 @@ bool AppInitMain(const util::Ref& context, NodeContext& node, interfaces::BlockA
 
     // ********************************************************* Step 13: finished
 
-    node.scheduler->scheduleEvery(boost::bind(&ThreadCheckMasternode), std::chrono::seconds{1});
+    node.scheduler->scheduleEvery(boost::bind(&ThreadCheckLegacySigner), std::chrono::seconds{1});
 
     SetRPCWarmupFinished();
     uiInterface.InitMessage(_("Done loading").translated);

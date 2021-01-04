@@ -98,12 +98,10 @@ bool AlreadyHaveMasternodeTypes(const CInv& inv, const CTxMemPool& mempool)
     return true;
 }
 
-void ProcessGetDataMasternodeTypes(CNode* pfrom, const CChainParams& chainparams, CConnman* connman, const CTxMemPool& mempool, const CInv& inv, bool& push) LOCKS_EXCLUDED(cs_main)
+void ProcessGetDataMasternodeTypes(CNode* pfrom, const CChainParams& chainparams, CConnman* connman, const CTxMemPool& mempool, const CInv& inv, bool& pushed) LOCKS_EXCLUDED(cs_main)
 {
     const CNetMsgMaker msgMaker(PROTOCOL_VERSION);
     {
-        bool pushed = false;
-
         //! common spork
         if (!pushed && inv.type == MSG_SPORK) {
             if(mapSporks.count(inv.hash)) {

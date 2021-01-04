@@ -152,7 +152,7 @@ bool CSystemnodePing::VerifySignature(const CPubKey& pubKeySystemnode, int& nDos
 
     if (!legacySigner.VerifyMessage(pubKeySystemnode, vchSig, strMessage, errorMessage)) {
         LogPrint(BCLog::NET, "CSystemnodePing::VerifySignature - Got bad Systemnode ping signature %s Error: %s\n", vin.ToString(), errorMessage);
-        nDos = 33;
+        // nDos = 33;
         return false;
     }
     return true;
@@ -211,6 +211,22 @@ CSystemnode::CSystemnode(const CSystemnodeBroadcast& snb)
     unitTest = false;
     protocolVersion = snb.protocolVersion;
     lastTimeChecked = 0;
+}
+
+bool CSystemnode::IsInputAssociatedWithPubkey()
+{
+    CScript payee = GetScriptForDestination(PKHash(pubkey));
+
+    uint256 hash;
+    CTransactionRef tx;
+    tx = GetTransaction(::ChainActive().Tip(), nullptr, vin.prevout.hash, Params().GetConsensus(), hash);
+    if (tx) {
+        for (CTxOut out : tx->vout) {
+            if (out.nValue == Params().GetConsensus().nSystemnodeCollateral && out.scriptPubKey == payee) return true;
+        }
+    }
+
+    return false;
 }
 
 bool CSystemnode::IsValidNetAddr()

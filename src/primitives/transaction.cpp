@@ -129,12 +129,14 @@ bool CTransaction::IsCoinStake() const
 std::string CTransaction::ToString() const
 {
     std::string str;
-    str += strprintf("CTransaction(hash=%s, ver=%d, vin.size=%u, vout.size=%u, nLockTime=%u)\n",
+    str += strprintf("CTransaction(hash=%s, ver=%d, type=%d, vin.size=%u, vout.size=%u, nLockTime=%u, extraPayload.size=%d)\n",
         GetHash().ToString().substr(0,10),
         nVersion,
+        nType,
         vin.size(),
         vout.size(),
-        nLockTime);
+        nLockTime,
+        extraPayload.size());
     for (const auto& tx_in : vin)
         str += "    " + tx_in.ToString() + "\n";
     for (const auto& tx_in : vin)

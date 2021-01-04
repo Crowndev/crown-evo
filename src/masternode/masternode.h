@@ -251,6 +251,7 @@ public:
         return activeState == MASTERNODE_ENABLED;
     }
 
+    bool IsInputAssociatedWithPubkey();
     bool IsValidNetAddr() const;
 
     int GetMasternodeInputAge()

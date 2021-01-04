@@ -248,6 +248,22 @@ void CMasternode::Check(bool forceCheck)
     activeState = MASTERNODE_ENABLED; // OK
 }
 
+bool CMasternode::IsInputAssociatedWithPubkey()
+{
+    CScript payee = GetScriptForDestination(PKHash(pubkey));
+
+    uint256 hash;
+    CTransactionRef tx;
+    tx = GetTransaction(::ChainActive().Tip(), nullptr, vin.prevout.hash, Params().GetConsensus(), hash);
+    if (tx) {
+        for (CTxOut out : tx->vout) {
+            if (out.nValue == Params().GetConsensus().nMasternodeCollateral && out.scriptPubKey == payee) return true;
+        }
+    }
+
+    return false;
+}
+
 bool CMasternode::IsValidNetAddr() const
 {
     return (addr.IsIPv4() && addr.IsRoutable());
@@ -801,7 +817,7 @@ bool CMasternodePing::VerifySignature(const CPubKey& pubKeyMasternode, int& nDos
 
     if (!legacySigner.VerifyMessage(pubKeyMasternode, vchSig, strMessage, errorMessage)) {
         LogPrint(BCLog::NET, "CMasternodePing::VerifySignature - Got bad Masternode ping signature %s Error: %s\n", vin.ToString(), errorMessage);
-        nDos = 33;
+        // nDos = 33;
         return false;
     }
 

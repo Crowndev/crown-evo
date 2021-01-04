@@ -242,9 +242,9 @@ bool CSystemnodeMan::CheckSnbAndUpdateSystemnodeList(CSystemnodeBroadcast snb, i
 
     // make sure the vout that was signed is related to the transaction that spawned the Systemnode
     //  - this is expensive, so it's only done once per Systemnode
-    if (!legacySigner.IsVinAssociatedWithPubkey(snb.vin, snb.pubkey)) {
+    if (!snb.IsInputAssociatedWithPubkey()) {
         LogPrint(BCLog::NET, "CSystemnodeMan::CheckSnbAndUpdateSystemnodeList - Got mismatched pubkey and vin\n");
-        nDos = 33;
+        // nDos = 33;
         return false;
     }
 

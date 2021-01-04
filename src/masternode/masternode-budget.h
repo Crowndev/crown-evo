@@ -165,11 +165,8 @@ public:
 
     bool HasItem(uint256 hash) const
     {
-        //LOCK(m_cs);
-
-        return
-            //mapSeenMasternodeBudgetProposals.count(hash) ||
-            mapSeenMasternodeBudgetVotes.count(hash) || mapSeenBudgetDrafts.count(hash) || mapSeenBudgetDraftVotes.count(hash);
+        LOCK(m_cs);
+        return mapSeenMasternodeBudgetVotes.count(hash) || mapSeenBudgetDrafts.count(hash) || mapSeenBudgetDraftVotes.count(hash);
     }
 
     const BudgetDraftBroadcast* GetSeenBudgetDraft(uint256 hash) const;

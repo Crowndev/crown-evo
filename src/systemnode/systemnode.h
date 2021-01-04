@@ -200,6 +200,7 @@ public:
     {
         return activeState == SYSTEMNODE_ENABLED;
     }
+    bool IsInputAssociatedWithPubkey();
     bool IsValidNetAddr();
     int GetSystemnodeInputAge()
     {

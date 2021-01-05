@@ -30,7 +30,6 @@ public:
 
     SERIALIZE_METHODS(CNetFulfilledRequestManager, obj)
     {
-        LOCK(obj.cs_mapFulfilledRequests);
         READWRITE(obj.mapFulfilledRequests);
     }
 

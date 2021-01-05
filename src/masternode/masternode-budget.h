@@ -190,7 +190,7 @@ public:
     std::string ToString() const;
 
     void CheckOrphanVotes(CConnman& connman);
-    void CheckAndRemove(CConnman& connman);
+    void CheckAndRemove(CConnman* connman = nullptr);
 
     void Clear()
     {

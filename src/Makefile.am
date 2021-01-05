@@ -133,6 +133,7 @@ BITCOIN_CORE_H = \
   consensus/tx_verify.h \
   core_io.h \
   core_memusage.h \
+  crown/cache.h \
   crown/init.h \
   crown/instantx.h \
   crown/legacycalls.h \
@@ -141,6 +142,7 @@ BITCOIN_CORE_H = \
   crown/spork.h \
   cuckoocache.h \
   dbwrapper.h \
+  flat-database.h \
   flatfile.h \
   fs.h \
   httprpc.h \
@@ -300,6 +302,7 @@ libbitcoin_server_a_SOURCES = \
   blockfilter.cpp \
   chain.cpp \
   consensus/tx_verify.cpp \
+  crown/cache.cpp \
   crown/init.cpp \
   crown/instantx.cpp \
   crown/legacycalls.cpp \

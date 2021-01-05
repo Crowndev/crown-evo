@@ -13,6 +13,7 @@
 #include <amount.h>
 #include <banman.h>
 #include <blockfilter.h>
+#include <crown/cache.h>
 #include <chain.h>
 #include <chainparams.h>
 #include <compat/sanity.h>
@@ -234,6 +235,8 @@ void Shutdown(NodeContext& node)
     node.peerman.reset();
     node.connman.reset();
     node.banman.reset();
+
+    DumpCaches();
 
     if (node.mempool && node.mempool->IsLoaded() && node.args->GetArg("-persistmempool", DEFAULT_PERSIST_MEMPOOL)) {
         DumpMempool(*node.mempool);
@@ -1841,6 +1844,13 @@ bool AppInitMain(const util::Ref& context, NodeContext& node, interfaces::BlockA
         // Advertise witness capabilities.
         // The option to not set NODE_WITNESS is only used in the tests and should be removed.
         nLocalServices = ServiceFlags(nLocalServices | NODE_WITNESS);
+    }
+
+    // ********************************************************* Step 10b: read cache
+
+    if (!LoadCaches()) {
+        InitError(strprintf(_("Error: Failed to correctly read caches")));
+        return false;
     }
 
     // ********************************************************* Step 11: import blocks

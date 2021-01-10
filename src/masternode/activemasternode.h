@@ -18,6 +18,9 @@
 #define ACTIVE_MASTERNODE_NOT_CAPABLE 3
 #define ACTIVE_MASTERNODE_STARTED 4
 
+class CActiveMasternode;
+extern CActiveMasternode activeMasternode;
+
 // Responsible for activating the Masternode and pinging the network
 class CActiveMasternode {
 private:
@@ -53,6 +56,8 @@ public:
 
     /// Enable cold wallet mode (run a Masternode with no funds)
     bool EnableHotColdMasterNode(const CTxIn& vin, const CService& addr);
+
+    std::vector<COutput> SelectCoinsMasternode();
 };
 
 #endif

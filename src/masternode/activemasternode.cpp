@@ -257,3 +257,46 @@ bool CActiveMasternode::EnableHotColdMasterNode(const CTxIn& newVin, const CServ
 
     return true;
 }
+
+// get all possible outputs for running Masternode
+std::vector<COutput> CActiveMasternode::SelectCoinsMasternode()
+{
+    std::vector<COutput> vCoins;
+    std::vector<COutput> filteredCoins;
+    std::vector<COutPoint> confLockedCoins;
+
+    auto m_wallet = GetMainWallet();
+    if (!m_wallet) return filteredCoins;
+
+    // Temporary unlock MN coins from masternode.conf
+    if (gArgs.GetBoolArg("-mnconflock", true)) {
+        uint256 mnTxHash = uint256();
+        for (const auto mne : masternodeConfig.getEntries()) {
+            mnTxHash.SetHex(mne.getTxHash());
+            int nIndex = 0;
+            if(!mne.castOutputIndex(nIndex))
+                continue;
+            COutPoint outpoint = COutPoint(mnTxHash, nIndex);
+            confLockedCoins.push_back(outpoint);
+            m_wallet->UnlockCoin(outpoint);
+        }
+    }
+
+    // Retrieve all possible outputs
+    m_wallet->AvailableCoins(vCoins);
+
+    // Lock MN coins from masternode.conf back if they where temporary unlocked
+    if (!confLockedCoins.empty()) {
+        for (COutPoint outpoint : confLockedCoins)
+            m_wallet->LockCoin(outpoint);
+    }
+
+    // Filter appropriate coins
+    for (const COutput& out : vCoins) {
+        if (out.tx->tx->vout[out.i].nValue == Params().GetConsensus().nMasternodeCollateral) {
+            filteredCoins.push_back(out);
+        }
+    }
+
+    return filteredCoins;
+}

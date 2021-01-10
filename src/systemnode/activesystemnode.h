@@ -59,6 +59,8 @@ public:
 
     /// Enable cold wallet mode (run a Systemnode with no funds)
     bool EnableHotColdSystemNode(const CTxIn& vin, const CService& addr);
+
+    std::vector<COutput> SelectCoinsSystemnode();
 };
 
 #endif

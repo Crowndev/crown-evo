@@ -58,6 +58,8 @@ public:
 
     SERIALIZE_METHODS(CSystemnodeMan, obj)
     {
+        LOCK(obj.cs);
+
         READWRITE(obj.vSystemnodes);
         READWRITE(obj.mAskedUsForSystemnodeList);
         READWRITE(obj.mWeAskedForSystemnodeList);

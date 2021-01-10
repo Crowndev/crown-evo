@@ -200,6 +200,8 @@ public:
 
     SERIALIZE_METHODS(CMasternode, obj)
     {
+        LOCK(obj.cs);
+
         READWRITE(obj.vin);
         READWRITE(obj.addr);
         READWRITE(obj.pubkey);

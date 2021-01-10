@@ -20,10 +20,12 @@
 #include <masternode/masternode-sync.h>
 #include <masternode/masternode.h>
 #include <masternode/masternodeman.h>
+#include <node/context.h>
 #include <net.h>
 #include <net_processing.h>
 #include <netfulfilledman.h>
 #include <netmessagemaker.h>
+#include <rpc/blockchain.h>
 #include <util/system.h>
 
 CBudgetManager budget;
@@ -372,13 +374,14 @@ bool CBudgetManager::AddProposal(const CBudgetProposal& budgetProposal, bool che
     return true;
 }
 
-void CBudgetManager::CheckAndRemove(CConnman* connman)
+void CBudgetManager::CheckAndRemove()
 {
     LOCK(m_cs);
 
     LogPrintf("CBudgetManager::CheckAndRemove\n");
 
     std::string strError = "";
+    CConnman& connman = *g_rpc_node->connman;
 
     LogPrintf("CBudgetManager::CheckAndRemove - mapBudgetDrafts cleanup - size: %d\n", mapBudgetDrafts.size());
     std::map<uint256, BudgetDraft>::iterator it = mapBudgetDrafts.begin();
@@ -391,7 +394,7 @@ void CBudgetManager::CheckAndRemove(CConnman* connman)
             if (Params().NetworkIDString() == CBaseChainParams::TESTNET || (Params().NetworkIDString() == CBaseChainParams::MAIN && rand() % 4 == 0)) {
                 //do this 1 in 4 blocks -- spread out the voting activity on mainnet
                 // -- this function is only called every sixth block, so this is really 1 in 24 blocks
-                pbudgetDraft->AutoCheck(*connman);
+                pbudgetDraft->AutoCheck(connman);
             } else {
                 LogPrintf("BudgetDraft::AutoCheck - waiting\n");
             }
@@ -737,7 +740,7 @@ void CBudgetManager::NewBlock(CConnman& connman)
         MarkSynced();
     }
 
-    CheckAndRemove(&connman);
+    CheckAndRemove();
 
     //remove invalid votes once in a while (we have to check the signatures and validity of every vote, somewhat CPU intensive)
 

@@ -62,6 +62,8 @@ public:
 
     SERIALIZE_METHODS(CMasternodeMan, obj)
     {
+        LOCK(obj.cs);
+
         READWRITE(obj.vMasternodes);
         READWRITE(obj.mAskedUsForMasternodeList);
         READWRITE(obj.mWeAskedForMasternodeList);
@@ -133,12 +135,6 @@ public:
     void UpdateMasternodeList(CMasternodeBroadcast mnb, CConnman& connman);
     /// Perform complete check and only then update list and maps
     bool CheckMnbAndUpdateMasternodeList(CMasternodeBroadcast mnb, int& nDos, CConnman& connman);
-
-    /**
-     * Called to notify CGovernanceManager that the masternode index has been updated.
-     * Must be called while not holding the CMasternodeMan::cs mutex
-     */
-    void NotifyMasternodeUpdates(CConnman& connman);
 };
 
 #endif

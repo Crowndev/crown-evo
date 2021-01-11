@@ -4,8 +4,8 @@
 
 #include <addrman.h>
 #include <consensus/validation.h>
-#include <crown/nodewallet.h>
 #include <crown/legacysigner.h>
+#include <crown/nodewallet.h>
 #include <key_io.h>
 #include <mn-pos/blockwitness.h>
 #include <mn-pos/prooftracker.h>
@@ -22,141 +22,6 @@
 //
 // CSystemnodePing
 //
-
-CSystemnodePing::CSystemnodePing()
-{
-    vin = CTxIn();
-    blockHash = uint256();
-    sigTime = 0;
-    vchSig = std::vector<unsigned char>();
-}
-
-CSystemnodePing::CSystemnodePing(const CTxIn& newVin)
-{
-    vin = newVin;
-    blockHash = ::ChainActive()[::ChainActive().Height() - 12]->GetBlockHash();
-    sigTime = GetAdjustedTime();
-    vchSig = std::vector<unsigned char>();
-}
-
-bool CSystemnodePing::Sign(const CKey& keySystemnode, const CPubKey& pubKeySystemnode)
-{
-    std::string errorMessage;
-    std::string strThroNeSignMessage;
-    sigTime = GetAdjustedTime();
-    std::string strMessage = vin.ToString() + blockHash.ToString() + boost::lexical_cast<std::string>(sigTime);
-
-    if (!legacySigner.SignMessage(strMessage, errorMessage, vchSig, keySystemnode)) {
-        LogPrint(BCLog::NET, "CSystemnodePing::Sign() - Error: %s\n", errorMessage);
-        return false;
-    }
-
-    if (!legacySigner.VerifyMessage(pubKeySystemnode, vchSig, strMessage, errorMessage)) {
-        LogPrint(BCLog::NET, "CSystemnodePing::Sign() - Error: %s\n", errorMessage);
-        return false;
-    }
-
-    return true;
-}
-
-void CSystemnodePing::Relay(CConnman& connman)
-{
-    CInv inv(MSG_SYSTEMNODE_PING, GetHash());
-    connman.RelayInv(inv);
-}
-
-bool CSystemnodePing::CheckAndUpdate(int& nDos, CConnman& connman, bool fRequireEnabled, bool fCheckSigTimeOnly)
-{
-    if (sigTime > GetAdjustedTime() + 60 * 60) {
-        LogPrint(BCLog::NET, "CSystemnodePing::CheckAndUpdate - Signature rejected, too far into the future %s\n", vin.ToString());
-        nDos = 1;
-        return false;
-    }
-
-    if (sigTime <= GetAdjustedTime() - 60 * 60) {
-        LogPrint(BCLog::NET, "CSystemnodePing::CheckAndUpdate - Signature rejected, too far into the past %s - %d %d \n", vin.ToString(), sigTime, GetAdjustedTime());
-        nDos = 1;
-        return false;
-    }
-
-    if (fCheckSigTimeOnly) {
-        CSystemnode* psn = snodeman.Find(vin);
-        if (psn)
-            return VerifySignature(psn->pubkey2, nDos);
-        return true;
-    }
-
-    LogPrint(BCLog::NET, "CSystemnodePing::CheckAndUpdate - New Ping - %s - %s - %lli\n", GetHash().ToString(), blockHash.ToString(), sigTime);
-
-    // see if we have this Systemnode
-    CSystemnode* psn = snodeman.Find(vin);
-    if (psn && psn->protocolVersion >= systemnodePayments.GetMinSystemnodePaymentsProto()) {
-        if (fRequireEnabled && !psn->IsEnabled())
-            return false;
-
-        // LogPrint(BCLog::NET, "snping - Found corresponding sn for vin: %s\n", vin.ToString());
-        // update only if there is no known ping for this systemnode or
-        // last ping was more then SYSTEMNODE_MIN_MNP_SECONDS-60 ago comparing to this one
-        if (!psn->IsPingedWithin(SYSTEMNODE_MIN_SNP_SECONDS - 60, sigTime)) {
-            if (!VerifySignature(psn->pubkey2, nDos))
-                return false;
-
-            BlockMap::iterator mi = g_chainman.BlockIndex().find(blockHash);
-            if (mi != g_chainman.BlockIndex().end() && (*mi).second) {
-                if ((*mi).second->nHeight < ::ChainActive().Height() - 24) {
-                    LogPrint(BCLog::NET, "CSystemnodePing::CheckAndUpdate - Systemnode %s block hash %s is too old\n", vin.ToString(), blockHash.ToString());
-                    // Do nothing here (no Systemnode update, no snping relay)
-                    // Let this node to be visible but fail to accept snping
-
-                    return false;
-                }
-            } else {
-                LogPrint(BCLog::NET, "CSystemnodePing::CheckAndUpdate - Systemnode %s block hash %s is unknown\n", vin.ToString(), blockHash.ToString());
-                // maybe we stuck so we shouldn't ban this node, just fail to accept it
-                // TODO: or should we also request this block?
-
-                return false;
-            }
-
-            psn->lastPing = *this;
-
-            //snodeman.mapSeenSystemnodeBroadcast.lastPing is probably outdated, so we'll update it
-            CSystemnodeBroadcast snb(*psn);
-            uint256 hash = snb.GetHash();
-            if (snodeman.mapSeenSystemnodeBroadcast.count(hash)) {
-                snodeman.mapSeenSystemnodeBroadcast[hash].lastPing = *this;
-            }
-
-            psn->Check(true);
-            if (!psn->IsEnabled())
-                return false;
-
-            LogPrint(BCLog::NET, "CSystemnodePing::CheckAndUpdate - Systemnode ping accepted, vin: %s\n", vin.ToString());
-
-            Relay(connman);
-            return true;
-        }
-        LogPrint(BCLog::NET, "CSystemnodePing::CheckAndUpdate - Systemnode ping arrived too early, vin: %s\n", vin.ToString());
-        //nDos = 1; //disable, this is happening frequently and causing banned peers
-        return false;
-    }
-    LogPrint(BCLog::NET, "CSystemnodePing::CheckAndUpdate - Couldn't find compatible Systemnode entry, vin: %s\n", vin.ToString());
-
-    return false;
-}
-
-bool CSystemnodePing::VerifySignature(const CPubKey& pubKeySystemnode, int& nDos) const
-{
-    std::string strMessage = vin.ToString() + blockHash.ToString() + boost::lexical_cast<std::string>(sigTime);
-    std::string errorMessage = "";
-
-    if (!legacySigner.VerifyMessage(pubKeySystemnode, vchSig, strMessage, errorMessage)) {
-        LogPrint(BCLog::NET, "CSystemnodePing::VerifySignature - Got bad Systemnode ping signature %s Error: %s\n", vin.ToString(), errorMessage);
-        // nDos = 33;
-        return false;
-    }
-    return true;
-}
 
 //
 // CSystemnode
@@ -222,7 +87,8 @@ bool CSystemnode::IsInputAssociatedWithPubkey()
     tx = GetTransaction(::ChainActive().Tip(), nullptr, vin.prevout.hash, Params().GetConsensus(), hash);
     if (tx) {
         for (CTxOut out : tx->vout) {
-            if (out.nValue == Params().GetConsensus().nSystemnodeCollateral && out.scriptPubKey == payee) return true;
+            if (out.nValue == Params().GetConsensus().nSystemnodeCollateral && out.scriptPubKey == payee)
+                return true;
         }
     }
 
@@ -254,7 +120,7 @@ arith_uint256 CSystemnode::CalculateScore(int64_t nBlockHeight) const
     uint256 hash = uint256();
 
     if (!GetBlockHash(hash, nBlockHeight)) {
-        LogPrint(BCLog::NET, "CalculateScore ERROR - nHeight %d - Returned 0\n", nBlockHeight);
+        LogPrint(BCLog::SYSTEMNODE, "CalculateScore ERROR - nHeight %d - Returned 0\n", nBlockHeight);
         return arith_uint256();
     }
 
@@ -336,7 +202,7 @@ void CSystemnode::Check(bool forceCheck)
         CollateralStatus err = CheckCollateral(vin.prevout);
         if (err == COLLATERAL_UTXO_NOT_FOUND) {
             activeState = SYSTEMNODE_VIN_SPENT;
-            LogPrintf("CSystemnode::Check -- Failed to find Systemnode UTXO, systemnode=%s\n", vin.prevout.ToString());
+            LogPrint(BCLog::SYSTEMNODE, "CSystemnode::Check -- Failed to find Systemnode UTXO, systemnode=%s\n", vin.prevout.ToString());
             return;
         }
     }
@@ -456,13 +322,13 @@ bool CSystemnodeBroadcast::CheckAndUpdate(int& nDos, CConnman& connman)
 
     // make sure signature isn't in the future (past is OK)
     if (sigTime > GetAdjustedTime() + 60 * 60) {
-        LogPrint(BCLog::NET, "snb - Signature rejected, too far into the future %s\n", vin.ToString());
+        LogPrint(BCLog::SYSTEMNODE, "snb - Signature rejected, too far into the future %s\n", vin.ToString());
         nDos = 1;
         return false;
     }
 
     if (protocolVersion < systemnodePayments.GetMinSystemnodePaymentsProto()) {
-        LogPrint(BCLog::NET, "snb - ignoring outdated systemnode %s protocol version %d\n", vin.ToString(), protocolVersion);
+        LogPrint(BCLog::SYSTEMNODE, "snb - ignoring outdated systemnode %s protocol version %d\n", vin.ToString(), protocolVersion);
         return false;
     }
 
@@ -470,7 +336,7 @@ bool CSystemnodeBroadcast::CheckAndUpdate(int& nDos, CConnman& connman)
     pubkeyScript = GetScriptForDestination(PKHash(pubkey));
 
     if (pubkeyScript.size() != 25) {
-        LogPrint(BCLog::NET, "snb - pubkey the wrong size\n");
+        LogPrint(BCLog::SYSTEMNODE, "snb - pubkey the wrong size\n");
         nDos = 100;
         return false;
     }
@@ -479,13 +345,13 @@ bool CSystemnodeBroadcast::CheckAndUpdate(int& nDos, CConnman& connman)
     pubkeyScript2 = GetScriptForDestination(PKHash(pubkey2));
 
     if (pubkeyScript2.size() != 25) {
-        LogPrint(BCLog::NET, "snb - pubkey2 the wrong size\n");
+        LogPrint(BCLog::SYSTEMNODE, "snb - pubkey2 the wrong size\n");
         nDos = 100;
         return false;
     }
 
     if (!vin.scriptSig.empty()) {
-        LogPrint(BCLog::NET, "snb - Ignore Not Empty ScriptSig %s\n", vin.ToString());
+        LogPrint(BCLog::SYSTEMNODE, "snb - Ignore Not Empty ScriptSig %s\n", vin.ToString());
         return false;
     }
 
@@ -495,34 +361,17 @@ bool CSystemnodeBroadcast::CheckAndUpdate(int& nDos, CConnman& connman)
 
     std::string strMessage;
     std::string errorMessage = "";
+    strMessage = addr.ToString(false) + boost::lexical_cast<std::string>(sigTime) + EncodeDestination(PKHash(pubkey)) + EncodeDestination(PKHash(pubkey2)) + boost::lexical_cast<std::string>(protocolVersion);
 
-    std::string vchPubKey(pubkey.begin(), pubkey.end());
-    std::string vchPubKey2(pubkey2.begin(), pubkey2.end());
-    strMessage = addr.ToString() + boost::lexical_cast<std::string>(sigTime) + vchPubKey + vchPubKey2 + boost::lexical_cast<std::string>(protocolVersion);
+    LogPrint(BCLog::SYSTEMNODE, "snb - sanitized strMessage: %s, pubkey address: %s, sig: %s\n", SanitizeString(strMessage), EncodeDestination(PKHash(pubkey)), EncodeBase64(sig));
 
     if (!legacySigner.VerifyMessage(pubkey, sig, strMessage, errorMessage)) {
-        if (addr.ToString() != addr.ToString()) {
-            // maybe it's wrong format, try again with the old one
-            strMessage = addr.ToString() + boost::lexical_cast<std::string>(sigTime) + vchPubKey + vchPubKey2 + boost::lexical_cast<std::string>(protocolVersion);
-
-            if (!legacySigner.VerifyMessage(pubkey, sig, strMessage, errorMessage)) {
-                // didn't work either
-                LogPrint(BCLog::NET, "snb - Got bad systemnode address signature, sanitized error: %s\n", SanitizeString(errorMessage));
-                // there is a bug in old MN signatures, ignore such MN but do not ban the peer we got this from
-                return false;
-            }
-        } else {
-            // nope, sig is actually wrong
-            LogPrint(BCLog::NET, "snb - Got bad systemnode address signature, sanitized error: %s\n", SanitizeString(errorMessage));
-            // there is a bug in old MN signatures, ignore such MN but do not ban the peer we got this from
-            return false;
-        }
+        LogPrint(BCLog::SYSTEMNODE, "snb - Got bad Systemnode address signature, sanitized error: %s\n", SanitizeString(errorMessage));
+        return false;
     }
 
-    if (Params().NetworkIDString() == CBaseChainParams::MAIN) {
-        if (addr.GetPort() != 9340)
-            return false;
-    } else if (addr.GetPort() == 9340)
+    //! or do it like this for all nets...
+    if (addr.GetPort() != Params().GetDefaultPort())
         return false;
 
     //search existing systemnode list, this is where we update existing Systemnodes with new snb broadcasts
@@ -536,7 +385,7 @@ bool CSystemnodeBroadcast::CheckAndUpdate(int& nDos, CConnman& connman)
     // unless someone is doing something fishy
     // (mapSeensystemnodeBroadcast in CSystemnodeMan::ProcessMessage should filter legit duplicates)
     if (psn->sigTime >= sigTime) {
-        LogPrint(BCLog::NET, "CsystemnodeBroadcast::CheckAndUpdate - Bad sigTime %d for Systemnode %20s %105s (existing broadcast is at %d)\n",
+        LogPrint(BCLog::SYSTEMNODE, "CSystemnodeBroadcast::CheckAndUpdate - Bad sigTime %d for Systemnode %20s %105s (existing broadcast is at %d)\n",
             sigTime, addr.ToString(), vin.ToString(), psn->sigTime);
         return false;
     }
@@ -549,7 +398,7 @@ bool CSystemnodeBroadcast::CheckAndUpdate(int& nDos, CConnman& connman)
     //   after that they just need to match
     if (psn->pubkey == pubkey && !psn->IsBroadcastedWithin(SYSTEMNODE_MIN_SNB_SECONDS)) {
         //take the newest entry
-        LogPrint(BCLog::NET, "snb - Got updated entry for %s\n", addr.ToString());
+        LogPrint(BCLog::SYSTEMNODE, "snb - Got updated entry for %s\n", addr.ToString());
         if (psn->UpdateFromNewBroadcast((*this), connman)) {
             psn->Check();
             if (psn->IsEnabled())
@@ -586,7 +435,7 @@ bool CSystemnodeBroadcast::CheckInputsAndAdd(int& nDoS, CConnman& connman)
 
     COutPoint snConfirms(vin.prevout.hash, vin.prevout.n);
     if (GetUTXOConfirmations(snConfirms) < SYSTEMNODE_MIN_CONFIRMATIONS) {
-        LogPrintf("snb - Input must have at least %d confirmations\n", SYSTEMNODE_MIN_CONFIRMATIONS);
+        LogPrint(BCLog::SYSTEMNODE, "snb - Input must have at least %d confirmations\n", SYSTEMNODE_MIN_CONFIRMATIONS);
         // maybe we miss few blocks, let this snb to be checked again later
         snodeman.mapSeenSystemnodeBroadcast.erase(GetHash());
         systemnodeSync.mapSeenSyncSNB.erase(GetHash());
@@ -596,22 +445,19 @@ bool CSystemnodeBroadcast::CheckInputsAndAdd(int& nDoS, CConnman& connman)
     // verify that sig time is legit in past
     // should be at least not earlier than block when 10000 CRW tx got SYSTEMNODE_MIN_CONFIRMATIONS
     uint256 hashBlock = uint256();
-    CTransactionRef tx2;
-    tx2 = GetTransaction(::ChainActive().Tip(), nullptr, vin.prevout.hash, Params().GetConsensus(), hashBlock);
-    if (!tx2)
-        return false;
+    CTransactionRef tx2 = GetTransaction(::ChainActive().Tip(), nullptr, vin.prevout.hash, Params().GetConsensus(), hashBlock);
     BlockMap::iterator mi = g_chainman.BlockIndex().find(hashBlock);
     if (mi != g_chainman.BlockIndex().end() && (*mi).second) {
         CBlockIndex* pMNIndex = (*mi).second; // block for 10000 CRW tx -> 1 confirmation
         CBlockIndex* pConfIndex = ::ChainActive()[pMNIndex->nHeight + SYSTEMNODE_MIN_CONFIRMATIONS - 1]; // block where tx got SYSTEMNODE_MIN_CONFIRMATIONS
         if (pConfIndex->GetBlockTime() > sigTime) {
-            LogPrint(BCLog::NET, "snb - Bad sigTime %d for systemnode %20s %105s (%i conf block is at %d)\n",
+            LogPrint(BCLog::SYSTEMNODE, "snb - Bad sigTime %d for systemnode %20s %105s (%i conf block is at %d)\n",
                 sigTime, addr.ToString(), vin.ToString(), SYSTEMNODE_MIN_CONFIRMATIONS, pConfIndex->GetBlockTime());
             return false;
         }
     }
 
-    LogPrint(BCLog::NET, "snb - Got NEW systemnode entry - %s - %s - %s - %lli \n", GetHash().ToString(), addr.ToString(), vin.ToString(), sigTime);
+    LogPrint(BCLog::SYSTEMNODE, "snb - Got NEW systemnode entry - %s - %s - %s - %lli \n", GetHash().ToString(), addr.ToString(), vin.ToString(), sigTime);
     CSystemnode sn(*this);
     snodeman.Add(sn);
 
@@ -620,13 +466,13 @@ bool CSystemnodeBroadcast::CheckInputsAndAdd(int& nDoS, CConnman& connman)
         activeSystemnode.EnableHotColdSystemNode(vin, addr);
         if (!vchSignover.empty()) {
             if (pubkey.Verify(pubkey2.GetHash(), vchSignover)) {
-                LogPrint(BCLog::NET, "%s: Verified pubkey2 signover for staking, added to activesystemnode\n", __func__);
+                LogPrint(BCLog::SYSTEMNODE, "%s: Verified pubkey2 signover for staking, added to activesystemnode\n", __func__);
                 activeSystemnode.vchSigSignover = vchSignover;
             } else {
-                LogPrint(BCLog::NET, "%s: Failed to verify pubkey on signover!\n", __func__);
+                LogPrint(BCLog::SYSTEMNODE, "%s: Failed to verify pubkey on signover!\n", __func__);
             }
         } else {
-            LogPrint(BCLog::NET, "%s: NOT SIGNOVER!\n", __func__);
+            LogPrint(BCLog::SYSTEMNODE, "%s: NOT SIGNOVER!\n", __func__);
         }
     }
 
@@ -703,20 +549,20 @@ bool CSystemnodeBroadcast::Create(std::string strService, std::string strKeySyst
         //need correct blocks to send ping
         if (!fOffline && !systemnodeSync.IsBlockchainSynced()) {
             strErrorMessage = "Sync in progress. Must wait until sync is complete to start Systemnode";
-            LogPrint(BCLog::NET, "CSystemnodeBroadcast::Create -- %s\n", strErrorMessage);
+            LogPrint(BCLog::SYSTEMNODE, "CSystemnodeBroadcast::Create -- %s\n", strErrorMessage);
             return false;
         }
     }
 
     if (!legacySigner.SetKey(strKeySystemnode, keySystemnodeNew, pubKeySystemnodeNew)) {
         strErrorMessage = strprintf("Can't find keys for systemnode %s - %s", strService, strErrorMessage);
-        LogPrint(BCLog::NET, "CSystemnodeBroadcast::Create -- %s\n", strErrorMessage);
+        LogPrint(BCLog::SYSTEMNODE, "CSystemnodeBroadcast::Create -- %s\n", strErrorMessage);
         return false;
     }
 
     if (!currentNode.GetSystemnodeVinAndKeys(txin, pubKeyCollateralAddress, keyCollateralAddress)) {
         strErrorMessage = strprintf("Could not allocate txin for systemnode");
-        LogPrint(BCLog::NET, "CSystemnodeBroadcast::Create -- %s\n", strErrorMessage);
+        LogPrint(BCLog::SYSTEMNODE, "CSystemnodeBroadcast::Create -- %s\n", strErrorMessage);
         return false;
     }
 
@@ -724,7 +570,7 @@ bool CSystemnodeBroadcast::Create(std::string strService, std::string strKeySyst
     if (age < SYSTEMNODE_MIN_CONFIRMATIONS) {
         strErrorMessage = strprintf("Input must have at least %d confirmations. Now it has %d",
             SYSTEMNODE_MIN_CONFIRMATIONS, age);
-        LogPrint(BCLog::NET, "CSystemnodeBroadcast::Create -- %s\n", strErrorMessage);
+        LogPrint(BCLog::SYSTEMNODE, "CSystemnodeBroadcast::Create -- %s\n", strErrorMessage);
         return false;
     }
 
@@ -732,12 +578,12 @@ bool CSystemnodeBroadcast::Create(std::string strService, std::string strKeySyst
     if (Params().NetworkIDString() == CBaseChainParams::MAIN) {
         if (service.GetPort() != 9340) {
             strErrorMessage = strprintf("Invalid port %u for systemnode %s - only 9340 is supported on mainnet.", service.GetPort(), strService);
-            LogPrint(BCLog::NET, "CSystemnodeBroadcast::Create -- %s\n", strErrorMessage);
+            LogPrint(BCLog::SYSTEMNODE, "CSystemnodeBroadcast::Create -- %s\n", strErrorMessage);
             return false;
         }
     } else if (service.GetPort() == 9340) {
         strErrorMessage = strprintf("Invalid port %u for systemnode %s - 9340 is only supported on mainnet.", service.GetPort(), strService);
-        LogPrint(BCLog::NET, "CSystemnodeBroadcast::Create -- %s\n", strErrorMessage);
+        LogPrint(BCLog::SYSTEMNODE, "CSystemnodeBroadcast::Create -- %s\n", strErrorMessage);
         return false;
     }
 
@@ -754,7 +600,7 @@ bool CSystemnodeBroadcast::Create(CTxIn txin, CService service, CKey keyCollater
     CSystemnodePing snp(txin);
     if (!snp.Sign(keySystemnodeNew, pubKeySystemnodeNew)) {
         strErrorMessage = strprintf("Failed to sign ping, txin: %s", txin.ToString());
-        LogPrint(BCLog::NET, "CSystemnodeBroadcast::Create --  %s\n", strErrorMessage);
+        LogPrint(BCLog::SYSTEMNODE, "CSystemnodeBroadcast::Create --  %s\n", strErrorMessage);
         snb = CSystemnodeBroadcast();
         return false;
     }
@@ -763,7 +609,7 @@ bool CSystemnodeBroadcast::Create(CTxIn txin, CService service, CKey keyCollater
 
     if (!snb.IsValidNetAddr()) {
         strErrorMessage = strprintf("Invalid IP address, systemnode=%s", txin.prevout.ToStringShort());
-        LogPrint(BCLog::NET, "CSystemnodeBroadcast::Create -- %s\n", strErrorMessage);
+        LogPrint(BCLog::SYSTEMNODE, "CSystemnodeBroadcast::Create -- %s\n", strErrorMessage);
         snb = CSystemnodeBroadcast();
         return false;
     }
@@ -771,7 +617,7 @@ bool CSystemnodeBroadcast::Create(CTxIn txin, CService service, CKey keyCollater
     snb.lastPing = snp;
     if (!snb.Sign(keyCollateralAddress)) {
         strErrorMessage = strprintf("Failed to sign broadcast, txin: %s", txin.ToString());
-        LogPrint(BCLog::NET, "CSystemnodeBroadcast::Create -- %s\n", strErrorMessage);
+        LogPrint(BCLog::SYSTEMNODE, "CSystemnodeBroadcast::Create -- %s\n", strErrorMessage);
         snb = CSystemnodeBroadcast();
         return false;
     }
@@ -779,11 +625,11 @@ bool CSystemnodeBroadcast::Create(CTxIn txin, CService service, CKey keyCollater
     //Additional signature for use in proof of stake
     if (fSignOver) {
         if (!keyCollateralAddress.Sign(pubKeySystemnodeNew.GetHash(), snb.vchSignover)) {
-            LogPrint(BCLog::NET, "CSystemnodeBroadcast::Create failed signover\n");
+            LogPrint(BCLog::SYSTEMNODE, "CSystemnodeBroadcast::Create failed signover\n");
             snb = CSystemnodeBroadcast();
             return false;
         }
-        LogPrint(BCLog::NET, "%s: Signed over to key %s\n", __func__, pubKeySystemnodeNew.GetID().GetHex());
+        LogPrint(BCLog::SYSTEMNODE, "%s: Signed over to key %s\n", __func__, pubKeySystemnodeNew.GetID().GetHex());
     }
 
     return true;
@@ -801,7 +647,7 @@ bool CSystemnodeBroadcast::Sign(const CKey& keyCollateralAddress)
     std::string strMessage = addr.ToString() + boost::lexical_cast<std::string>(sigTime) + vchPubKey + vchPubKey2 + boost::lexical_cast<std::string>(protocolVersion);
 
     if (!legacySigner.SignMessage(strMessage, errorMessage, sig, keyCollateralAddress)) {
-        LogPrint(BCLog::NET, "CSystemnodeBroadcast::Sign() - Error: %s\n", errorMessage);
+        LogPrint(BCLog::SYSTEMNODE, "CSystemnodeBroadcast::Sign() - Error: %s\n", errorMessage);
         return false;
     }
 
@@ -818,9 +664,139 @@ bool CSystemnodeBroadcast::VerifySignature() const
     std::string strMessage = addr.ToString() + boost::lexical_cast<std::string>(sigTime) + vchPubKey + vchPubKey2 + boost::lexical_cast<std::string>(protocolVersion);
 
     if (!legacySigner.VerifyMessage(pubkey, sig, strMessage, errorMessage)) {
-        LogPrint(BCLog::NET, "CSystemnodeBroadcast::VerifySignature() - Error: %s\n", errorMessage);
+        LogPrint(BCLog::SYSTEMNODE, "CSystemnodeBroadcast::VerifySignature() - Error: %s\n", errorMessage);
         return false;
     }
 
     return true;
+}
+
+CSystemnodePing::CSystemnodePing()
+{
+    vin = CTxIn();
+    blockHash = uint256();
+    sigTime = 0;
+    vchSig = std::vector<unsigned char>();
+}
+
+CSystemnodePing::CSystemnodePing(const CTxIn& newVin)
+{
+    vin = newVin;
+    blockHash = ::ChainActive()[::ChainActive().Height() - 12]->GetBlockHash();
+    sigTime = GetAdjustedTime();
+    vchSig = std::vector<unsigned char>();
+}
+
+bool CSystemnodePing::Sign(const CKey& keySystemnode, const CPubKey& pubKeySystemnode)
+{
+    std::string errorMessage;
+    std::string strThroNeSignMessage;
+    sigTime = GetAdjustedTime();
+    std::string strMessage = vin.ToString() + blockHash.ToString() + boost::lexical_cast<std::string>(sigTime);
+
+    if (!legacySigner.SignMessage(strMessage, errorMessage, vchSig, keySystemnode)) {
+        LogPrint(BCLog::SYSTEMNODE, "CSystemnodePing::Sign() - Error: %s\n", errorMessage);
+        return false;
+    }
+
+    return true;
+}
+
+bool CSystemnodePing::VerifySignature(const CPubKey& pubKeySystemnode, int& nDos) const
+{
+    std::string errorMessage;
+    std::string strMessage = vin.ToString() + blockHash.ToString() + boost::lexical_cast<std::string>(sigTime);
+
+    if (!legacySigner.VerifyMessage(pubKeySystemnode, vchSig, strMessage, errorMessage)) {
+        LogPrint(BCLog::SYSTEMNODE, "CSystemnodePing::Sign() - Error: %s\n", errorMessage);
+        return false;
+    }
+
+    return true;
+}
+
+bool CSystemnodePing::CheckAndUpdate(int& nDos, CConnman& connman, bool fRequireEnabled, bool fCheckSigTimeOnly)
+{
+    if (sigTime > GetAdjustedTime() + 60 * 60) {
+        LogPrint(BCLog::SYSTEMNODE, "CSystemnodePing::CheckAndUpdate - Signature rejected, too far into the future %s\n", vin.ToString());
+        nDos = 1;
+        return false;
+    }
+
+    if (sigTime <= GetAdjustedTime() - 60 * 60) {
+        LogPrint(BCLog::SYSTEMNODE, "CSystemnodePing::CheckAndUpdate - Signature rejected, too far into the past %s - %d %d \n", vin.ToString(), sigTime, GetAdjustedTime());
+        nDos = 1;
+        return false;
+    }
+
+    if (fCheckSigTimeOnly) {
+        CSystemnode* psn = snodeman.Find(vin);
+        if (psn)
+            return VerifySignature(psn->pubkey2, nDos);
+        return true;
+    }
+
+    LogPrint(BCLog::SYSTEMNODE, "CSystemnodePing::CheckAndUpdate - New Ping - %s - %s - %lli\n", GetHash().ToString(), blockHash.ToString(), sigTime);
+
+    // see if we have this Systemnode
+    CSystemnode* psn = snodeman.Find(vin);
+    if (psn && psn->protocolVersion >= systemnodePayments.GetMinSystemnodePaymentsProto()) {
+        if (fRequireEnabled && !psn->IsEnabled())
+            return false;
+
+        // LogPrint(BCLog::SYSTEMNODE, "snping - Found corresponding sn for vin: %s\n", vin.ToString());
+        // update only if there is no known ping for this systemnode or
+        // last ping was more then SYSTEMNODE_MIN_MNP_SECONDS-60 ago comparing to this one
+        if (!psn->IsPingedWithin(SYSTEMNODE_MIN_SNP_SECONDS - 60, sigTime)) {
+            if (!VerifySignature(psn->pubkey2, nDos))
+                return false;
+
+            BlockMap::iterator mi = g_chainman.BlockIndex().find(blockHash);
+            if (mi != g_chainman.BlockIndex().end() && (*mi).second) {
+                if ((*mi).second->nHeight < ::ChainActive().Height() - 24) {
+                    LogPrint(BCLog::SYSTEMNODE, "CSystemnodePing::CheckAndUpdate - Systemnode %s block hash %s is too old\n", vin.ToString(), blockHash.ToString());
+                    // Do nothing here (no Systemnode update, no snping relay)
+                    // Let this node to be visible but fail to accept snping
+
+                    return false;
+                }
+            } else {
+                LogPrint(BCLog::SYSTEMNODE, "CSystemnodePing::CheckAndUpdate - Systemnode %s block hash %s is unknown\n", vin.ToString(), blockHash.ToString());
+                // maybe we stuck so we shouldn't ban this node, just fail to accept it
+                // TODO: or should we also request this block?
+
+                return false;
+            }
+
+            psn->lastPing = *this;
+
+            //snodeman.mapSeenSystemnodeBroadcast.lastPing is probably outdated, so we'll update it
+            CSystemnodeBroadcast snb(*psn);
+            uint256 hash = snb.GetHash();
+            if (snodeman.mapSeenSystemnodeBroadcast.count(hash)) {
+                snodeman.mapSeenSystemnodeBroadcast[hash].lastPing = *this;
+            }
+
+            psn->Check(true);
+            if (!psn->IsEnabled())
+                return false;
+
+            LogPrint(BCLog::SYSTEMNODE, "CSystemnodePing::CheckAndUpdate - Systemnode ping accepted, vin: %s\n", vin.ToString());
+
+            Relay(connman);
+            return true;
+        }
+        LogPrint(BCLog::SYSTEMNODE, "CSystemnodePing::CheckAndUpdate - Systemnode ping arrived too early, vin: %s\n", vin.ToString());
+        //nDos = 1; //disable, this is happening frequently and causing banned peers
+        return false;
+    }
+    LogPrint(BCLog::SYSTEMNODE, "CSystemnodePing::CheckAndUpdate - Couldn't find compatible Systemnode entry, vin: %s\n", vin.ToString());
+
+    return false;
+}
+
+void CSystemnodePing::Relay(CConnman& connman)
+{
+    CInv inv(MSG_SYSTEMNODE_PING, GetHash());
+    connman.RelayInv(inv);
 }

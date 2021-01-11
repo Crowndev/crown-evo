@@ -56,6 +56,8 @@ namespace BCLog {
         QT          = (1 << 19),
         LEVELDB     = (1 << 20),
         VALIDATION  = (1 << 21),
+        MASTERNODE  = (1 << 22),
+        SYSTEMNODE  = (1 << 23),
         ALL         = ~(uint32_t)0,
     };
 

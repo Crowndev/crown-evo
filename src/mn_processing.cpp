@@ -133,16 +133,21 @@ void ProcessGetDataMasternodeTypes(CNode* pfrom, const CChainParams& chainparams
         }
         if (!pushed && inv.type == MSG_MASTERNODE_ANNOUNCE) {
             if(mnodeman.mapSeenMasternodeBroadcast.count(inv.hash)) {
-                if (pfrom->nVersion < MIN_MNW_PING_VERSION)
+                if (pfrom->nVersion < MIN_MNW_PING_VERSION) {
                     connman->PushMessage(pfrom, msgMaker.Make("mnb", mnodeman.mapSeenMasternodeBroadcast[inv.hash]));
-                else
+                } else {
                     connman->PushMessage(pfrom, msgMaker.Make("mnb_new", mnodeman.mapSeenMasternodeBroadcast[inv.hash]));
+                }
                 pushed = true;
             }
         }
         if (!pushed && inv.type == MSG_MASTERNODE_PING) {
             if(mnodeman.mapSeenMasternodePing.count(inv.hash)){
-                connman->PushMessage(pfrom, msgMaker.Make(NetMsgType::MNPING, mnodeman.mapSeenMasternodePing[inv.hash]));
+                if (pfrom->nVersion < MIN_MNW_PING_VERSION) {
+                    connman->PushMessage(pfrom, msgMaker.Make("mnp", mnodeman.mapSeenMasternodePing[inv.hash]));
+                } else {
+                    connman->PushMessage(pfrom, msgMaker.Make("mnp_new", mnodeman.mapSeenMasternodePing[inv.hash]));
+                }
                 pushed = true;
             }
         }
@@ -213,16 +218,7 @@ void ProcessGetDataMasternodeTypes(CNode* pfrom, const CChainParams& chainparams
 
 bool ProcessMessageMasternodeTypes(CNode* pfrom, const std::string& msg_type, CDataStream& vRecv, const CChainParams& chainparams, CTxMemPool& mempool, CConnman* connman, BanMan* banman, const std::atomic<bool>& interruptMsgProc)
 {
-    bool found = false;
-    const std::vector<std::string> &allMessages = getAllNetMessageTypes();
-    for (const std::string msg : allMessages) {
-        if (msg == msg_type) {
-            found = true;
-             break;
-        }
-    }
-
-    if (found) {
+    {
             mnodeman.ProcessMessage(pfrom, msg_type, vRecv, connman);
             snodeman.ProcessMessage(pfrom, msg_type, vRecv, connman);
             budget.ProcessMessage(pfrom, msg_type, vRecv, connman);

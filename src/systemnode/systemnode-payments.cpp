@@ -30,7 +30,7 @@ bool SNIsBlockPayeeValid(const CAmount& nValueCreated, const CTransaction& txNew
 {
     if (!systemnodeSync.IsSynced()) { //there is no budget data to use to check anything -- find the longest chain
         if (gArgs.GetBoolArg("-debug", false))
-            LogPrint(BCLog::NET, "Client not synced, skipping block payee checks\n");
+            LogPrint(BCLog::SYSTEMNODE, "Client not synced, skipping block payee checks\n");
         return true;
     }
 
@@ -40,11 +40,11 @@ bool SNIsBlockPayeeValid(const CAmount& nValueCreated, const CTransaction& txNew
             if (budget.IsTransactionValid(txNew, nBlockHeight)) {
                 return true;
             } else {
-                LogPrint(BCLog::NET, "Invalid budget payment detected %s\n", txNew.ToString().c_str());
+                LogPrint(BCLog::SYSTEMNODE, "Invalid budget payment detected %s\n", txNew.ToString().c_str());
                 if (IsSporkActive(SPORK_9_MASTERNODE_BUDGET_ENFORCEMENT)) {
                     return false;
                 } else {
-                    LogPrint(BCLog::NET, "Budget enforcement is disabled, accepting block\n");
+                    LogPrint(BCLog::SYSTEMNODE, "Budget enforcement is disabled, accepting block\n");
                     return true;
                 }
             }
@@ -56,14 +56,14 @@ bool SNIsBlockPayeeValid(const CAmount& nValueCreated, const CTransaction& txNew
         return true;
     } else if (nTime - nTimePrevBlock > Params().GetConsensus().ChainStallDuration()) {
         // The chain has stalled, allow the first block to have no payment to winners
-        LogPrint(BCLog::NET, "%s: Chain stall, time between blocks=%d\n", __func__, nTime - nTimePrevBlock);
+        LogPrint(BCLog::SYSTEMNODE, "%s: Chain stall, time between blocks=%d\n", __func__, nTime - nTimePrevBlock);
         return true;
     } else {
-        LogPrint(BCLog::NET, "Invalid mn payment detected %s\n", txNew.ToString().c_str());
+        LogPrint(BCLog::SYSTEMNODE, "Invalid mn payment detected %s\n", txNew.ToString().c_str());
         if (IsSporkActive(SPORK_14_SYSTEMNODE_PAYMENT_ENFORCEMENT)) {
             return false;
         } else {
-            LogPrint(BCLog::NET, "Systemnode payment enforcement is disabled, accepting block\n");
+            LogPrint(BCLog::SYSTEMNODE, "Systemnode payment enforcement is disabled, accepting block\n");
             return true;
         }
     }
@@ -101,14 +101,14 @@ void CSystemnodePayments::ProcessMessageSystemnodePayments(CNode* pfrom, const s
 
         if (Params().NetworkIDString() == CBaseChainParams::MAIN) {
             if (netfulfilledman.HasFulfilledRequest(pfrom->addr, "snget")) {
-                LogPrint(BCLog::NET, "snget - peer already asked me for the list\n");
+                LogPrint(BCLog::SYSTEMNODE, "snget - peer already asked me for the list\n");
                 Misbehaving(pfrom->GetId(), 20);
                 return;
             }
         }
         netfulfilledman.AddFulfilledRequest(pfrom->addr, "snget");
         systemnodePayments.Sync(pfrom, nCountNeeded, *connman);
-        LogPrint(BCLog::NET, "snget - Sent Systemnode winners to %s\n", pfrom->addr.ToString().c_str());
+        LogPrint(BCLog::SYSTEMNODE, "snget - Sent Systemnode winners to %s\n", pfrom->addr.ToString().c_str());
     } else if (strCommand == "snw") { //Systemnode Payments Declare Winner
         //this is required in litemodef
         CSystemnodePaymentWinner winner;
@@ -126,31 +126,31 @@ void CSystemnodePayments::ProcessMessageSystemnodePayments(CNode* pfrom, const s
         }
 
         if (systemnodePayments.mapSystemnodePayeeVotes.count(winner.GetHash())) {
-            LogPrint(BCLog::NET, "snw - Already seen - %s bestHeight %d\n", winner.GetHash().ToString().c_str(), nHeight);
+            LogPrint(BCLog::SYSTEMNODE, "snw - Already seen - %s bestHeight %d\n", winner.GetHash().ToString().c_str(), nHeight);
             systemnodeSync.AddedSystemnodeWinner(winner.GetHash());
             return;
         }
 
         int nFirstBlock = nHeight - (snodeman.CountEnabled() * 1.25);
         if (winner.nBlockHeight < nFirstBlock || winner.nBlockHeight > nHeight + 20) {
-            LogPrint(BCLog::NET, "snw - winner out of range - FirstBlock %d Height %d bestHeight %d\n", nFirstBlock, winner.nBlockHeight, nHeight);
+            LogPrint(BCLog::SYSTEMNODE, "snw - winner out of range - FirstBlock %d Height %d bestHeight %d\n", nFirstBlock, winner.nBlockHeight, nHeight);
             return;
         }
 
         std::string strError = "";
         if (!winner.IsValid(pfrom, strError, *connman)) {
             if (strError != "")
-                LogPrint(BCLog::NET, "snw - invalid message - %s\n", strError);
+                LogPrint(BCLog::SYSTEMNODE, "snw - invalid message - %s\n", strError);
             return;
         }
 
         if (!systemnodePayments.CanVote(winner.vinSystemnode.prevout, winner.nBlockHeight)) {
-            LogPrint(BCLog::NET, "snw - systemnode already voted - %s\n", winner.vinSystemnode.prevout.ToStringShort());
+            LogPrint(BCLog::SYSTEMNODE, "snw - systemnode already voted - %s\n", winner.vinSystemnode.prevout.ToStringShort());
             return;
         }
 
         if (!winner.SignatureValid()) {
-            LogPrint(BCLog::NET, "snw - invalid signature\n");
+            LogPrint(BCLog::SYSTEMNODE, "snw - invalid signature\n");
             if (systemnodeSync.IsSynced())
                 Misbehaving(pfrom->GetId(), 20);
             // it could just be a non-synced systemnode
@@ -158,7 +158,7 @@ void CSystemnodePayments::ProcessMessageSystemnodePayments(CNode* pfrom, const s
             return;
         }
 
-        LogPrint(BCLog::NET, "snw - winning vote - Addr %s Height %d bestHeight %d - %s\n", EncodeDestination(ScriptHash(winner.payee)).c_str(), winner.nBlockHeight, nHeight, winner.vinSystemnode.prevout.ToStringShort());
+        LogPrint(BCLog::SYSTEMNODE, "snw - winning vote - Addr %s Height %d bestHeight %d - %s\n", EncodeDestination(ScriptHash(winner.payee)).c_str(), winner.nBlockHeight, nHeight, winner.vinSystemnode.prevout.ToStringShort());
 
         if (systemnodePayments.AddWinningSystemnode(winner)) {
             winner.Relay(*connman);
@@ -220,7 +220,7 @@ void CSystemnodePayments::FillBlockPayee(CMutableTransaction& txNew, int64_t nFe
         if (winningNode) {
             payee = GetScriptForDestination(PKHash(winningNode->pubkey));
         } else {
-            LogPrint(BCLog::NET, "CreateNewBlock: Failed to detect systemnode to pay\n");
+            LogPrint(BCLog::SYSTEMNODE, "CreateNewBlock: Failed to detect systemnode to pay\n");
             hasPayment = false;
         }
     }
@@ -240,7 +240,7 @@ void CSystemnodePayments::FillBlockPayee(CMutableTransaction& txNew, int64_t nFe
 
         txNew.vout[0].nValue -= systemnodePayment;
 
-        LogPrint(BCLog::NET, "Systemnode payment to %s\n", EncodeDestination(ScriptHash(payee)).c_str());
+        LogPrint(BCLog::SYSTEMNODE, "Systemnode payment to %s\n", EncodeDestination(ScriptHash(payee)).c_str());
     }
 }
 
@@ -318,7 +318,7 @@ bool CSystemnodeBlockPayees::IsTransactionValid(const CTransaction& txNew, const
         }
     }
 
-    LogPrint(BCLog::NET, "CSystemnodePayments::IsTransactionValid - Missing required payment - %s\n", strPayeesPossible.c_str());
+    LogPrint(BCLog::SYSTEMNODE, "CSystemnodePayments::IsTransactionValid - Missing required payment - %s\n", strPayeesPossible.c_str());
     return false;
 }
 
@@ -351,7 +351,7 @@ void CSystemnodePayments::CheckAndRemove()
         CSystemnodePaymentWinner winner = (*it).second;
 
         if (nHeight - winner.nBlockHeight > nLimit) {
-            LogPrint(BCLog::NET, "CSystemnodePayments::CleanPaymentList - Removing old Systemnode payment - block %d\n", winner.nBlockHeight);
+            LogPrint(BCLog::SYSTEMNODE, "CSystemnodePayments::CleanPaymentList - Removing old Systemnode payment - block %d\n", winner.nBlockHeight);
             systemnodeSync.mapSeenSyncSNW.erase((*it).first);
             mapSystemnodePayeeVotes.erase(it++);
             mapSystemnodeBlocks.erase(winner.nBlockHeight);
@@ -370,14 +370,14 @@ bool CSystemnodePaymentWinner::IsValid(CNode* pnode, std::string& strError, CCon
 
     if (!psn) {
         strError = strprintf("Unknown Systemnode %s", vinSystemnode.prevout.ToStringShort());
-        LogPrintf("CSystemnodePaymentWinner::IsValid - %s\n", strError);
+        LogPrint(BCLog::SYSTEMNODE, "CSystemnodePaymentWinner::IsValid - %s\n", strError);
         snodeman.AskForSN(pnode, vinSystemnode, connman);
         return false;
     }
 
     if (psn->protocolVersion < MIN_MNW_PEER_PROTO_VERSION) {
         strError = strprintf("Systemnode protocol too old %d - req %d", psn->protocolVersion, MIN_MNW_PEER_PROTO_VERSION);
-        LogPrintf("CSystemnodePaymentWinner::IsValid - %s\n", strError);
+        LogPrint(BCLog::SYSTEMNODE, "CSystemnodePaymentWinner::IsValid - %s\n", strError);
         return false;
     }
 
@@ -388,7 +388,7 @@ bool CSystemnodePaymentWinner::IsValid(CNode* pnode, std::string& strError, CCon
         // We don't want to print all of these messages, or punish them unless they're way off
         if (n > MNPAYMENTS_SIGNATURES_TOTAL * 2) {
             strError = strprintf("Systemnode not in the top %d (%d)", MNPAYMENTS_SIGNATURES_TOTAL, n);
-            LogPrint(BCLog::NET, "CSystemnodePaymentWinner::IsValid - %s\n", strError);
+            LogPrint(BCLog::SYSTEMNODE, "CSystemnodePaymentWinner::IsValid - %s\n", strError);
             if (systemnodeSync.IsSynced())
                 Misbehaving(pnode->GetId(), 20);
         }
@@ -409,12 +409,12 @@ bool CSystemnodePayments::ProcessBlock(int nBlockHeight, CConnman& connman)
         int n = snodeman.GetSystemnodeRank(activeSystemnode.vin, nBlockHeight - 100, MIN_MNW_PEER_PROTO_VERSION);
 
         if (n == -1) {
-            LogPrint(BCLog::NET, "CSystemnodePayments::ProcessBlock - Unknown Systemnode\n");
+            LogPrint(BCLog::SYSTEMNODE, "CSystemnodePayments::ProcessBlock - Unknown Systemnode\n");
             return false;
         }
 
         if (n > SNPAYMENTS_SIGNATURES_TOTAL) {
-            LogPrint(BCLog::NET, "CSystemnodePayments::ProcessBlock - Systemnode not in the top %d (%d)\n", MNPAYMENTS_SIGNATURES_TOTAL, n);
+            LogPrint(BCLog::SYSTEMNODE, "CSystemnodePayments::ProcessBlock - Systemnode not in the top %d (%d)\n", MNPAYMENTS_SIGNATURES_TOTAL, n);
             return false;
         }
     }
@@ -424,22 +424,22 @@ bool CSystemnodePayments::ProcessBlock(int nBlockHeight, CConnman& connman)
 
     CSystemnodePaymentWinner newWinner(activeSystemnode.vin);
 
-    LogPrint(BCLog::NET, "CSystemnodePayments::ProcessBlock() Start nHeight %d - vin %s. \n", nBlockHeight, activeSystemnode.vin.ToString().c_str());
+    LogPrint(BCLog::SYSTEMNODE, "CSystemnodePayments::ProcessBlock() Start nHeight %d - vin %s. \n", nBlockHeight, activeSystemnode.vin.ToString().c_str());
     // pay to the oldest MN that still had no payment but its input is old enough and it was active long enough
     int nCount = 0;
     CSystemnode* psn = snodeman.GetNextSystemnodeInQueueForPayment(nBlockHeight, true, nCount);
 
     if (psn != nullptr) {
-        LogPrint(BCLog::NET, "CSystemnodePayments::ProcessBlock() Found by FindOldestNotInVec \n");
+        LogPrint(BCLog::SYSTEMNODE, "CSystemnodePayments::ProcessBlock() Found by FindOldestNotInVec \n");
 
         newWinner.nBlockHeight = nBlockHeight;
 
         CScript payee = GetScriptForDestination(PKHash(psn->pubkey));
         newWinner.AddPayee(payee);
 
-        LogPrint(BCLog::NET, "CSystemnodePayments::ProcessBlock() Winner payee %s nHeight %d. \n", EncodeDestination(ScriptHash(payee)).c_str(), newWinner.nBlockHeight);
+        LogPrint(BCLog::SYSTEMNODE, "CSystemnodePayments::ProcessBlock() Winner payee %s nHeight %d. \n", EncodeDestination(ScriptHash(payee)).c_str(), newWinner.nBlockHeight);
     } else {
-        LogPrint(BCLog::NET, "CSystemnodePayments::ProcessBlock() Failed to find systemnode to pay\n");
+        LogPrint(BCLog::SYSTEMNODE, "CSystemnodePayments::ProcessBlock() Failed to find systemnode to pay\n");
     }
 
     std::string errorMessage;
@@ -447,13 +447,13 @@ bool CSystemnodePayments::ProcessBlock(int nBlockHeight, CConnman& connman)
     CKey keySystemnode;
 
     if (!legacySigner.SetKey(strSystemNodePrivKey, keySystemnode, pubKeySystemnode)) {
-        LogPrint(BCLog::NET, "CSystemnodePayments::ProcessBlock() - Error upon calling SetKey: %s\n", errorMessage.c_str());
+        LogPrint(BCLog::SYSTEMNODE, "CSystemnodePayments::ProcessBlock() - Error upon calling SetKey: %s\n", errorMessage.c_str());
         return false;
     }
 
-    LogPrint(BCLog::NET, "CSystemnodePayments::ProcessBlock() - Signing Winner\n");
+    LogPrint(BCLog::SYSTEMNODE, "CSystemnodePayments::ProcessBlock() - Signing Winner\n");
     if (newWinner.Sign(keySystemnode, pubKeySystemnode)) {
-        LogPrint(BCLog::NET, "CSystemnodePayments::ProcessBlock() - AddWinningSystemnode\n");
+        LogPrint(BCLog::SYSTEMNODE, "CSystemnodePayments::ProcessBlock() - AddWinningSystemnode\n");
 
         if (AddWinningSystemnode(newWinner)) {
             newWinner.Relay(connman);
@@ -601,12 +601,12 @@ bool CSystemnodePaymentWinner::Sign(CKey& keySystemnode, CPubKey& pubKeySystemno
     std::string strMessage = vinSystemnode.prevout.ToStringShort() + boost::lexical_cast<std::string>(nBlockHeight) + payee.ToString();
 
     if (!legacySigner.SignMessage(strMessage, errorMessage, vchSig, keySystemnode)) {
-        LogPrint(BCLog::NET, "CSystemnodePing::Sign() - Error: %s\n", errorMessage.c_str());
+        LogPrint(BCLog::SYSTEMNODE, "CSystemnodePing::Sign() - Error: %s\n", errorMessage.c_str());
         return false;
     }
 
     if (!legacySigner.VerifyMessage(pubKeySystemnode, vchSig, strMessage, errorMessage)) {
-        LogPrint(BCLog::NET, "CSystemnodePing::Sign() - Error: %s\n", errorMessage.c_str());
+        LogPrint(BCLog::SYSTEMNODE, "CSystemnodePing::Sign() - Error: %s\n", errorMessage.c_str());
         return false;
     }
 

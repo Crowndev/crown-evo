@@ -32,6 +32,11 @@ bool CMasternodeSync::IsSynced()
     return RequestedMasternodeAssets == MASTERNODE_SYNC_FINISHED;
 }
 
+bool CMasternodeSync::AreSporksSynced() const
+{
+    return RequestedMasternodeAssets > MASTERNODE_SYNC_SPORKS;
+}
+
 bool CMasternodeSync::IsBlockchainSynced()
 {
     static bool fBlockchainSynced = false;
@@ -190,37 +195,32 @@ void CMasternodeSync::ProcessMessage(CNode* pfrom, const std::string& strCommand
 {
     if (strCommand == "ssc") {
 
-        if (IsSynced())
-            return;
-
         int nItemID;
         int nCount;
         vRecv >> nItemID >> nCount;
+
+        if(RequestedMasternodeAssets >= MASTERNODE_SYNC_FINISHED) return;
 
         //this means we will receive no further communication
         switch (nItemID)
         {
             case (MASTERNODE_SYNC_LIST):
-                if (nItemID != RequestedMasternodeAssets)
-                    return;
+                if(nItemID != RequestedMasternodeAssets) return;
                 sumMasternodeList += nCount;
                 countMasternodeList++;
                 break;
             case (MASTERNODE_SYNC_MNW):
-                if (nItemID != RequestedMasternodeAssets)
-                    return;
+                if(nItemID != RequestedMasternodeAssets) return;
                 sumMasternodeWinner += nCount;
                 countMasternodeWinner++;
                 break;
             case (MASTERNODE_SYNC_BUDGET_PROP):
-                if (RequestedMasternodeAssets != MASTERNODE_SYNC_BUDGET)
-                    return;
+                if(RequestedMasternodeAssets != MASTERNODE_SYNC_BUDGET) return;
                 sumBudgetItemProp += nCount;
                 countBudgetItemProp++;
                 break;
             case (MASTERNODE_SYNC_BUDGET_FIN):
-                if (RequestedMasternodeAssets != MASTERNODE_SYNC_BUDGET)
-                    return;
+                if(RequestedMasternodeAssets != MASTERNODE_SYNC_BUDGET) return;
                 sumBudgetItemFin += nCount;
                 countBudgetItemFin++;
                 break;
@@ -366,7 +366,7 @@ void CMasternodeSync::Process(CConnman& connman)
                 }
 
                 // timeout
-                if ((RequestedMasternodeAttempt >= MASTERNODE_SYNC_THRESHOLD * 3 || GetTime() - nAssetSyncStarted > MASTERNODE_SYNC_TIMEOUT * 5)) {
+                if (lastBudgetItem == 0 && (RequestedMasternodeAttempt >= MASTERNODE_SYNC_THRESHOLD * 3 || GetTime() - nAssetSyncStarted > MASTERNODE_SYNC_TIMEOUT * 5)) {
                     // maybe there is no budgets at all, so just finish syncing
                     GetNextAsset();
                     activeMasternode.ManageStatus(connman);
@@ -386,38 +386,6 @@ void CMasternodeSync::Process(CConnman& connman)
 
                 return;
             }
-        }
-    }
-}
-
-void ThreadCheckMasternode()
-{
-    if (fReindex || fImporting)
-       return;
-    if (::ChainstateActive().IsInitialBlockDownload())
-       return;
-    if (ShutdownRequested())
-       return;
-
-    static unsigned int nTick = 0;
-
-    // try to sync from all available nodes, one step at a time
-    masternodeSync.Process(*g_rpc_node->connman);
-
-    if (masternodeSync.IsBlockchainSynced()) {
-        nTick++;
-
-        // make sure to check all masternodes first
-        mnodeman.Check();
-
-        // check if we should activate or ping every few minutes,
-        // start right after sync is considered to be done
-        if (nTick % MASTERNODE_PING_SECONDS == 0)
-            activeMasternode.ManageStatus(*g_rpc_node->connman);
-
-        if (nTick % 60 == 0) {
-            mnodeman.CheckAndRemove();
-            masternodePayments.CheckAndRemove();
         }
     }
 }

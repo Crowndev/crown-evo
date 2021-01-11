@@ -62,11 +62,7 @@ bool CLegacySigner::SetKey(std::string strSecret, CKey& key, CPubKey& pubkey)
 
 bool CLegacySigner::SignMessage(std::string strMessage, std::string& errorMessage, vector<unsigned char>& vchSig, CKey key)
 {
-    CHashWriter ss(SER_GETHASH, 0);
-    ss << MESSAGE_MAGIC;
-    ss << strMessage;
-
-    if (!key.SignCompact(ss.GetHash(), vchSig)) {
+    if (!key.SignCompact(MessageHash(strMessage), vchSig)) {
         errorMessage = ("Signing failed.");
         return false;
     }
@@ -76,17 +72,13 @@ bool CLegacySigner::SignMessage(std::string strMessage, std::string& errorMessag
 
 bool CLegacySigner::VerifyMessage(CPubKey pubkey, const vector<unsigned char>& vchSig, std::string strMessage, std::string& errorMessage)
 {
-    CHashWriter ss(SER_GETHASH, 0);
-    ss << MESSAGE_MAGIC;
-    ss << strMessage;
-
     CPubKey pubkey2;
-    if (!pubkey2.RecoverCompact(ss.GetHash(), vchSig)) {
+    if (!pubkey2.RecoverCompact(MessageHash(strMessage), vchSig)) {
         errorMessage = ("Error recovering public key.");
         return false;
     }
 
-    auto verifyResult = PKHash(pubkey2) == PKHash(pubkey);
+    auto verifyResult = pubkey2 == pubkey;
     if (!verifyResult)
         return false;
     return true;

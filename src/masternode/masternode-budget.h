@@ -196,7 +196,7 @@ public:
     {
         LOCK(m_cs);
 
-        LogPrintf("Budget object cleared\n");
+        LogPrint(BCLog::MASTERNODE, "Budget object cleared\n");
         mapProposals.clear();
         mapBudgetDrafts.clear();
         mapSeenMasternodeBudgetProposals.clear();

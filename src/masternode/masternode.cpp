@@ -160,23 +160,6 @@ bool CMasternode::UpdateFromNewBroadcast(CMasternodeBroadcast& mnb, CConnman& co
     return false;
 }
 
-bool CMasternode::IsInputAssociatedWithPubkey()
-{
-    CScript payee = GetScriptForDestination(PKHash(pubkey));
-
-    uint256 hash;
-    CTransactionRef tx;
-    tx = GetTransaction(::ChainActive().Tip(), nullptr, vin.prevout.hash, Params().GetConsensus(), hash);
-    if (tx) {
-        for (CTxOut out : tx->vout) {
-            if (out.nValue == Params().GetConsensus().nMasternodeCollateral && out.scriptPubKey == payee)
-                return true;
-        }
-    }
-
-    return false;
-}
-
 bool CMasternode::IsValidNetAddr() const
 {
     return (addr.IsIPv4() && addr.IsRoutable());
@@ -219,8 +202,6 @@ CMasternode::CollateralStatus CMasternode::CheckCollateral(const COutPoint& outp
 
 CMasternode::CollateralStatus CMasternode::CheckCollateral(const COutPoint& outpoint, int& nHeightRet)
 {
-    AssertLockHeld(cs_main);
-
     Coin coin;
     if (!GetUTXOCoin(outpoint, coin)) {
         return COLLATERAL_UTXO_NOT_FOUND;
@@ -576,8 +557,9 @@ bool CMasternodeBroadcast::CheckAndUpdate(int& nDos, CConnman& connman)
 
     std::string strMessage;
     std::string errorMessage = "";
-    strMessage = addr.ToString(false) + boost::lexical_cast<std::string>(sigTime) + EncodeDestination(PKHash(pubkey)) + EncodeDestination(PKHash(pubkey2)) + boost::lexical_cast<std::string>(protocolVersion);
-
+    std::string vchPubKey(pubkey.begin(), pubkey.end());
+    std::string vchPubKey2(pubkey2.begin(), pubkey2.end());
+    strMessage = addr.LegacyToString(false) + boost::lexical_cast<std::string>(sigTime) + vchPubKey + vchPubKey2 + boost::lexical_cast<std::string>(protocolVersion);
     LogPrint(BCLog::MASTERNODE, "mnb - sanitized strMessage: %s, pubkey address: %s, sig: %s\n", SanitizeString(strMessage), EncodeDestination(PKHash(pubkey)), EncodeBase64(sig));
 
     if (!legacySigner.VerifyMessage(pubkey, sig, strMessage, errorMessage)) {
@@ -601,7 +583,7 @@ bool CMasternodeBroadcast::CheckAndUpdate(int& nDos, CConnman& connman)
     // (mapSeenMasternodeBroadcast in CMasternodeMan::ProcessMessage should filter legit duplicates)
     if (pmn->sigTime >= sigTime) {
         LogPrint(BCLog::MASTERNODE, "CMasternodeBroadcast::CheckAndUpdate - Bad sigTime %d for Masternode %20s %105s (existing broadcast is at %d)\n",
-            sigTime, addr.ToString(), vin.ToString(), pmn->sigTime);
+            sigTime, addr.LegacyToString(), vin.ToString(), pmn->sigTime);
         return false;
     }
 
@@ -613,7 +595,7 @@ bool CMasternodeBroadcast::CheckAndUpdate(int& nDos, CConnman& connman)
     //   after that they just need to match
     if (pmn->pubkey == pubkey && !pmn->IsBroadcastedWithin(MASTERNODE_MIN_MNB_SECONDS)) {
         //take the newest entry
-        LogPrint(BCLog::MASTERNODE, "mnb - Got updated entry for %s\n", addr.ToString());
+        LogPrint(BCLog::MASTERNODE, "mnb - Got updated entry for %s\n", addr.LegacyToString());
         if (pmn->UpdateFromNewBroadcast((*this), connman)) {
             pmn->Check();
             if (pmn->IsEnabled())
@@ -639,7 +621,7 @@ bool CMasternodeBroadcast::CheckInputsAndAdd(int& nDoS, CConnman& connman)
     // search existing Masternode list
     CMasternode* pmn = mnodeman.Find(vin);
 
-    if (pmn != nullptr) {
+    if (pmn) {
         // nothing to do here if we already know about this masternode and it's enabled
         if (pmn->IsEnabled())
             return true;
@@ -667,12 +649,12 @@ bool CMasternodeBroadcast::CheckInputsAndAdd(int& nDoS, CConnman& connman)
         CBlockIndex* pConfIndex = ::ChainActive()[pMNIndex->nHeight + MASTERNODE_MIN_CONFIRMATIONS - 1]; // block where tx got MASTERNODE_MIN_CONFIRMATIONS
         if (pConfIndex->GetBlockTime() > sigTime) {
             LogPrint(BCLog::MASTERNODE, "mnb - Bad sigTime %d for Masternode %20s %105s (%i conf block is at %d)\n",
-                sigTime, addr.ToString(), vin.ToString(), MASTERNODE_MIN_CONFIRMATIONS, pConfIndex->GetBlockTime());
+                sigTime, addr.LegacyToString(), vin.ToString(), MASTERNODE_MIN_CONFIRMATIONS, pConfIndex->GetBlockTime());
             return false;
         }
     }
 
-    LogPrint(BCLog::MASTERNODE, "mnb - Got NEW Masternode entry - %s - %s - %s - %lli \n", GetHash().ToString(), addr.ToString(), vin.ToString(), sigTime);
+    LogPrint(BCLog::MASTERNODE, "mnb - Got NEW Masternode entry - %s - %s - %s - %lli \n", GetHash().ToString(), addr.LegacyToString(), vin.ToString(), sigTime);
     CMasternode mn(*this);
     mnodeman.Add(mn);
 
@@ -716,9 +698,9 @@ bool CMasternodeBroadcast::Sign(const CKey& keyCollateralAddress)
 
     sigTime = GetAdjustedTime();
 
-    std::string strMessage = addr.ToString(false) + boost::lexical_cast<std::string>(sigTime) + vchPubKey + vchPubKey2 + boost::lexical_cast<std::string>(protocolVersion);
+    std::string strMessage = addr.LegacyToString(false) + boost::lexical_cast<std::string>(sigTime) + vchPubKey + vchPubKey2 + boost::lexical_cast<std::string>(protocolVersion);
 
-    if (!legacySigner.SignMessage(strMessage, errorMessage, sig, keyCollateralAddress)) {
+    if (!legacySigner.SignMessage(strMessage, sig, keyCollateralAddress)) {
         LogPrint(BCLog::MASTERNODE, "CMasternodeBroadcast::Sign() - Error: %s\n", errorMessage);
         return false;
     }
@@ -733,7 +715,7 @@ bool CMasternodeBroadcast::VerifySignature() const
     std::string vchPubKey(pubkey.begin(), pubkey.end());
     std::string vchPubKey2(pubkey2.begin(), pubkey2.end());
 
-    std::string strMessage = addr.ToString() + boost::lexical_cast<std::string>(sigTime) + vchPubKey + vchPubKey2 + boost::lexical_cast<std::string>(protocolVersion);
+    std::string strMessage = addr.LegacyToString() + boost::lexical_cast<std::string>(sigTime) + vchPubKey + vchPubKey2 + boost::lexical_cast<std::string>(protocolVersion);
 
     if (!legacySigner.VerifyMessage(pubkey, sig, strMessage, errorMessage)) {
         LogPrint(BCLog::MASTERNODE, "CMasternodeBroadcast::VerifySignature() - Error: %s\n", errorMessage);
@@ -779,7 +761,12 @@ bool CMasternodePing::Sign(const CKey& keyMasternode, const CPubKey& pubKeyMaste
     sigTime = GetAdjustedTime();
     std::string strMessage = vin.ToString() + blockHash.ToString() + boost::lexical_cast<std::string>(sigTime);
 
-    if (!legacySigner.SignMessage(strMessage, errorMessage, vchSig, keyMasternode)) {
+    if (!legacySigner.SignMessage(strMessage, vchSig, keyMasternode)) {
+        LogPrint(BCLog::MASTERNODE, "CMasternodePing::Sign() - Error: %s\n", errorMessage);
+        return false;
+    }
+
+    if (!legacySigner.VerifyMessage(pubKeyMasternode, vchSig, strMessage, errorMessage)) {
         LogPrint(BCLog::MASTERNODE, "CMasternodePing::Sign() - Error: %s\n", errorMessage);
         return false;
     }
@@ -825,7 +812,7 @@ bool CMasternodePing::CheckAndUpdate(int& nDos, CConnman& connman, bool fRequire
 
     // see if we have this Masternode
     CMasternode* pmn = mnodeman.Find(vin);
-    if (pmn != nullptr && pmn->protocolVersion >= masternodePayments.GetMinMasternodePaymentsProto()) {
+    if (pmn && pmn->protocolVersion >= masternodePayments.GetMinMasternodePaymentsProto()) {
         if (fRequireEnabled && !pmn->IsEnabled())
             return false;
 

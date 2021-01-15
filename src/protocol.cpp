@@ -65,6 +65,7 @@ const char* DSEEP = "dseep";
 const char* SYSWINNER = "snw";
 const char* SYSBROADCAST = "snb";
 const char* SYSPING = "snp";
+const char* DSTX = "dstx";
 } // namespace NetMsgType
 
 static const char* ppszTypeName[] = {

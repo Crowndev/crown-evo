@@ -108,7 +108,7 @@ void CSystemnodePayments::ProcessMessageSystemnodePayments(CNode* pfrom, const s
         }
         netfulfilledman.AddFulfilledRequest(pfrom->addr, "snget");
         systemnodePayments.Sync(pfrom, nCountNeeded, *connman);
-        LogPrint(BCLog::SYSTEMNODE, "snget - Sent Systemnode winners to %s\n", pfrom->addr.ToString().c_str());
+        LogPrint(BCLog::SYSTEMNODE, "snget - Sent Systemnode winners to %s\n", pfrom->addr.LegacyToString().c_str());
     } else if (strCommand == "snw") { //Systemnode Payments Declare Winner
         //this is required in litemodef
         CSystemnodePaymentWinner winner;
@@ -158,7 +158,7 @@ void CSystemnodePayments::ProcessMessageSystemnodePayments(CNode* pfrom, const s
             return;
         }
 
-        LogPrint(BCLog::SYSTEMNODE, "snw - winning vote - Addr %s Height %d bestHeight %d - %s\n", EncodeDestination(ScriptHash(winner.payee)).c_str(), winner.nBlockHeight, nHeight, winner.vinSystemnode.prevout.ToStringShort());
+        LogPrint(BCLog::SYSTEMNODE, "snw - winning vote - Addr %s Height %d bestHeight %d - %s\n", winner.payee.ToString(), winner.nBlockHeight, nHeight, winner.vinSystemnode.prevout.ToStringShort());
 
         if (systemnodePayments.AddWinningSystemnode(winner)) {
             winner.Relay(*connman);
@@ -240,7 +240,7 @@ void CSystemnodePayments::FillBlockPayee(CMutableTransaction& txNew, int64_t nFe
 
         txNew.vout[0].nValue -= systemnodePayment;
 
-        LogPrint(BCLog::SYSTEMNODE, "Systemnode payment to %s\n", EncodeDestination(ScriptHash(payee)).c_str());
+        LogPrint(BCLog::SYSTEMNODE, "Systemnode payment to %s\n", payee.ToString());
     }
 }
 
@@ -252,9 +252,9 @@ std::string CSystemnodeBlockPayees::GetRequiredPaymentsString()
 
     for (auto& payee : vecPayments) {
         if (ret != "Unknown") {
-            ret += ", " + EncodeDestination(ScriptHash(payee.scriptPubKey)) + ":" + boost::lexical_cast<std::string>(payee.nVotes);
+            ret += ", " + payee.scriptPubKey.ToString() + ":" + boost::lexical_cast<std::string>(payee.nVotes);
         } else {
-            ret = EncodeDestination(ScriptHash(payee.scriptPubKey)) + ":" + boost::lexical_cast<std::string>(payee.nVotes);
+            ret = payee.scriptPubKey.ToString() + ":" + boost::lexical_cast<std::string>(payee.nVotes);
         }
     }
 
@@ -311,9 +311,9 @@ bool CSystemnodeBlockPayees::IsTransactionValid(const CTransaction& txNew, const
             }
 
             if (strPayeesPossible == "") {
-                strPayeesPossible += EncodeDestination(ScriptHash(payee.scriptPubKey));
+                strPayeesPossible += payee.scriptPubKey.ToString();
             } else {
-                strPayeesPossible += "," + EncodeDestination(ScriptHash(payee.scriptPubKey));
+                strPayeesPossible += "," + payee.scriptPubKey.ToString();
             }
         }
     }
@@ -429,7 +429,7 @@ bool CSystemnodePayments::ProcessBlock(int nBlockHeight, CConnman& connman)
     int nCount = 0;
     CSystemnode* psn = snodeman.GetNextSystemnodeInQueueForPayment(nBlockHeight, true, nCount);
 
-    if (psn != nullptr) {
+    if (psn) {
         LogPrint(BCLog::SYSTEMNODE, "CSystemnodePayments::ProcessBlock() Found by FindOldestNotInVec \n");
 
         newWinner.nBlockHeight = nBlockHeight;
@@ -437,7 +437,7 @@ bool CSystemnodePayments::ProcessBlock(int nBlockHeight, CConnman& connman)
         CScript payee = GetScriptForDestination(PKHash(psn->pubkey));
         newWinner.AddPayee(payee);
 
-        LogPrint(BCLog::SYSTEMNODE, "CSystemnodePayments::ProcessBlock() Winner payee %s nHeight %d. \n", EncodeDestination(ScriptHash(payee)).c_str(), newWinner.nBlockHeight);
+        LogPrint(BCLog::SYSTEMNODE, "CSystemnodePayments::ProcessBlock() Winner payee %s nHeight %d. \n", payee.ToString(), newWinner.nBlockHeight);
     } else {
         LogPrint(BCLog::SYSTEMNODE, "CSystemnodePayments::ProcessBlock() Failed to find systemnode to pay\n");
     }
@@ -506,7 +506,7 @@ bool CSystemnodePaymentWinner::SignatureValid()
 
     CSystemnode* psn = snodeman.Find(vinSystemnode);
 
-    if (psn != nullptr) {
+    if (psn) {
         std::string strMessage = vinSystemnode.prevout.ToStringShort() + boost::lexical_cast<std::string>(nBlockHeight) + payee.ToString();
 
         std::string errorMessage = "";
@@ -600,7 +600,7 @@ bool CSystemnodePaymentWinner::Sign(CKey& keySystemnode, CPubKey& pubKeySystemno
 
     std::string strMessage = vinSystemnode.prevout.ToStringShort() + boost::lexical_cast<std::string>(nBlockHeight) + payee.ToString();
 
-    if (!legacySigner.SignMessage(strMessage, errorMessage, vchSig, keySystemnode)) {
+    if (!legacySigner.SignMessage(strMessage, vchSig, keySystemnode)) {
         LogPrint(BCLog::SYSTEMNODE, "CSystemnodePing::Sign() - Error: %s\n", errorMessage.c_str());
         return false;
     }

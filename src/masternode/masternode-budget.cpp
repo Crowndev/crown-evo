@@ -11,20 +11,21 @@
 #include <boost/range/algorithm.hpp>
 #include <boost/range/algorithm_ext.hpp>
 #include <consensus/validation.h>
-#include <crown/nodewallet.h>
 #include <crown/legacycalls.h>
 #include <crown/legacysigner.h>
+#include <crown/nodewallet.h>
 #include <fstream>
+#include <index/txindex.h>
 #include <key_io.h>
 #include <masternode/masternode-budget.h>
 #include <masternode/masternode-sync.h>
 #include <masternode/masternode.h>
 #include <masternode/masternodeman.h>
-#include <node/context.h>
 #include <net.h>
 #include <net_processing.h>
 #include <netfulfilledman.h>
 #include <netmessagemaker.h>
+#include <node/context.h>
 #include <rpc/blockchain.h>
 #include <util/system.h>
 
@@ -109,12 +110,9 @@ bool IsBudgetCollateralValid(uint256 nTxCollateralHash, uint256 nExpectedHash, s
 {
     uint256 nBlockHash;
     CTransactionRef txCollateral;
-    txCollateral = GetTransaction(::ChainActive().Tip(), nullptr, nTxCollateralHash, Params().GetConsensus(), nBlockHash);
-    if (!txCollateral) {
-        strError = strprintf("Can't find collateral tx");
-        LogPrint(BCLog::MASTERNODE, "CBudgetProposalBroadcast::IsBudgetCollateralValid - %s\n", strError);
+    g_txindex->BlockUntilSyncedToCurrentChain();
+    if (!g_txindex->FindTx(nTxCollateralHash, nBlockHash, txCollateral))
         return false;
-    }
 
     if (txCollateral->vout.size() < 1)
         return false;
@@ -456,7 +454,7 @@ void CBudgetManager::FillBlockPayee(CMutableTransaction& txNew, CAmount nFees) c
 
     for (const auto& payment : budgetToPay->GetBudgetPayments()) {
         LogPrint(BCLog::MASTERNODE, "CBudgetManager::FillBlockPayee - Budget payment to %s for %lld; proposal %s\n",
-            EncodeDestination(ScriptHash(payment.payee)), payment.nAmount, payment.nProposalHash.ToString());
+            payment.payee.ToString(), payment.nAmount, payment.nProposalHash.ToString());
         txNew.vout.push_back(CTxOut(payment.nAmount, payment.payee));
     }
 }
@@ -1623,7 +1621,7 @@ bool CBudgetVote::Sign(CKey& keyMasternode, CPubKey& pubKeyMasternode)
     std::string errorMessage;
     std::string strMessage = vin.prevout.ToStringShort() + nProposalHash.ToString() + boost::lexical_cast<std::string>(nVote) + boost::lexical_cast<std::string>(nTime);
 
-    if (!legacySigner.SignMessage(strMessage, errorMessage, vchSig, keyMasternode)) {
+    if (!legacySigner.SignMessage(strMessage, vchSig, keyMasternode)) {
         LogPrint(BCLog::MASTERNODE, "CBudgetVote::Sign - Error upon calling SignMessage");
         return false;
     }
@@ -2086,7 +2084,7 @@ bool BudgetDraft::IsTransactionValid(const CTransaction& txNew, int nBlockHeight
                 found = true;
         }
         if (!found) {
-            LogPrint(BCLog::MASTERNODE, "BudgetDraft::IsTransactionValid - Missing required payment - %s: %d\n", EncodeDestination(ScriptHash(payment.payee)), payment.nAmount);
+            LogPrint(BCLog::MASTERNODE, "BudgetDraft::IsTransactionValid - Missing required payment - %s: %d\n", payment.payee.ToString(), payment.nAmount);
             return false;
         }
     }
@@ -2306,7 +2304,7 @@ bool BudgetDraftVote::Sign(CKey& keyMasternode, CPubKey& pubKeyMasternode)
     std::string errorMessage;
     std::string strMessage = vin.prevout.ToStringShort() + nBudgetHash.ToString() + boost::lexical_cast<std::string>(nTime);
 
-    if (!legacySigner.SignMessage(strMessage, errorMessage, vchSig, keyMasternode)) {
+    if (!legacySigner.SignMessage(strMessage, vchSig, keyMasternode)) {
         LogPrint(BCLog::MASTERNODE, "BudgetDraftVote::Sign - Error upon calling SignMessage");
         return false;
     }

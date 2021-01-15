@@ -135,6 +135,7 @@ CChain& ChainActive()
 RecursiveMutex cs_main;
 
 int nLastStakeAttempt{0};
+std::map<uint256, int64_t> mapRejectedBlocks;
 std::map<PointerHash, uint256> mapUsedStakePointers;
 ProofTracker* g_proofTracker = new ProofTracker();
 CBlockIndex *pindexBestHeader = nullptr;
@@ -400,8 +401,7 @@ static bool IsCurrentForFeeEstimation() EXCLUSIVE_LOCKS_REQUIRED(cs_main)
  * Passing fAddToMempool=false will skip trying to add the transactions back,
  * and instead just erase from the mempool as needed.
  */
-
-static void UpdateMempoolForReorg(CTxMemPool& mempool, DisconnectedBlockTransactions& disconnectpool, bool fAddToMempool) EXCLUSIVE_LOCKS_REQUIRED(cs_main, mempool.cs)
+void UpdateMempoolForReorg(CTxMemPool& mempool, DisconnectedBlockTransactions& disconnectpool, bool fAddToMempool) EXCLUSIVE_LOCKS_REQUIRED(cs_main, mempool.cs)
 {
     AssertLockHeld(cs_main);
     AssertLockHeld(mempool.cs);

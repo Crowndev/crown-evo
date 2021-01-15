@@ -526,19 +526,8 @@ static std::string IPv6ToString(Span<const uint8_t> a)
     // clang-format on
 }
 
-std::string CNetAddr::ToStringIP(bool fUseGetnameinfo) const
+std::string CNetAddr::ToStringIP() const
 {
-    if (fUseGetnameinfo)
-    {
-        CService serv(*this, 0);
-        struct sockaddr_storage sockaddr;
-        socklen_t socklen = sizeof(sockaddr);
-        if (serv.GetSockAddr((struct sockaddr*)&sockaddr, &socklen)) {
-            char name[1025] = "";
-            if (!getnameinfo((const struct sockaddr*)&sockaddr, socklen, name, sizeof(name), NULL, 0, NI_NUMERICHOST))
-                return std::string(name);
-        }
-    }
     switch (m_net) {
     case NET_IPV4:
     case NET_IPV6: {
@@ -587,6 +576,36 @@ std::string CNetAddr::ToStringIP(bool fUseGetnameinfo) const
     } // no default case, so the compiler can warn about missing cases
 
     assert(false);
+}
+
+unsigned int CNetAddr::LegacyGetByte(int n) const
+{
+    return m_addr[15-n];
+}
+
+std::string CNetAddr::LegacyToStringIP(bool fUseGetnameinfo) const
+{
+    if (IsTor())
+        return EncodeBase32(m_addr) + ".onion";
+    if (fUseGetnameinfo)
+    {
+        CService serv(*this, 0);
+        struct sockaddr_storage sockaddr;
+        socklen_t socklen = sizeof(sockaddr);
+        if (serv.GetSockAddr((struct sockaddr*)&sockaddr, &socklen)) {
+            char name[1025] = "";
+            if (!getnameinfo((const struct sockaddr*)&sockaddr, socklen, name, sizeof(name), NULL, 0, NI_NUMERICHOST))
+                return std::string(name);
+        }
+    }
+    if (IsIPv4())
+        return strprintf("%u.%u.%u.%u", LegacyGetByte(3), LegacyGetByte(2), LegacyGetByte(1), LegacyGetByte(0));
+    else
+        return strprintf("%x:%x:%x:%x:%x:%x:%x:%x",
+                         LegacyGetByte(15) << 8 | LegacyGetByte(14), LegacyGetByte(13) << 8 | LegacyGetByte(12),
+                         LegacyGetByte(11) << 8 | LegacyGetByte(10), LegacyGetByte(9) << 8 | LegacyGetByte(8),
+                         LegacyGetByte(7) << 8 | LegacyGetByte(6), LegacyGetByte(5) << 8 | LegacyGetByte(4),
+                         LegacyGetByte(3) << 8 | LegacyGetByte(2), LegacyGetByte(1) << 8 | LegacyGetByte(0));
 }
 
 std::string CNetAddr::ToString() const
@@ -981,18 +1000,37 @@ std::string CService::ToStringPort() const
     return strprintf("%u", port);
 }
 
-std::string CService::ToStringIPPort(bool fUseGetnameinfo) const
+std::string CService::ToStringIPPort() const
 {
     if (IsIPv4() || IsTor() || IsI2P() || IsInternal()) {
-        return ToStringIP(fUseGetnameinfo) + ":" + ToStringPort();
+        return ToStringIP() + ":" + ToStringPort();
     } else {
-        return "[" + ToStringIP(fUseGetnameinfo) + "]:" + ToStringPort();
+        return "[" + ToStringIP() + "]:" + ToStringPort();
     }
 }
 
-std::string CService::ToString(bool fUseGetnameinfo) const
+std::string CService::ToString() const
 {
-    return ToStringIPPort(fUseGetnameinfo);
+    return ToStringIPPort();
+}
+
+std::string CService::LegacyToStringPort() const
+{
+    return strprintf("%u", port);
+}
+
+std::string CService::LegacyToStringIPPort(bool fUseGetnameinfo) const
+{
+    if (IsIPv4() || IsTor()) {
+        return LegacyToStringIP(fUseGetnameinfo) + ":" + LegacyToStringPort();
+    } else {
+        return "[" + LegacyToStringIP(fUseGetnameinfo) + "]:" + LegacyToStringPort();
+    }
+}
+
+std::string CService::LegacyToString(bool fUseGetnameinfo) const
+{
+    return LegacyToStringIPPort(fUseGetnameinfo);
 }
 
 CSubNet::CSubNet():

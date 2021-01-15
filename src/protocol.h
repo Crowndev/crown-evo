@@ -279,6 +279,7 @@ extern const char* DSEEP;
 extern const char* SYSWINNER;
 extern const char* SYSBROADCAST;
 extern const char* SYSPING;
+extern const char* DSTX;
 }; // namespace NetMsgType
 
 /* Get a vector of all valid message types (see above) */
@@ -431,7 +432,6 @@ enum GetDataMsg : uint32_t {
     UNDEFINED = 0,
     MSG_TX = 1,
     MSG_BLOCK = 2,
-    MSG_WTX = 5,                                      //!< Defined in BIP 339
     // The following can only occur in getdata. Invs always use TX/WTX or BLOCK.
     MSG_FILTERED_BLOCK = 3,                           //!< Defined in BIP37
     MSG_TXLOCK_REQUEST = 4,
@@ -449,7 +449,9 @@ enum GetDataMsg : uint32_t {
     MSG_SYSTEMNODE_ANNOUNCE = 16,
     MSG_SYSTEMNODE_PING = 17,
     MSG_SYSTEMNODE_WINNER = 18,
-    MSG_CMPCT_BLOCK = 19, //!< Defined in BIP152 (moved from 4)
+    MSG_DSTX = 19,
+    MSG_CMPCT_BLOCK = 20, //!< Defined in BIP152 (moved from 4)
+    MSG_WTX = 21,         //!< Defined in BIP339 (moved from 5)
     MSG_WITNESS_BLOCK = MSG_BLOCK | MSG_WITNESS_FLAG, //!< Defined in BIP144
     MSG_WITNESS_TX = MSG_TX | MSG_WITNESS_FLAG,       //!< Defined in BIP144
     // MSG_FILTERED_WITNESS_BLOCK is defined in BIP144 as reserved for future
@@ -480,19 +482,9 @@ public:
     bool IsMsgWitnessBlk() const { return type == MSG_WITNESS_BLOCK; }
 
     // Combined-message helper methods
-    bool IsGenTxMsg(bool bJustTx = false) const
-    {
-        const bool bJustTxInternal = type == MSG_TX || type == MSG_WTX || type == MSG_WITNESS_TX;
-        if(bJustTx || bJustTxInternal) {
-            return bJustTxInternal;
-        }
-        return type >= MSG_SPORK && type <= MSG_SYSTEMNODE_WINNER;
-    }
-
-    bool IsGenBlkMsg() const
-    {
-        return type == MSG_BLOCK || type == MSG_FILTERED_BLOCK || type == MSG_CMPCT_BLOCK || type == MSG_WITNESS_BLOCK;
-    }
+    bool IsGenTxMsg() const { return type == MSG_TX || type == MSG_WTX || type == MSG_WITNESS_TX; }
+    bool IsGenBlkMsg() const { return type == MSG_BLOCK || type == MSG_FILTERED_BLOCK || type == MSG_CMPCT_BLOCK || type == MSG_WITNESS_BLOCK; }
+    bool IsMnSnMsg() const { return !IsGenTxMsg() && !IsGenBlkMsg(); }
 
     uint32_t type;
     uint256 hash;

@@ -1,13 +1,17 @@
 #include <base58.h>
+#include <consensus/validation.h>
 #include <crown/spork.h>
 #include <key.h>
 #include <masternode/masternode-budget.h>
 #include <net.h>
 #include <net_processing.h>
 #include <netmessagemaker.h>
+#include <node/context.h>
 #include <protocol.h>
+#include <rpc/blockchain.h>
 #include <sync.h>
 #include <util/system.h>
+#include <validation.h>
 
 #include <boost/lexical_cast.hpp>
 
@@ -18,17 +22,15 @@ class CSporkMessage;
 class CSporkManager;
 
 CSporkManager sporkManager;
-
 std::map<uint256, CSporkMessage> mapSporks;
 std::map<int, CSporkMessage> mapSporksActive;
 
+//! forward declaration (only gets used once here)
+void UpdateMempoolForReorg(CTxMemPool& mempool, DisconnectedBlockTransactions& disconnectpool, bool fAddToMempool) EXCLUSIVE_LOCKS_REQUIRED(cs_main, mempool.cs);
+
 void ProcessSpork(CNode* pfrom, CConnman* connman, const std::string& strCommand, CDataStream& vRecv)
 {
-    if (fLiteMode)
-        return; //disable all masternode related functionality
-
     if (strCommand == "spork") {
-        //LogPrintf("ProcessSpork::spork\n");
         CDataStream vMsg(vRecv);
         CSporkMessage spork;
         vRecv >> spork;
@@ -84,9 +86,8 @@ bool IsSporkActive(int nSporkID)
             r = SPORK_2_INSTANTX_DEFAULT;
         if (nSporkID == SPORK_3_INSTANTX_BLOCK_FILTERING)
             r = SPORK_3_INSTANTX_BLOCK_FILTERING_DEFAULT;
-        // TODO fix
-        //if(nSporkID == SPORK_4_ENABLE_MASTERNODE_PAYMENTS)
-        //    r = Params().StartMasternodePayments() > 0 ? Params().StartMasternodePayments() : SPORK_4_ENABLE_MASTERNODE_PAYMENTS_DEFAULT;
+        if (nSporkID == SPORK_4_ENABLE_MASTERNODE_PAYMENTS)
+            r = SPORK_4_ENABLE_MASTERNODE_PAYMENTS_DEFAULT;
         if (nSporkID == SPORK_5_MAX_VALUE)
             r = SPORK_5_MAX_VALUE_DEFAULT;
         if (nSporkID == SPORK_7_MASTERNODE_SCANNING)
@@ -178,49 +179,58 @@ void ExecuteSpork(int nSporkID, int nValue, CConnman& connman)
     }
 }
 
+bool DisconnectBlocks(int blocks)
+{
+    LOCK(cs_main);
+
+    BlockValidationState state;
+    const CChainParams& chainparams = Params();
+    LogPrintf("DisconnectBlocks -- Got command to replay %d blocks\n", blocks);
+    for (int i = 0; i < blocks; i++) {
+        DisconnectedBlockTransactions disconnectpool;
+        if (!::ChainstateActive().DisconnectTip(state, chainparams, &disconnectpool) || !state.IsValid()) {
+            // This is likely a fatal error, but keep the mempool consistent,
+            // just in case. Only remove from the mempool in this case.
+            UpdateMempoolForReorg(*g_rpc_node->mempool, disconnectpool, false);
+            return false;
+        }
+    }
+    return true;
+}
+
 void ReprocessBlocks(int nBlocks)
 {
-    // TODO fix
-    //std::map<uint256, int64_t>::iterator it = mapRejectedBlocks.begin();
-    //while(it != mapRejectedBlocks.end()){
-    //    //use a window twice as large as is usual for the nBlocks we want to reset
-    //    if((*it).second  > GetTime() - (nBlocks*60*5)) {
-    //        BlockMap::iterator mi = mapBlockIndex.find((*it).first);
-    //        if (mi != mapBlockIndex.end() && (*mi).second) {
-    //            LOCK(cs_main);
-    //
-    //            CBlockIndex* pindex = (*mi).second;
-    //            LogPrintf("ReprocessBlocks - %s\n", (*it).first.ToString());
+    LOCK(cs_main);
 
-    //            CValidationState state;
-    //            ReconsiderBlock(state, pindex);
-    //        }
-    //    }
-    //    ++it;
-    //}
+    std::map<uint256, int64_t>::iterator it = mapRejectedBlocks.begin();
+    while (it != mapRejectedBlocks.end()) {
+        //use a window twice as large as is usual for the nBlocks we want to reset
+        if ((*it).second > GetTime() - (nBlocks * 60 * 5)) {
+            BlockMap::iterator mi = g_chainman.BlockIndex().find((*it).first);
+            if (mi != g_chainman.BlockIndex().end() && (*mi).second) {
+                CBlockIndex* pindex = (*mi).second;
+                LogPrintf("ReprocessBlocks -- %s\n", (*it).first.ToString());
+                ResetBlockFailureFlags(pindex);
+            }
+        }
+        ++it;
+    }
 
-    //CValidationState state;
-    //{
-    //    LOCK(cs_main);
-    //    DisconnectBlocksAndReprocess(nBlocks);
-    //}
-
-    //if (state.IsValid()) {
-    //    ActivateBestChain(state);
-    //}
+    DisconnectBlocks(nBlocks);
+    BlockValidationState state;
+    ActivateBestChain(state, Params(), std::shared_ptr<const CBlock>());
 }
 
 bool CSporkManager::CheckSignature(CSporkMessage& spork)
 {
-    //note: need to investigate why this is failing
-    std::string strMessage = boost::lexical_cast<std::string>(spork.nSporkID) + boost::lexical_cast<std::string>(spork.nValue) + boost::lexical_cast<std::string>(spork.nTimeSigned);
-    // TODO fix
-    //CPubKey pubkey(ParseHex(Params().SporkKey()));
+    CPubKey pubkey(ParseHex(Params().GetConsensus().SporkKey()));
+    std::string strMessage = std::to_string(spork.nSporkID) + std::to_string(spork.nValue) + std::to_string(spork.nTimeSigned);
+    std::string strError = "";
 
-    //std::string errorMessage = "";
-    //if(!legacySigner.VerifyMessage(pubkey, spork.vchSig, strMessage, errorMessage)){
-    //    return false;
-    //}
+    if (!legacySigner.VerifyMessage(pubkey, spork.vchSig, strMessage, strError)) {
+        LogPrintf("CSporkMessage::CheckSignature -- VerifyHash() failed, error: %s\n", strError);
+        return false;
+    }
 
     return true;
 }
@@ -238,7 +248,7 @@ bool CSporkManager::Sign(CSporkMessage& spork)
         return false;
     }
 
-    if (!legacySigner.SignMessage(strMessage, errorMessage, spork.vchSig, key2)) {
+    if (!legacySigner.SignMessage(strMessage, spork.vchSig, key2)) {
         LogPrintf("CMasternodePayments::Sign - Sign message failed");
         return false;
     }

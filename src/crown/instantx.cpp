@@ -15,8 +15,8 @@
 #include <net.h>
 #include <net_processing.h>
 #include <node/context.h>
-#include <rpc/blockchain.h>
 #include <protocol.h>
+#include <rpc/blockchain.h>
 #include <sync.h>
 #include <util/system.h>
 #include <wallet/wallet.h>
@@ -576,7 +576,7 @@ bool CConsensusVote::Sign()
         return false;
     }
 
-    if (!legacySigner.SignMessage(strMessage, errorMessage, vchMasterNodeSignature, key2)) {
+    if (!legacySigner.SignMessage(strMessage, vchMasterNodeSignature, key2)) {
         LogPrintf("CConsensusVote::Sign() - Sign message failed");
         return false;
     }

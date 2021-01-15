@@ -14,13 +14,14 @@ bool setupNodeConfiguration()
     }
 
     const auto pwalletMain = GetMainWallet();
-    if (!pwalletMain) return true;
+    if (!pwalletMain)
+        return true;
 
     if (fMasterNode) {
         LogPrintf("IS MASTERNODE\n");
         strMasterNodeAddr = gArgs.GetArg("-masternodeaddr", "");
         LogPrintf(" addr %s\n", strMasterNodeAddr.c_str());
-        if (!strMasterNodeAddr.empty()){
+        if (!strMasterNodeAddr.empty()) {
             CService addrTest = CService(LookupNumeric(strMasterNodeAddr.c_str()));
             if (!addrTest.IsValid()) {
                 return InitError(strprintf(_("Invalid -masternodeaddr address")));
@@ -28,7 +29,7 @@ bool setupNodeConfiguration()
         }
 
         strMasterNodePrivKey = gArgs.GetArg("-masternodeprivkey", "");
-        if (!strMasterNodePrivKey.empty()){
+        if (!strMasterNodePrivKey.empty()) {
             std::string errorMessage;
             CKey key;
             CPubKey pubkey;
@@ -45,7 +46,7 @@ bool setupNodeConfiguration()
         LogPrintf("IS SYSTEMNODE\n");
         strSystemNodeAddr = gArgs.GetArg("-systemnodeaddr", "");
         LogPrintf(" addr %s\n", strSystemNodeAddr.c_str());
-        if (!strSystemNodeAddr.empty()){
+        if (!strSystemNodeAddr.empty()) {
             CService addrTest = CService(LookupNumeric(strSystemNodeAddr.c_str()));
             if (!addrTest.IsValid()) {
                 return InitError(strprintf(_("Invalid -systemnodeaddr address")));
@@ -53,7 +54,7 @@ bool setupNodeConfiguration()
         }
 
         strSystemNodePrivKey = gArgs.GetArg("-systemnodeprivkey", "");
-        if (!strSystemNodePrivKey.empty()){
+        if (!strSystemNodePrivKey.empty()) {
             std::string errorMessage;
             CKey key;
             CPubKey pubkey;
@@ -80,7 +81,7 @@ bool setupNodeConfiguration()
         }
     }
 
-    if(gArgs.GetBoolArg("-snconflock", true)) {
+    if (gArgs.GetBoolArg("-snconflock", true)) {
         LOCK(pwalletMain->cs_wallet);
         LogPrintf("Locking Systemnodes:\n");
         uint256 mnTxHash;

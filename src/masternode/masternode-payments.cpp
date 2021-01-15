@@ -193,7 +193,7 @@ void CMasternodePayments::FillBlockPayee(CMutableTransaction& txNew, int64_t nFe
         txNew.vout[MN_PMT_SLOT].nValue = masternodePayment;
 
         txNew.vout[0].nValue -= masternodePayment;
-        LogPrint(BCLog::MASTERNODE, "Masternode payment to %s\n", EncodeDestination(ScriptHash(payee)));
+        LogPrint(BCLog::MASTERNODE, "Masternode payment to %s\n", payee.ToString());
     }
 }
 
@@ -223,7 +223,7 @@ void CMasternodePayments::ProcessMessageMasternodePayments(CNode* pfrom, const s
         }
         netfulfilledman.AddFulfilledRequest(pfrom->addr, "mnget");
         masternodePayments.Sync(pfrom, nCountNeeded, *connman);
-        LogPrint(BCLog::MASTERNODE, "mnget - Sent Masternode winners to %s\n", pfrom->addr.ToString().c_str());
+        LogPrint(BCLog::MASTERNODE, "mnget - Sent Masternode winners to %s\n", pfrom->addr.LegacyToString().c_str());
     } else if (strCommand == "mnw") { //Masternode Payments Declare Winner
         //this is required in litemodef
         CMasternodePaymentWinner winner;
@@ -273,7 +273,7 @@ void CMasternodePayments::ProcessMessageMasternodePayments(CNode* pfrom, const s
             return;
         }
 
-        LogPrint(BCLog::MASTERNODE, "mnw - winning vote - Addr %s Height %d bestHeight %d - %s\n", EncodeDestination(ScriptHash(winner.payee)).c_str(), winner.nBlockHeight, nHeight, winner.vinMasternode.prevout.ToStringShort());
+        LogPrint(BCLog::MASTERNODE, "mnw - winning vote - Addr %s Height %d bestHeight %d - %s\n", winner.payee.ToString(), winner.nBlockHeight, nHeight, winner.vinMasternode.prevout.ToStringShort());
 
         if (masternodePayments.AddWinningMasternode(winner)) {
             winner.Relay(*connman);
@@ -289,7 +289,7 @@ bool CMasternodePaymentWinner::Sign(CKey& keyMasternode, CPubKey& pubKeyMasterno
 
     std::string strMessage = vinMasternode.prevout.ToStringShort() + boost::lexical_cast<std::string>(nBlockHeight) + payee.ToString();
 
-    if (!legacySigner.SignMessage(strMessage, errorMessage, vchSig, keyMasternode)) {
+    if (!legacySigner.SignMessage(strMessage, vchSig, keyMasternode)) {
         LogPrint(BCLog::MASTERNODE, "CMasternodePing::Sign() - Error: %s\n", errorMessage.c_str());
         return false;
     }
@@ -414,9 +414,9 @@ bool CMasternodeBlockPayees::IsTransactionValid(const CTransaction& txNew, const
             }
 
             if (strPayeesPossible == "") {
-                strPayeesPossible += EncodeDestination(ScriptHash(payee.scriptPubKey));
+                strPayeesPossible += payee.scriptPubKey.ToString();
             } else {
-                strPayeesPossible += "," + EncodeDestination(ScriptHash(payee.scriptPubKey));
+                strPayeesPossible += "," + payee.scriptPubKey.ToString();
             }
         }
     }
@@ -434,9 +434,9 @@ std::string CMasternodeBlockPayees::GetRequiredPaymentsString()
 
     for (const auto& payee : vecPayments) {
         if (ret != "Unknown") {
-            ret += ", " + EncodeDestination(ScriptHash(payee.scriptPubKey)) + ":" + boost::lexical_cast<std::string>(payee.nVotes);
+            ret += ", " + payee.scriptPubKey.ToString() + ":" + boost::lexical_cast<std::string>(payee.nVotes);
         } else {
-            ret = EncodeDestination(ScriptHash(payee.scriptPubKey)) + ":" + boost::lexical_cast<std::string>(payee.nVotes);
+            ret = payee.scriptPubKey.ToString() + ":" + boost::lexical_cast<std::string>(payee.nVotes);
         }
     }
 
@@ -580,7 +580,7 @@ bool CMasternodePayments::ProcessBlock(int nBlockHeight, CConnman& connman)
         int nCount = 0;
         CMasternode* pmn = mnodeman.GetNextMasternodeInQueueForPayment(nBlockHeight, true, nCount);
 
-        if (pmn != nullptr) {
+        if (pmn) {
             LogPrint(BCLog::MASTERNODE, "CMasternodePayments::ProcessBlock() Found by FindOldestNotInVec \n");
 
             newWinner.nBlockHeight = nBlockHeight;
@@ -588,7 +588,7 @@ bool CMasternodePayments::ProcessBlock(int nBlockHeight, CConnman& connman)
             CScript payee = GetScriptForDestination(PKHash(pmn->pubkey));
             newWinner.AddPayee(payee);
 
-            LogPrint(BCLog::MASTERNODE, "CMasternodePayments::ProcessBlock() Winner payee %s nHeight %d. \n", EncodeDestination(ScriptHash(payee)).c_str(), newWinner.nBlockHeight);
+            LogPrint(BCLog::MASTERNODE, "CMasternodePayments::ProcessBlock() Winner payee %s nHeight %d. \n", payee.ToString(), newWinner.nBlockHeight);
         } else {
             LogPrint(BCLog::MASTERNODE, "CMasternodePayments::ProcessBlock() Failed to find masternode to pay\n");
         }
@@ -628,7 +628,7 @@ bool CMasternodePaymentWinner::SignatureValid()
 
     CMasternode* pmn = mnodeman.Find(vinMasternode);
 
-    if (pmn != nullptr) {
+    if (pmn) {
         std::string strMessage = vinMasternode.prevout.ToStringShort() + boost::lexical_cast<std::string>(nBlockHeight) + payee.ToString();
 
         std::string errorMessage = "";

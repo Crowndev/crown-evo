@@ -13,7 +13,7 @@ bool NodeWallet::GetMasternodeVinAndKeys(CTxIn& txinRet, CPubKey& pubKeyRet, CKe
 {
     std::vector<COutput> vPossibleCoins;
     pwallet->AvailableCoins(vPossibleCoins, true, nullptr, Params().GetConsensus().nMasternodeCollateral, Params().GetConsensus().nMasternodeCollateral);
-    if(vPossibleCoins.empty()) {
+    if (vPossibleCoins.empty()) {
         LogPrintf("NodeWallet::GetMasternodeVinAndKeys -- Could not locate any valid masternode vin\n");
         return false;
     }
@@ -25,7 +25,7 @@ bool NodeWallet::GetSystemnodeVinAndKeys(CTxIn& txinRet, CPubKey& pubKeyRet, CKe
 {
     std::vector<COutput> vPossibleCoins;
     pwallet->AvailableCoins(vPossibleCoins, true, nullptr, Params().GetConsensus().nSystemnodeCollateral, Params().GetConsensus().nSystemnodeCollateral);
-    if(vPossibleCoins.empty()) {
+    if (vPossibleCoins.empty()) {
         LogPrintf("NodeWallet::GetSystemnodeVinAndKeys -- Could not locate any valid systemnode vin\n");
         return false;
     }
@@ -52,12 +52,12 @@ bool NodeWallet::GetVinAndKeysFromOutput(COutput out, CTxIn& txinRet, CPubKey& p
 
     LegacyScriptPubKeyMan* spk_man = pwallet->GetLegacyScriptPubKeyMan();
     if (!spk_man) {
-        LogPrintf ("GetVinFromOutput -- This type of wallet does not support this command\n");
+        LogPrintf("GetVinFromOutput -- This type of wallet does not support this command\n");
         return false;
     }
 
     if (!spk_man->GetKey(keyID, keyRet)) {
-        LogPrintf ("GetVinFromOutput -- Private key for address is not known\n");
+        LogPrintf("GetVinFromOutput -- Private key for address is not known\n");
         return false;
     }
 
@@ -72,8 +72,8 @@ bool NodeWallet::GetBudgetSystemCollateralTX(CTransactionRef& tx, uint256 hash, 
     CScript scriptChange;
     scriptChange << OP_RETURN << ToByteVector(hash);
 
-    std::vector< CRecipient > vecSend;
-    vecSend.push_back((CRecipient){scriptChange, BUDGET_FEE_TX, false});
+    std::vector<CRecipient> vecSend;
+    vecSend.push_back((CRecipient) { scriptChange, BUDGET_FEE_TX, false });
 
     CCoinControl coinControl;
     int nChangePosRet = -1;
@@ -84,7 +84,7 @@ bool NodeWallet::GetBudgetSystemCollateralTX(CTransactionRef& tx, uint256 hash, 
     return pwallet->CreateTransaction(vecSend, tx, nFeeRequired, nChangePosRet, error, coinControl, fee_calc_out);
 }
 
-bool NodeWallet::GetActiveMasternode(CMasternode *&activeStakingNode)
+bool NodeWallet::GetActiveMasternode(CMasternode*& activeStakingNode)
 {
     activeStakingNode = nullptr;
     if (activeMasternode.status == ACTIVE_MASTERNODE_STARTED)
@@ -92,7 +92,7 @@ bool NodeWallet::GetActiveMasternode(CMasternode *&activeStakingNode)
     return activeStakingNode != nullptr;
 }
 
-bool NodeWallet::GetActiveSystemnode(CSystemnode *&activeStakingNode)
+bool NodeWallet::GetActiveSystemnode(CSystemnode*& activeStakingNode)
 {
     activeStakingNode = nullptr;
     if (activeSystemnode.status == ACTIVE_SYSTEMNODE_STARTED)
@@ -212,7 +212,7 @@ bool NodeWallet::CreateCoinStake(const int nHeight, const uint32_t& nBits, const
     return false;
 }
 
-template<typename stakingnode>
+template <typename stakingnode>
 bool GetPointers(stakingnode* pstaker, std::vector<StakePointer>& vStakePointers, int nPaymentSlot)
 {
     bool found = false;
@@ -229,7 +229,7 @@ bool GetPointers(stakingnode* pstaker, std::vector<StakePointer>& vStakePointers
             continue;
 
         // Pointer has to be at least deeper than the max reorg depth
-	const int nMaxReorganizationDepth = 100;
+        const int nMaxReorganizationDepth = 100;
         if (nBestHeight - pindex->nHeight < nMaxReorganizationDepth)
             continue;
 

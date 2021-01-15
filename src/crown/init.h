@@ -10,14 +10,14 @@
 #include <masternode/activemasternode.h>
 #include <masternode/masternode-budget.h>
 #include <masternode/masternode-payments.h>
-#include <masternode/masternodeman.h>
 #include <masternode/masternodeconfig.h>
+#include <masternode/masternodeman.h>
 #include <netbase.h>
 #include <node/ui_interface.h>
 #include <systemnode/activesystemnode.h>
-#include <systemnode/systemnodeman.h>
 #include <systemnode/systemnode-payments.h>
 #include <systemnode/systemnodeconfig.h>
+#include <systemnode/systemnodeman.h>
 #include <util/system.h>
 #include <util/translation.h>
 #include <validation.h>

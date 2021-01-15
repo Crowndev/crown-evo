@@ -6,8 +6,8 @@
 #include <protocol.h>
 #include <systemnode/activesystemnode.h>
 #include <systemnode/systemnode.h>
-#include <systemnode/systemnodeman.h>
 #include <systemnode/systemnodeconfig.h>
+#include <systemnode/systemnodeman.h>
 #include <validation.h>
 #include <wallet/coincontrol.h>
 
@@ -26,7 +26,7 @@ void CActiveSystemnode::ManageStatus(CConnman& connman)
     LogPrintf("CActiveSystemnode::ManageStatus() - Begin\n");
 
     //need correct blocks to send ping
-    if (Params().NetworkIDString() != CBaseChainParams::REGTEST && !systemnodeSync.IsBlockchainSynced()) {
+    if (!systemnodeSync.IsBlockchainSynced()) {
         status = ACTIVE_SYSTEMNODE_SYNC_IN_PROCESS;
         LogPrintf("CActiveSystemnode::ManageStatus() - %s\n", GetStatus());
         return;
@@ -38,7 +38,7 @@ void CActiveSystemnode::ManageStatus(CConnman& connman)
     if (status == ACTIVE_SYSTEMNODE_INITIAL) {
         CSystemnode* psn;
         psn = snodeman.Find(pubKeySystemnode);
-        if (psn != nullptr) {
+        if (psn) {
             psn->Check();
             if (psn->IsEnabled() && psn->protocolVersion == PROTOCOL_VERSION) {
                 EnableHotColdSystemNode(psn->vin, psn->addr);
@@ -217,7 +217,7 @@ bool CActiveSystemnode::SendSystemnodePing(std::string& errorMessage, CConnman& 
 
     // Update lastPing for our systemnode in Systemnode list
     CSystemnode* pmn = snodeman.Find(vin);
-    if (pmn != nullptr) {
+    if (pmn) {
         if (pmn->IsPingedWithin(SYSTEMNODE_PING_SECONDS, mnp.sigTime)) {
             errorMessage = "Too early to send Systemnode Ping";
             return false;
@@ -269,7 +269,8 @@ std::vector<COutput> CActiveSystemnode::SelectCoinsSystemnode()
     std::vector<COutPoint> confLockedCoins;
 
     auto m_wallet = GetMainWallet();
-    if (!m_wallet) return filteredCoins;
+    if (!m_wallet)
+        return filteredCoins;
 
     // Temporary unlock SN coins from systemnode.conf
     if (gArgs.GetBoolArg("-snconflock", true)) {
@@ -277,7 +278,7 @@ std::vector<COutput> CActiveSystemnode::SelectCoinsSystemnode()
         for (const auto sne : systemnodeConfig.getEntries()) {
             snTxHash.SetHex(sne.getTxHash());
             int nIndex = 0;
-            if(!sne.castOutputIndex(nIndex))
+            if (!sne.castOutputIndex(nIndex))
                 continue;
             COutPoint outpoint = COutPoint(snTxHash, nIndex);
             confLockedCoins.push_back(outpoint);

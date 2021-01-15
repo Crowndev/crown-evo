@@ -8,8 +8,8 @@
 #define CROWN_NODEWALLET_H
 
 #include <masternode/activemasternode.h>
-#include <masternode/masternode.h>
 #include <masternode/masternode-budget.h>
+#include <masternode/masternode.h>
 #include <masternode/masternodeconfig.h>
 #include <mn-pos/kernel.h>
 #include <mn-pos/stakeminer.h>
@@ -26,8 +26,8 @@ public:
     bool GetVinAndKeysFromOutput(COutput out, CTxIn& txinRet, CPubKey& pubkeyRet, CKey& keyRet, std::shared_ptr<CWallet> pwallet = GetMainWallet());
     bool GetBudgetSystemCollateralTX(CTransactionRef& tx, uint256 hash, std::shared_ptr<CWallet> pwallet = GetMainWallet());
     bool CreateCoinStake(const int nHeight, const uint32_t& nBits, const uint32_t& nTime, CMutableTransaction& txCoinStake, uint32_t& nTxNewTime, StakePointer& stakePointer, std::shared_ptr<CWallet> pwallet = GetMainWallet());
-    bool GetActiveMasternode(CMasternode *&activeStakingNode);
-    bool GetActiveSystemnode(CSystemnode *&activeStakingNode);
+    bool GetActiveMasternode(CMasternode*& activeStakingNode);
+    bool GetActiveSystemnode(CSystemnode*& activeStakingNode);
     uint256 GenerateStakeModifier(const CBlockIndex* prewardBlockIndex) const;
     bool GetRecentStakePointers(std::vector<StakePointer>& vStakePointers);
 };

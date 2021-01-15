@@ -10,6 +10,9 @@
 #include <validation.h>
 #include <wallet/coincontrol.h>
 
+class CActiveMasternode;
+CActiveMasternode activeMasternode;
+
 //
 // Bootup the Masternode, look for a 10000 CRW input and register on the network
 //
@@ -35,7 +38,7 @@ void CActiveMasternode::ManageStatus(CConnman& connman)
     if (status == ACTIVE_MASTERNODE_INITIAL) {
         CMasternode* pmn;
         pmn = mnodeman.Find(pubKeyMasternode);
-        if (pmn != nullptr) {
+        if (pmn) {
             pmn->Check();
             if (pmn->IsEnabled() && pmn->protocolVersion == PROTOCOL_VERSION) {
                 EnableHotColdMasterNode(pmn->vin, pmn->addr);
@@ -214,7 +217,7 @@ bool CActiveMasternode::SendMasternodePing(std::string& errorMessage, CConnman& 
 
     // Update lastPing for our masternode in Masternode list
     CMasternode* pmn = mnodeman.Find(vin);
-    if (pmn != nullptr) {
+    if (pmn) {
         if (pmn->IsPingedWithin(MASTERNODE_PING_SECONDS, mnp.sigTime)) {
             errorMessage = "Too early to send Masternode Ping";
             return false;
@@ -266,7 +269,8 @@ std::vector<COutput> CActiveMasternode::SelectCoinsMasternode()
     std::vector<COutPoint> confLockedCoins;
 
     auto m_wallet = GetMainWallet();
-    if (!m_wallet) return filteredCoins;
+    if (!m_wallet)
+        return filteredCoins;
 
     // Temporary unlock MN coins from masternode.conf
     if (gArgs.GetBoolArg("-mnconflock", true)) {
@@ -274,7 +278,7 @@ std::vector<COutput> CActiveMasternode::SelectCoinsMasternode()
         for (const auto mne : masternodeConfig.getEntries()) {
             mnTxHash.SetHex(mne.getTxHash());
             int nIndex = 0;
-            if(!mne.castOutputIndex(nIndex))
+            if (!mne.castOutputIndex(nIndex))
                 continue;
             COutPoint outpoint = COutPoint(mnTxHash, nIndex);
             confLockedCoins.push_back(outpoint);

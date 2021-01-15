@@ -1784,7 +1784,7 @@ void static ProcessGetData(CNode& pfrom, Peer& peer, const CChainParams& chainpa
         // Process as many TX items from the front of the getdata queue as
         // possible, since they're common and it's efficient to batch process
         // them.
-        while (it != peer.m_getdata_requests.end() && (it->type == MSG_TX || it->type == MSG_WITNESS_TX)) {
+        while (it != peer.m_getdata_requests.end()) {
             if (interruptMsgProc)
                 return;
             // The send buffer provides backpressure. If there's no space in
@@ -1818,7 +1818,10 @@ void static ProcessGetData(CNode& pfrom, Peer& peer, const CChainParams& chainpa
                     push = true;
                 }
             }
-            ProcessGetDataMasternodeTypes(&pfrom, chainparams, &connman, mempool, inv, push);
+
+            if (inv.IsMnSnMsg())
+                ProcessGetDataMasternodeTypes(&pfrom, chainparams, &connman, mempool, inv, push);
+
             if (!push) {
                 vNotFound.push_back(inv);
             }
@@ -2386,6 +2389,8 @@ void PeerManager::ProcessMessage(CNode& pfrom, const std::string& msg_type, CDat
 
     PeerRef peer = GetPeerRef(pfrom.GetId());
     if (peer == nullptr) return;
+
+    ProcessMessageMasternodeTypes(&pfrom, msg_type, vRecv, m_chainparams, m_mempool, &m_connman, m_banman, interruptMsgProc);
 
     if (msg_type == NetMsgType::VERSION) {
         // Each connection can only send one version message
@@ -3817,8 +3822,6 @@ void PeerManager::ProcessMessage(CNode& pfrom, const std::string& msg_type, CDat
         }
         return;
     }
-
-    ProcessMessageMasternodeTypes(&pfrom, msg_type, vRecv, m_chainparams, m_mempool, &m_connman, m_banman, interruptMsgProc);
 
     return;
 }

@@ -2025,8 +2025,6 @@ bool AppInitMain(const util::Ref& context, NodeContext& node, interfaces::BlockA
 
     // ********************************************************* Step 13: finished
 
-    node.scheduler->scheduleEvery(boost::bind(&ThreadCheckLegacySigner), std::chrono::seconds{1});
-
     SetRPCWarmupFinished();
     uiInterface.InitMessage(_("Done loading").translated);
 
@@ -2038,6 +2036,8 @@ bool AppInitMain(const util::Ref& context, NodeContext& node, interfaces::BlockA
     node.scheduler->scheduleEvery([banman]{
         banman->DumpBanlist();
     }, DUMP_BANS_INTERVAL);
+
+    node.scheduler->scheduleEvery(std::bind(&ThreadCheckLegacySigner), std::chrono::milliseconds{1000});
 
 #if HAVE_SYSTEM
     StartupNotify(args);

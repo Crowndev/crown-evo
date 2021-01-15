@@ -17,12 +17,6 @@
 #include <util/system.h>
 #include <validation.h>
 
-#include <boost/lexical_cast.hpp>
-
-//
-// CSystemnodePing
-//
-
 //
 // CSystemnode
 //
@@ -78,23 +72,6 @@ CSystemnode::CSystemnode(const CSystemnodeBroadcast& snb)
     lastTimeChecked = 0;
 }
 
-bool CSystemnode::IsInputAssociatedWithPubkey()
-{
-    CScript payee = GetScriptForDestination(PKHash(pubkey));
-
-    uint256 hash;
-    CTransactionRef tx;
-    tx = GetTransaction(::ChainActive().Tip(), nullptr, vin.prevout.hash, Params().GetConsensus(), hash);
-    if (tx) {
-        for (CTxOut out : tx->vout) {
-            if (out.nValue == Params().GetConsensus().nSystemnodeCollateral && out.scriptPubKey == payee)
-                return true;
-        }
-    }
-
-    return false;
-}
-
 bool CSystemnode::IsValidNetAddr()
 {
     return (addr.IsIPv4() && addr.IsRoutable());
@@ -137,8 +114,6 @@ CSystemnode::CollateralStatus CSystemnode::CheckCollateral(const COutPoint& outp
 
 CSystemnode::CollateralStatus CSystemnode::CheckCollateral(const COutPoint& outpoint, int& nHeightRet)
 {
-    AssertLockHeld(cs_main);
-
     Coin coin;
     if (!GetUTXOCoin(outpoint, coin)) {
         return COLLATERAL_UTXO_NOT_FOUND;
@@ -361,12 +336,13 @@ bool CSystemnodeBroadcast::CheckAndUpdate(int& nDos, CConnman& connman)
 
     std::string strMessage;
     std::string errorMessage = "";
-    strMessage = addr.ToString(false) + boost::lexical_cast<std::string>(sigTime) + EncodeDestination(PKHash(pubkey)) + EncodeDestination(PKHash(pubkey2)) + boost::lexical_cast<std::string>(protocolVersion);
-
+    std::string vchPubKey(pubkey.begin(), pubkey.end());
+    std::string vchPubKey2(pubkey2.begin(), pubkey2.end());
+    strMessage = addr.LegacyToString(false) + boost::lexical_cast<std::string>(sigTime) + vchPubKey + vchPubKey2 + boost::lexical_cast<std::string>(protocolVersion);
     LogPrint(BCLog::SYSTEMNODE, "snb - sanitized strMessage: %s, pubkey address: %s, sig: %s\n", SanitizeString(strMessage), EncodeDestination(PKHash(pubkey)), EncodeBase64(sig));
 
     if (!legacySigner.VerifyMessage(pubkey, sig, strMessage, errorMessage)) {
-        LogPrint(BCLog::SYSTEMNODE, "snb - Got bad Systemnode address signature, sanitized error: %s\n", SanitizeString(errorMessage));
+        LogPrint(BCLog::SYSTEMNODE, "snb - Got bad systemnode address signature, sanitized error: %s\n", SanitizeString(errorMessage));
         return false;
     }
 
@@ -386,7 +362,7 @@ bool CSystemnodeBroadcast::CheckAndUpdate(int& nDos, CConnman& connman)
     // (mapSeensystemnodeBroadcast in CSystemnodeMan::ProcessMessage should filter legit duplicates)
     if (psn->sigTime >= sigTime) {
         LogPrint(BCLog::SYSTEMNODE, "CSystemnodeBroadcast::CheckAndUpdate - Bad sigTime %d for Systemnode %20s %105s (existing broadcast is at %d)\n",
-            sigTime, addr.ToString(), vin.ToString(), psn->sigTime);
+            sigTime, addr.LegacyToString(), vin.ToString(), psn->sigTime);
         return false;
     }
 
@@ -398,7 +374,7 @@ bool CSystemnodeBroadcast::CheckAndUpdate(int& nDos, CConnman& connman)
     //   after that they just need to match
     if (psn->pubkey == pubkey && !psn->IsBroadcastedWithin(SYSTEMNODE_MIN_SNB_SECONDS)) {
         //take the newest entry
-        LogPrint(BCLog::SYSTEMNODE, "snb - Got updated entry for %s\n", addr.ToString());
+        LogPrint(BCLog::SYSTEMNODE, "snb - Got updated entry for %s\n", addr.LegacyToString());
         if (psn->UpdateFromNewBroadcast((*this), connman)) {
             psn->Check();
             if (psn->IsEnabled())
@@ -452,12 +428,12 @@ bool CSystemnodeBroadcast::CheckInputsAndAdd(int& nDoS, CConnman& connman)
         CBlockIndex* pConfIndex = ::ChainActive()[pMNIndex->nHeight + SYSTEMNODE_MIN_CONFIRMATIONS - 1]; // block where tx got SYSTEMNODE_MIN_CONFIRMATIONS
         if (pConfIndex->GetBlockTime() > sigTime) {
             LogPrint(BCLog::SYSTEMNODE, "snb - Bad sigTime %d for systemnode %20s %105s (%i conf block is at %d)\n",
-                sigTime, addr.ToString(), vin.ToString(), SYSTEMNODE_MIN_CONFIRMATIONS, pConfIndex->GetBlockTime());
+                sigTime, addr.LegacyToString(), vin.ToString(), SYSTEMNODE_MIN_CONFIRMATIONS, pConfIndex->GetBlockTime());
             return false;
         }
     }
 
-    LogPrint(BCLog::SYSTEMNODE, "snb - Got NEW systemnode entry - %s - %s - %s - %lli \n", GetHash().ToString(), addr.ToString(), vin.ToString(), sigTime);
+    LogPrint(BCLog::SYSTEMNODE, "snb - Got NEW systemnode entry - %s - %s - %s - %lli \n", GetHash().ToString(), addr.LegacyToString(), vin.ToString(), sigTime);
     CSystemnode sn(*this);
     snodeman.Add(sn);
 
@@ -629,7 +605,7 @@ bool CSystemnodeBroadcast::Create(CTxIn txin, CService service, CKey keyCollater
             snb = CSystemnodeBroadcast();
             return false;
         }
-        LogPrint(BCLog::SYSTEMNODE, "%s: Signed over to key %s\n", __func__, pubKeySystemnodeNew.GetID().GetHex());
+        LogPrint(BCLog::SYSTEMNODE, "%s: Signed over to key %s\n", __func__, EncodeDestination(PKHash(pubKeySystemnodeNew)));
     }
 
     return true;
@@ -644,9 +620,9 @@ bool CSystemnodeBroadcast::Sign(const CKey& keyCollateralAddress)
 
     sigTime = GetAdjustedTime();
 
-    std::string strMessage = addr.ToString() + boost::lexical_cast<std::string>(sigTime) + vchPubKey + vchPubKey2 + boost::lexical_cast<std::string>(protocolVersion);
+    std::string strMessage = addr.LegacyToString(false) + boost::lexical_cast<std::string>(sigTime) + vchPubKey + vchPubKey2 + boost::lexical_cast<std::string>(protocolVersion);
 
-    if (!legacySigner.SignMessage(strMessage, errorMessage, sig, keyCollateralAddress)) {
+    if (!legacySigner.SignMessage(strMessage, sig, keyCollateralAddress)) {
         LogPrint(BCLog::SYSTEMNODE, "CSystemnodeBroadcast::Sign() - Error: %s\n", errorMessage);
         return false;
     }
@@ -661,7 +637,7 @@ bool CSystemnodeBroadcast::VerifySignature() const
     std::string vchPubKey(pubkey.begin(), pubkey.end());
     std::string vchPubKey2(pubkey2.begin(), pubkey2.end());
 
-    std::string strMessage = addr.ToString() + boost::lexical_cast<std::string>(sigTime) + vchPubKey + vchPubKey2 + boost::lexical_cast<std::string>(protocolVersion);
+    std::string strMessage = addr.LegacyToString() + boost::lexical_cast<std::string>(sigTime) + vchPubKey + vchPubKey2 + boost::lexical_cast<std::string>(protocolVersion);
 
     if (!legacySigner.VerifyMessage(pubkey, sig, strMessage, errorMessage)) {
         LogPrint(BCLog::SYSTEMNODE, "CSystemnodeBroadcast::VerifySignature() - Error: %s\n", errorMessage);
@@ -691,10 +667,16 @@ bool CSystemnodePing::Sign(const CKey& keySystemnode, const CPubKey& pubKeySyste
 {
     std::string errorMessage;
     std::string strThroNeSignMessage;
+
     sigTime = GetAdjustedTime();
     std::string strMessage = vin.ToString() + blockHash.ToString() + boost::lexical_cast<std::string>(sigTime);
 
-    if (!legacySigner.SignMessage(strMessage, errorMessage, vchSig, keySystemnode)) {
+    if (!legacySigner.SignMessage(strMessage, vchSig, keySystemnode)) {
+        LogPrint(BCLog::SYSTEMNODE, "CSystemnodePing::Sign() - Error: %s\n", errorMessage);
+        return false;
+    }
+
+    if (!legacySigner.VerifyMessage(pubKeySystemnode, vchSig, strMessage, errorMessage)) {
         LogPrint(BCLog::SYSTEMNODE, "CSystemnodePing::Sign() - Error: %s\n", errorMessage);
         return false;
     }
@@ -708,7 +690,7 @@ bool CSystemnodePing::VerifySignature(const CPubKey& pubKeySystemnode, int& nDos
     std::string strMessage = vin.ToString() + blockHash.ToString() + boost::lexical_cast<std::string>(sigTime);
 
     if (!legacySigner.VerifyMessage(pubKeySystemnode, vchSig, strMessage, errorMessage)) {
-        LogPrint(BCLog::SYSTEMNODE, "CSystemnodePing::Sign() - Error: %s\n", errorMessage);
+        LogPrint(BCLog::SYSTEMNODE, "CSystemnodePing::VerifySignature - Got bad Systemnode ping signature %s Error: %s\n", vin.ToString(), errorMessage);
         return false;
     }
 

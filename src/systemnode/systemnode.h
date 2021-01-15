@@ -173,6 +173,8 @@ public:
 
     SERIALIZE_METHODS(CSystemnode, obj)
     {
+        LOCK(obj.cs);
+
         READWRITE(obj.vin);
         READWRITE(obj.addr);
         READWRITE(obj.pubkey);

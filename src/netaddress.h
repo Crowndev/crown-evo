@@ -186,7 +186,11 @@ class CNetAddr
 
         enum Network GetNetwork() const;
         std::string ToString() const;
-        std::string ToStringIP(bool fUseGetnameinfo = true) const;
+        //! btc 0.21 routine
+        std::string ToStringIP() const;
+        //! legacy crown routine
+        unsigned int LegacyGetByte(int n) const;
+        std::string LegacyToStringIP(bool fUseGetnameinfo = true) const;
         uint64_t GetHash() const;
         bool GetInAddr(struct in_addr* pipv4Addr) const;
         Network GetNetClass() const;
@@ -517,9 +521,14 @@ class CService : public CNetAddr
         friend bool operator!=(const CService& a, const CService& b) { return !(a == b); }
         friend bool operator<(const CService& a, const CService& b);
         std::vector<unsigned char> GetKey() const;
-        std::string ToString(bool fUseGetnameinfo = true) const;
+        //! btc 0.21 routines
+        std::string ToString() const;
         std::string ToStringPort() const;
-        std::string ToStringIPPort(bool fUseGetnameinfo = true) const;
+        std::string ToStringIPPort() const;
+        //! legacy crown routines
+        std::string LegacyToString(bool fUseGetnameinfo = true) const;
+        std::string LegacyToStringPort() const;
+        std::string LegacyToStringIPPort(bool fUseGetnameinfo = true) const;
 
         CService(const struct in6_addr& ipv6Addr, uint16_t port);
         explicit CService(const struct sockaddr_in6& addr);

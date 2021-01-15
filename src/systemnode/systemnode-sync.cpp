@@ -4,17 +4,17 @@
 
 #include <addrman.h>
 #include <crown/spork.h>
-#include <systemnode/activesystemnode.h>
-#include <systemnode/systemnode-payments.h>
-#include <systemnode/systemnode-sync.h>
-#include <systemnode/systemnode.h>
-#include <systemnode/systemnodeman.h>
 #include <netfulfilledman.h>
 #include <netmessagemaker.h>
 #include <node/context.h>
 #include <node/ui_interface.h>
 #include <rpc/blockchain.h>
 #include <shutdown.h>
+#include <systemnode/activesystemnode.h>
+#include <systemnode/systemnode-payments.h>
+#include <systemnode/systemnode-sync.h>
+#include <systemnode/systemnode.h>
+#include <systemnode/systemnodeman.h>
 #include <util/system.h>
 #include <util/time.h>
 
@@ -115,23 +115,22 @@ void CSystemnodeSync::AddedSystemnodeWinner(uint256 hash)
 
 void CSystemnodeSync::GetNextAsset()
 {
-    switch(RequestedSystemnodeAssets)
-    {
-        case (SYSTEMNODE_SYNC_INITIAL):
-        case (SYSTEMNODE_SYNC_FAILED):
-            ClearFulfilledRequest(*g_rpc_node->connman);
-            RequestedSystemnodeAssets = SYSTEMNODE_SYNC_SPORKS;
-            break;
-        case (SYSTEMNODE_SYNC_SPORKS):
-            RequestedSystemnodeAssets = SYSTEMNODE_SYNC_LIST;
-            break;
-        case (SYSTEMNODE_SYNC_LIST):
-            RequestedSystemnodeAssets = SYSTEMNODE_SYNC_SNW;
-            break;
-        case (SYSTEMNODE_SYNC_SNW):
-            LogPrintf("CSystemnodeSync::GetNextAsset - Sync has finished\n");
-            RequestedSystemnodeAssets = SYSTEMNODE_SYNC_FINISHED;
-            break;
+    switch (RequestedSystemnodeAssets) {
+    case (SYSTEMNODE_SYNC_INITIAL):
+    case (SYSTEMNODE_SYNC_FAILED):
+        ClearFulfilledRequest(*g_rpc_node->connman);
+        RequestedSystemnodeAssets = SYSTEMNODE_SYNC_SPORKS;
+        break;
+    case (SYSTEMNODE_SYNC_SPORKS):
+        RequestedSystemnodeAssets = SYSTEMNODE_SYNC_LIST;
+        break;
+    case (SYSTEMNODE_SYNC_LIST):
+        RequestedSystemnodeAssets = SYSTEMNODE_SYNC_SNW;
+        break;
+    case (SYSTEMNODE_SYNC_SNW):
+        LogPrintf("CSystemnodeSync::GetNextAsset - Sync has finished\n");
+        RequestedSystemnodeAssets = SYSTEMNODE_SYNC_FINISHED;
+        break;
     }
     RequestedSystemnodeAttempt = 0;
     nAssetSyncStarted = GetTime();
@@ -168,20 +167,19 @@ void CSystemnodeSync::ProcessMessage(CNode* pfrom, const std::string& strCommand
             return;
 
         //this means we will receive no further communication
-        switch(nItemID)
-        {
-            case(SYSTEMNODE_SYNC_LIST):
-                if (nItemID != RequestedSystemnodeAssets)
-                    return;
-                sumSystemnodeList += nCount;
-                countSystemnodeList++;
-                break;
-            case(SYSTEMNODE_SYNC_SNW):
-                if (nItemID != RequestedSystemnodeAssets)
-                    return;
-                sumSystemnodeWinner += nCount;
-                countSystemnodeWinner++;
-                break;
+        switch (nItemID) {
+        case (SYSTEMNODE_SYNC_LIST):
+            if (nItemID != RequestedSystemnodeAssets)
+                return;
+            sumSystemnodeList += nCount;
+            countSystemnodeList++;
+            break;
+        case (SYSTEMNODE_SYNC_SNW):
+            if (nItemID != RequestedSystemnodeAssets)
+                return;
+            sumSystemnodeWinner += nCount;
+            countSystemnodeWinner++;
+            break;
         }
 
         LogPrintf("CSystemnodeSync:ProcessMessage - snssc - got inventory count %d %d\n", nItemID, nCount);
@@ -227,8 +225,7 @@ void CSystemnodeSync::Process(CConnman& connman)
         return;
 
     std::vector<CNode*> vNodesCopy = connman.CopyNodeVector();
-    for (auto& pnode : vNodesCopy)
-    {
+    for (auto& pnode : vNodesCopy) {
         //set to synced
         if (RequestedSystemnodeAssets == SYSTEMNODE_SYNC_SPORKS) {
             if (netfulfilledman.HasFulfilledRequest(pnode->addr, "sngetspork"))
@@ -275,8 +272,7 @@ void CSystemnodeSync::Process(CConnman& connman)
                 return;
             }
 
-            if (RequestedSystemnodeAssets == SYSTEMNODE_SYNC_SNW)
-            {
+            if (RequestedSystemnodeAssets == SYSTEMNODE_SYNC_SNW) {
                 if (lastSystemnodeWinner > 0 && lastSystemnodeWinner < GetTime() - SYSTEMNODE_SYNC_TIMEOUT * 2 && RequestedSystemnodeAttempt >= SYSTEMNODE_SYNC_THRESHOLD) {
                     GetNextAsset();
                     return;
@@ -304,7 +300,8 @@ void CSystemnodeSync::Process(CConnman& connman)
                     return;
 
                 CBlockIndex* pindexPrev = ::ChainActive().Tip();
-                if(pindexPrev == nullptr) return;
+                if (pindexPrev == nullptr)
+                    return;
 
                 int nSnCount = snodeman.CountEnabled();
                 connman.PushMessage(pnode, msgMaker.Make("snget", nSnCount)); //sync payees

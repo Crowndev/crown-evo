@@ -145,26 +145,25 @@ bool CMasternodeSync::IsBudgetFinEmpty()
 
 void CMasternodeSync::GetNextAsset()
 {
-    switch (RequestedMasternodeAssets)
-    {
-        case (MASTERNODE_SYNC_INITIAL):
-        case (MASTERNODE_SYNC_FAILED):
-            ClearFulfilledRequest(*g_rpc_node->connman);
-            RequestedMasternodeAssets = MASTERNODE_SYNC_SPORKS;
-            break;
-        case (MASTERNODE_SYNC_SPORKS):
-            RequestedMasternodeAssets = MASTERNODE_SYNC_LIST;
-            break;
-        case (MASTERNODE_SYNC_LIST):
-            RequestedMasternodeAssets = MASTERNODE_SYNC_MNW;
-            break;
-        case (MASTERNODE_SYNC_MNW):
-            RequestedMasternodeAssets = MASTERNODE_SYNC_BUDGET;
-            break;
-        case (MASTERNODE_SYNC_BUDGET):
-            LogPrintf("CMasternodeSync::GetNextAsset - Sync has finished\n");
-            RequestedMasternodeAssets = MASTERNODE_SYNC_FINISHED;
-            break;
+    switch (RequestedMasternodeAssets) {
+    case (MASTERNODE_SYNC_INITIAL):
+    case (MASTERNODE_SYNC_FAILED):
+        ClearFulfilledRequest(*g_rpc_node->connman);
+        RequestedMasternodeAssets = MASTERNODE_SYNC_SPORKS;
+        break;
+    case (MASTERNODE_SYNC_SPORKS):
+        RequestedMasternodeAssets = MASTERNODE_SYNC_LIST;
+        break;
+    case (MASTERNODE_SYNC_LIST):
+        RequestedMasternodeAssets = MASTERNODE_SYNC_MNW;
+        break;
+    case (MASTERNODE_SYNC_MNW):
+        RequestedMasternodeAssets = MASTERNODE_SYNC_BUDGET;
+        break;
+    case (MASTERNODE_SYNC_BUDGET):
+        LogPrintf("CMasternodeSync::GetNextAsset - Sync has finished\n");
+        RequestedMasternodeAssets = MASTERNODE_SYNC_FINISHED;
+        break;
     }
     RequestedMasternodeAttempt = 0;
     nAssetSyncStarted = GetTime();
@@ -199,31 +198,35 @@ void CMasternodeSync::ProcessMessage(CNode* pfrom, const std::string& strCommand
         int nCount;
         vRecv >> nItemID >> nCount;
 
-        if(RequestedMasternodeAssets >= MASTERNODE_SYNC_FINISHED) return;
+        if (RequestedMasternodeAssets >= MASTERNODE_SYNC_FINISHED)
+            return;
 
         //this means we will receive no further communication
-        switch (nItemID)
-        {
-            case (MASTERNODE_SYNC_LIST):
-                if(nItemID != RequestedMasternodeAssets) return;
-                sumMasternodeList += nCount;
-                countMasternodeList++;
-                break;
-            case (MASTERNODE_SYNC_MNW):
-                if(nItemID != RequestedMasternodeAssets) return;
-                sumMasternodeWinner += nCount;
-                countMasternodeWinner++;
-                break;
-            case (MASTERNODE_SYNC_BUDGET_PROP):
-                if(RequestedMasternodeAssets != MASTERNODE_SYNC_BUDGET) return;
-                sumBudgetItemProp += nCount;
-                countBudgetItemProp++;
-                break;
-            case (MASTERNODE_SYNC_BUDGET_FIN):
-                if(RequestedMasternodeAssets != MASTERNODE_SYNC_BUDGET) return;
-                sumBudgetItemFin += nCount;
-                countBudgetItemFin++;
-                break;
+        switch (nItemID) {
+        case (MASTERNODE_SYNC_LIST):
+            if (nItemID != RequestedMasternodeAssets)
+                return;
+            sumMasternodeList += nCount;
+            countMasternodeList++;
+            break;
+        case (MASTERNODE_SYNC_MNW):
+            if (nItemID != RequestedMasternodeAssets)
+                return;
+            sumMasternodeWinner += nCount;
+            countMasternodeWinner++;
+            break;
+        case (MASTERNODE_SYNC_BUDGET_PROP):
+            if (RequestedMasternodeAssets != MASTERNODE_SYNC_BUDGET)
+                return;
+            sumBudgetItemProp += nCount;
+            countBudgetItemProp++;
+            break;
+        case (MASTERNODE_SYNC_BUDGET_FIN):
+            if (RequestedMasternodeAssets != MASTERNODE_SYNC_BUDGET)
+                return;
+            sumBudgetItemFin += nCount;
+            countBudgetItemFin++;
+            break;
         }
 
         LogPrintf("CMasternodeSync:ProcessMessage - ssc - got inventory count %d %d\n", nItemID, nCount);

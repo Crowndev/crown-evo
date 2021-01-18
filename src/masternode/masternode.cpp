@@ -5,6 +5,7 @@
 
 #include <addrman.h>
 #include <consensus/validation.h>
+#include <crown/legacycalls.h>
 #include <crown/legacysigner.h>
 #include <crown/nodewallet.h>
 #include <key_io.h>
@@ -176,7 +177,7 @@ arith_uint256 CMasternode::CalculateScore(int64_t nBlockHeight) const
         return arith_uint256();
 
     // Find the block hash where tx got MASTERNODE_MIN_CONFIRMATIONS
-    int nPrevoutAge = GetUTXOConfirmations(vin.prevout);
+    int nPrevoutAge = GetInputHeight(vin);
     CBlockIndex* pblockIndex = ::ChainActive()[nPrevoutAge + MASTERNODE_MIN_CONFIRMATIONS - 1];
     if (!pblockIndex)
         return arith_uint256();
@@ -443,7 +444,7 @@ bool CMasternodeBroadcast::Create(std::string strService, std::string strKeyMast
         return false;
     }
 
-    int age = GetUTXOConfirmations(txin.prevout);
+    int age = GetInputAge(txin);
     if (age < MASTERNODE_MIN_CONFIRMATIONS) {
         strErrorMessage = strprintf("Input must have at least %d confirmations. Now it has %d",
             MASTERNODE_MIN_CONFIRMATIONS, age);
@@ -630,8 +631,7 @@ bool CMasternodeBroadcast::CheckInputsAndAdd(int& nDoS, CConnman& connman)
             mnodeman.Remove(pmn->vin);
     }
 
-    COutPoint mnConfirms(vin.prevout.hash, vin.prevout.n);
-    if (GetUTXOConfirmations(mnConfirms) < MASTERNODE_MIN_CONFIRMATIONS) {
+    if (GetInputAge(vin) < MASTERNODE_MIN_CONFIRMATIONS) {
         LogPrint(BCLog::MASTERNODE, "mnb - Input must have at least %d confirmations\n", MASTERNODE_MIN_CONFIRMATIONS);
         // maybe we miss few blocks, let this mnb to be checked again later
         mnodeman.mapSeenMasternodeBroadcast.erase(GetHash());

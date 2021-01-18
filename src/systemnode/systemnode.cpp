@@ -4,6 +4,7 @@
 
 #include <addrman.h>
 #include <consensus/validation.h>
+#include <crown/legacycalls.h>
 #include <crown/legacysigner.h>
 #include <crown/nodewallet.h>
 #include <key_io.h>
@@ -88,7 +89,7 @@ arith_uint256 CSystemnode::CalculateScore(int64_t nBlockHeight) const
         return arith_uint256();
 
     // Find the block hash where tx got SYSTEMNODE_MIN_CONFIRMATIONS
-    int nPrevoutAge = GetUTXOConfirmations(vin.prevout);
+    int nPrevoutAge = GetInputHeight(vin);
     CBlockIndex* pblockIndex = ::ChainActive()[nPrevoutAge + SYSTEMNODE_MIN_CONFIRMATIONS - 1];
     if (!pblockIndex)
         return arith_uint256();
@@ -409,8 +410,7 @@ bool CSystemnodeBroadcast::CheckInputsAndAdd(int& nDoS, CConnman& connman)
             snodeman.Remove(psn->vin);
     }
 
-    COutPoint snConfirms(vin.prevout.hash, vin.prevout.n);
-    if (GetUTXOConfirmations(snConfirms) < SYSTEMNODE_MIN_CONFIRMATIONS) {
+    if (GetInputAge(vin) < SYSTEMNODE_MIN_CONFIRMATIONS) {
         LogPrint(BCLog::SYSTEMNODE, "snb - Input must have at least %d confirmations\n", SYSTEMNODE_MIN_CONFIRMATIONS);
         // maybe we miss few blocks, let this snb to be checked again later
         snodeman.mapSeenSystemnodeBroadcast.erase(GetHash());
@@ -542,7 +542,7 @@ bool CSystemnodeBroadcast::Create(std::string strService, std::string strKeySyst
         return false;
     }
 
-    int age = GetUTXOConfirmations(txin.prevout);
+    int age = GetInputAge(txin);
     if (age < SYSTEMNODE_MIN_CONFIRMATIONS) {
         strErrorMessage = strprintf("Input must have at least %d confirmations. Now it has %d",
             SYSTEMNODE_MIN_CONFIRMATIONS, age);

@@ -112,14 +112,14 @@ void ProcessGetDataMasternodeTypes(CNode* pfrom, const CChainParams& chainparams
 
         //! instantsend types
         if (!pushed && inv.type == MSG_TXLOCK_VOTE) {
-            if(instantSend.GetLockVote(inv.hash)) {
-//              connman->PushMessage(pfrom, msgMaker.Make("txlvote", instantSend.GetLockVote(inv.hash)));
+            if(instantSend.mapTxLockVote.count(inv.hash)) {
+                connman->PushMessage(pfrom, msgMaker.Make("txlvote", instantSend.mapTxLockVote[inv.hash]));
                 pushed = true;
             }
         }
         if (!pushed && inv.type == MSG_TXLOCK_REQUEST) {
-            if(instantSend.GetLockReq(inv.hash)) {
-//             connman->PushMessage(pfrom, msgMaker.Make("ix", instantSend.GetLockReq(inv.hash)));
+            if(instantSend.mapTxLockReq.count(inv.hash)) {
+                connman->PushMessage(pfrom, msgMaker.Make("ix", instantSend.mapTxLockReq[inv.hash]));
                 pushed = true;
             }
         }

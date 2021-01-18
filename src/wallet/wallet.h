@@ -42,6 +42,10 @@ using LoadWalletFn = std::function<void(std::unique_ptr<interfaces::Wallet> wall
 
 struct bilingual_str;
 
+void EnableInstantSend();
+void DisableInstantSend();
+bool UseInstantSend();
+
 //! Explicitly unload and delete the wallet.
 //! Blocks the current thread after signaling the unload intent so that all
 //! wallet clients release the wallet.
@@ -502,7 +506,7 @@ public:
     int64_t GetTxTime() const;
 
     // Pass this transaction to node for mempool insertion and relay to peers if flag set to true
-    bool SubmitMemoryPoolAndRelay(std::string& err_string, bool relay);
+    bool SubmitMemoryPoolAndRelay(std::string& err_string, bool relay, bool isIX = false);
 
     // TODO: Remove "NO_THREAD_SAFETY_ANALYSIS" and replace it with the correct
     // annotation "EXCLUSIVE_LOCKS_REQUIRED(pwallet->cs_wallet)". The annotation

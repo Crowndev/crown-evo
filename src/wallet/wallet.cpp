@@ -9,6 +9,7 @@
 #include <consensus/consensus.h>
 #include <consensus/validation.h>
 #include <fs.h>
+#include <crown/instantx.h>
 #include <interfaces/chain.h>
 #include <interfaces/wallet.h>
 #include <key.h>
@@ -55,6 +56,20 @@ static const size_t OUTPUT_GROUP_MAX_ENTRIES = 10;
 static RecursiveMutex cs_wallets;
 static std::vector<std::shared_ptr<CWallet>> vpwallets GUARDED_BY(cs_wallets);
 static std::list<LoadWalletFn> g_load_wallet_fns GUARDED_BY(cs_wallets);
+
+bool useInstantSend{false};
+
+void EnableInstantSend() {
+    useInstantSend = true;
+}
+
+void DisableInstantSend() {
+    useInstantSend = false;
+}
+
+bool UseInstantSend() {
+    return useInstantSend;
+}
 
 std::shared_ptr<CWallet> GetMainWallet()
 {
@@ -1872,7 +1887,7 @@ void CWallet::ReacceptWalletTransactions()
     }
 }
 
-bool CWalletTx::SubmitMemoryPoolAndRelay(std::string& err_string, bool relay)
+bool CWalletTx::SubmitMemoryPoolAndRelay(std::string& err_string, bool relay, bool isIX)
 {
     // Can't relay if wallet is not broadcasting
     if (!pwallet->GetBroadcastTransactions()) return false;
@@ -1886,6 +1901,20 @@ bool CWalletTx::SubmitMemoryPoolAndRelay(std::string& err_string, bool relay)
 
     // Submit transaction to mempool for relay
     pwallet->WalletLogPrintf("Submitting wtx %s to mempool for relay\n", GetHash().ToString());
+
+    // Handle instasend here as well
+    if (isIX && IsSporkActive(SPORK_2_INSTANTX))
+    {
+        if (this->tx->vout.size() > 0) {
+            CTxDestination dest;
+            ExtractDestination(this->tx->vout[0].scriptPubKey, dest);
+            LogPrintf("CWalletTx::RelayWalletTransaction() - Instantsend to address: %s\n", EncodeDestination(dest));
+        }
+        instantSend.CreateNewLock(*(const CMutableTransaction*)this);
+        RelayTransactionLockReq(this->tx);
+        return true;
+    }
+
     // We must set fInMempool here - while it will be re-set to true by the
     // entered-mempool callback, if we did not there would be a race where a
     // user could call sendmoney in a loop and hit spurious out of funds errors
@@ -2752,6 +2781,8 @@ bool CWallet::CreateTransactionInternal(
         FeeCalculation& fee_calc_out,
         bool sign)
 {
+    bool fUseInstantX = UseInstantSend();
+
     CAmount nValue = 0;
     const OutputType change_type = TransactionChangeType(coin_control.m_change_type ? *coin_control.m_change_type : m_default_change_type, vecSend);
     ReserveDestination reservedest(this, change_type);
@@ -2769,6 +2800,13 @@ bool CWallet::CreateTransactionInternal(
         if (recipient.fSubtractFeeFromAmount)
             nSubtractFeeFromAmount++;
     }
+
+    if (fUseInstantX && (nValue > GetSporkValue(SPORK_5_MAX_VALUE) * COIN))
+    {
+        LogPrintf("InstantX doesn't support sending amounts higher than %d CRW.", GetSporkValue(SPORK_5_MAX_VALUE));
+        return false;
+    }
+
     if (vecSend.empty())
     {
         error = _("Transaction must have at least one recipient");
@@ -3142,6 +3180,8 @@ bool CWallet::CreateTransaction(
 
 void CWallet::CommitTransaction(CTransactionRef tx, mapValue_t mapValue, std::vector<std::pair<std::string, std::string>> orderForm)
 {
+    bool fUseInstantX = UseInstantSend();
+
     LOCK(cs_wallet);
     WalletLogPrintf("CommitTransaction:\n%s", tx->ToString()); /* Continued */
 
@@ -3174,7 +3214,7 @@ void CWallet::CommitTransaction(CTransactionRef tx, mapValue_t mapValue, std::ve
     }
 
     std::string err_string;
-    if (!wtx.SubmitMemoryPoolAndRelay(err_string, true)) {
+    if (!wtx.SubmitMemoryPoolAndRelay(err_string, true, fUseInstantX)) {
         WalletLogPrintf("CommitTransaction(): Transaction cannot be broadcast immediately, %s\n", err_string);
         // TODO: if we expect the failure to be long term or permanent, instead delete wtx from the wallet and return failure.
     }

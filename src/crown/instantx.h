@@ -26,14 +26,14 @@
 #define INSTANTX_SIGNATURES_TOTAL 10
 
 class CConsensusVote;
+class CInstantSend;
 class CTransactionLock;
-class InstantSend;
 
 static const int MIN_INSTANTX_PROTO_VERSION = 70040;
 
-extern InstantSend instantSend;
+extern CInstantSend instantSend;
 
-class InstantSend {
+class CInstantSend {
 public:
     void ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStream& vRecv, CConnman* connman);
     void CheckAndRemove();
@@ -45,19 +45,16 @@ public:
     bool TxLockRequested(uint256 txHash) const;
     bool AlreadyHave(uint256 txHash) const;
     std::string ToString() const;
-    boost::optional<uint256> GetLockedTx(const COutPoint& out) const;
-    boost::optional<CConsensusVote> GetLockVote(uint256 txHash) const;
-    boost::optional<CMutableTransaction> GetLockReq(uint256 txHash) const;
 
-    SERIALIZE_METHODS(InstantSend, obj)
+    SERIALIZE_METHODS(CInstantSend, obj)
     {
-        READWRITE(obj.m_lockedInputs);
-        READWRITE(obj.m_txLockVote);
-        READWRITE(obj.m_txLockReq);
-        READWRITE(obj.m_txLocks);
-        READWRITE(obj.m_unknownVotes);
-        READWRITE(obj.m_txLockReqRejected);
-        READWRITE(obj.m_completeTxLocks);
+        READWRITE(obj.mapLockedInputs);
+        READWRITE(obj.mapTxLockVote);
+        READWRITE(obj.mapTxLockReq);
+        READWRITE(obj.mapTxLocks);
+        READWRITE(obj.mapUnknownVotes);
+        READWRITE(obj.mapTxLockReqRejected);
+        READWRITE(obj.nCompleteTXLocks);
     }
 
 public:
@@ -66,7 +63,7 @@ public:
 
 private:
     void DoConsensusVote(const CMutableTransaction& tx, int64_t nBlockHeight, CConnman& connman);
-    bool IsIxTxValid(const CMutableTransaction& txCollateral) const;
+    bool IsIxTxValid(const CTransactionRef& txCollateral) const;
     bool ProcessConsensusVote(CNode* pnode, const CConsensusVote& ctx, CConnman& connman);
     bool CheckForConflictingLocks(const CMutableTransaction& tx);
     int64_t GetAverageVoteTime() const;
@@ -75,19 +72,22 @@ private:
     // critical section to protect the inner data structures
     mutable RecursiveMutex cs;
 
-    std::map<COutPoint, uint256> m_lockedInputs;
-    std::map<uint256, CConsensusVote> m_txLockVote;
-    std::map<uint256, CMutableTransaction> m_txLockReq;
-    std::map<uint256, CTransactionLock> m_txLocks;
-    std::map<uint256, int64_t> m_unknownVotes; //track votes with no tx for DOS
-    std::map<uint256, CMutableTransaction> m_txLockReqRejected;
-    int m_completeTxLocks;
+    std::map<COutPoint, uint256> mapLockedInputs;
+    std::map<uint256, CTransactionLock> mapTxLocks;
+    std::map<uint256, int64_t> mapUnknownVotes; //track votes with no tx for DOS
+    std::map<uint256, CMutableTransaction> mapTxLockReqRejected;
+    int nCompleteTXLocks;
+
+public:
+    // TODO: test how warm this is, these should be private w/LOCK
+    std::map<uint256, CConsensusVote> mapTxLockVote;
+    std::map<uint256, CMutableTransaction> mapTxLockReq;
 };
 
 class CConsensusVote {
 public:
     CConsensusVote()
-        : m_expiration(GetTime() + (InstantSend::m_numberOfSeconds * InstantSend::m_acceptedBlockCount))
+        : m_expiration(GetTime() + (CInstantSend::m_numberOfSeconds * CInstantSend::m_acceptedBlockCount))
     {
     }
     uint256 GetHash() const;
@@ -114,8 +114,8 @@ public:
 class CTransactionLock {
 public:
     CTransactionLock()
-        : m_expiration(GetTime() + (InstantSend::m_numberOfSeconds * InstantSend::m_acceptedBlockCount))
-        , m_timeout(GetTime() + (InstantSend::m_numberOfSeconds * 5))
+        : m_expiration(GetTime() + (CInstantSend::m_numberOfSeconds * CInstantSend::m_acceptedBlockCount))
+        , m_timeout(GetTime() + (CInstantSend::m_numberOfSeconds * 5))
     {
     }
     bool SignaturesValid() const;
@@ -139,5 +139,7 @@ public:
     int m_expiration;
     int m_timeout;
 };
+
+void RelayTransactionLockReq(CTransactionRef& tx);
 
 #endif

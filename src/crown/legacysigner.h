@@ -67,6 +67,4 @@ public:
     static bool VerifyHash(const uint256& hash, const CKeyID& keyID, const std::vector<unsigned char>& vchSig, std::string& strErrorRet);
 };
 
-void ThreadCheckLegacySigner();
-
 #endif

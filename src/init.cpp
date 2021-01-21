@@ -70,6 +70,7 @@
 #include <stdio.h>
 
 #include <crown/init.h>
+#include <crown/nodesync.h>
 #include <masternode/masternode-sync.h>
 
 #ifndef WIN32
@@ -2037,7 +2038,7 @@ bool AppInitMain(const util::Ref& context, NodeContext& node, interfaces::BlockA
         banman->DumpBanlist();
     }, DUMP_BANS_INTERVAL);
 
-    node.scheduler->scheduleEvery(std::bind(&ThreadCheckLegacySigner), std::chrono::milliseconds{1000});
+    node.scheduler->scheduleEvery(std::bind(&ThreadNodeSync, std::ref(*node.connman)), std::chrono::milliseconds{1000});
 
 #if HAVE_SYSTEM
     StartupNotify(args);

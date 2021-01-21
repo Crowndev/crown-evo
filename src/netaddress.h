@@ -189,7 +189,6 @@ class CNetAddr
         //! btc 0.21 routine
         std::string ToStringIP() const;
         //! legacy crown routine
-        unsigned int LegacyGetByte(int n) const;
         std::string LegacyToStringIP(bool fUseGetnameinfo = true) const;
         uint64_t GetHash() const;
         bool GetInAddr(struct in_addr* pipv4Addr) const;

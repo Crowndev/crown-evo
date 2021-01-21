@@ -117,7 +117,6 @@ void CSystemnodeSync::GetNextAsset()
 {
     switch (RequestedSystemnodeAssets) {
     case (SYSTEMNODE_SYNC_INITIAL):
-    case (SYSTEMNODE_SYNC_FAILED):
         ClearFulfilledRequest(*g_rpc_node->connman);
         RequestedSystemnodeAssets = SYSTEMNODE_SYNC_SPORKS;
         break;
@@ -159,12 +158,12 @@ void CSystemnodeSync::ProcessMessage(CNode* pfrom, const std::string& strCommand
 {
     if (strCommand == "snssc") {
 
+        if (IsSynced())
+            return;
+
         int nItemID;
         int nCount;
         vRecv >> nItemID >> nCount;
-
-        if (IsSynced())
-            return;
 
         //this means we will receive no further communication
         switch (nItemID) {

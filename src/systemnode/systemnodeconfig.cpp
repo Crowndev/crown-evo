@@ -3,9 +3,7 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <chainparams.h>
-#include <fs.h>
 #include <systemnode/systemnodeconfig.h>
-#include <util/strencodings.h>
 #include <util/system.h>
 
 CSystemnodeConfig systemnodeConfig;

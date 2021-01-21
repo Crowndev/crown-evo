@@ -51,17 +51,19 @@ bool CLegacySigner::IsVinAssociatedWithPubkey(CTxIn& vin, CPubKey& pubkey, int n
     //! get specific vout
     unsigned int voutn = 0;
     for (const auto& out : txVin->vout) {
-        if (vin.prevout.n != voutn)
+        if (vin.prevout.n != voutn++)
             continue;
-        LogPrintf("     vout %d - found %s - expected %s\n", voutn, out.scriptPubKey.ToString(), payee.ToString());
+        // LogPrintf("     vout %d - found %s - expected %s\n", voutn, out.scriptPubKey.ToString(), payee.ToString());
         if (out.scriptPubKey == payee) {
             if (out.nValue * COIN == nodeType ? consensusParams.nSystemnodeCollateral : consensusParams.nMasternodeCollateral) {
                 return true;
+            } else {
+                LogPrintf("     pubkeys match but value incorrect (expecting %llu, got %llu)\n", nodeType ? consensusParams.nSystemnodeCollateral : consensusParams.nMasternodeCollateral, out.nValue * COIN);
             }
         }
-        ++voutn;
     }
 
+    LogPrintf("%s - vin not associated with given pubkey (vin: %s)\n", __func__, vin.ToString());
     return false;
 }
 
@@ -131,55 +133,3 @@ bool CHashSigner::VerifyHash(const uint256& hash, const CKeyID& keyID, const std
     return true;
 }
 
-void ThreadCheckLegacySigner()
-{
-    util::ThreadRename("crown-legacysigner");
-
-    if (fReindex || fImporting)
-        return;
-    if (::ChainstateActive().IsInitialBlockDownload())
-        return;
-    if (ShutdownRequested())
-        return;
-
-    static unsigned int c1 = 0;
-    static unsigned int c2 = 0;
-
-    // try to sync from all available nodes, one step at a time
-    masternodeSync.Process(*g_rpc_node->connman);
-    systemnodeSync.Process(*g_rpc_node->connman);
-
-    if (masternodeSync.IsBlockchainSynced()) {
-
-        c1++;
-
-        // check if we should activate or ping every few minutes,
-        // start right after sync is considered to be done
-        if (c1 % MASTERNODE_PING_SECONDS == 15)
-            activeMasternode.ManageStatus(*g_rpc_node->connman);
-
-        if (c1 % 60 == 0) {
-            mnodeman.CheckAndRemove();
-            mnodeman.ProcessMasternodeConnections(*g_rpc_node->connman);
-            masternodePayments.CheckAndRemove();
-            instantSend.CheckAndRemove();
-        }
-    }
-
-    if (systemnodeSync.IsBlockchainSynced()) {
-
-        c2++;
-
-        // check if we should activate or ping every few minutes,
-        // start right after sync is considered to be done
-        if (c2 % SYSTEMNODE_PING_SECONDS == 15)
-            activeSystemnode.ManageStatus(*g_rpc_node->connman);
-
-        if (c2 % 60 == 0) {
-            snodeman.CheckAndRemove();
-            snodeman.ProcessSystemnodeConnections(*g_rpc_node->connman);
-            systemnodePayments.CheckAndRemove();
-            instantSend.CheckAndRemove();
-        }
-    }
-}

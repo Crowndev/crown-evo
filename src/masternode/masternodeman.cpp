@@ -162,6 +162,7 @@ void CMasternodeMan::ProcessMessage(CNode* pfrom, const std::string& strCommand,
         mapSeenMasternodePing.insert(make_pair(mnp.GetHash(), mnp));
 
         int nDoS = 0;
+        LOCK(cs_main);
         if (mnp.CheckAndUpdate(nDoS, *connman))
             return;
 
@@ -233,9 +234,9 @@ void CMasternodeMan::ProcessMessage(CNode* pfrom, const std::string& strCommand,
 
 void CMasternodeMan::CheckAndRemove(bool forceExpiredRemoval)
 {
-    LOCK(cs);
-
     Check();
+
+    LOCK(cs);
 
     //remove inactive and outdated
     vector<CMasternode>::iterator it = vMasternodes.begin();
@@ -693,6 +694,11 @@ bool CMasternodeMan::CheckMnbAndUpdateMasternodeList(CMasternodeBroadcast mnb, i
     if (!mnb.IsValidNetAddr()) {
         LogPrint(BCLog::MASTERNODE, "CMasternodeBroadcast::CheckMnbAndUpdateMasternodeList -- Invalid addr, rejected: masternode=%s  sigTime=%lld  addr=%s\n",
             mnb.vin.prevout.ToStringShort(), mnb.sigTime, mnb.addr.LegacyToString());
+        return false;
+    }
+
+    if(!mnb.CheckAndUpdate(nDos, connman)){
+        LogPrint(BCLog::MASTERNODE, "CMasternodeMan::CheckMnbAndUpdateMasternodeList - Masternode broadcast, vin: %s CheckAndUpdate failed\n", mnb.vin.ToString());
         return false;
     }
 

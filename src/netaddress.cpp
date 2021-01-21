@@ -578,11 +578,6 @@ std::string CNetAddr::ToStringIP() const
     assert(false);
 }
 
-unsigned int CNetAddr::LegacyGetByte(int n) const
-{
-    return m_addr[15-n];
-}
-
 std::string CNetAddr::LegacyToStringIP(bool fUseGetnameinfo) const
 {
     if (IsTor())
@@ -599,13 +594,9 @@ std::string CNetAddr::LegacyToStringIP(bool fUseGetnameinfo) const
         }
     }
     if (IsIPv4())
-        return strprintf("%u.%u.%u.%u", LegacyGetByte(3), LegacyGetByte(2), LegacyGetByte(1), LegacyGetByte(0));
+        return strprintf("%u.%u.%u.%u", m_addr[0], m_addr[1], m_addr[2], m_addr[3]);
     else
-        return strprintf("%x:%x:%x:%x:%x:%x:%x:%x",
-                         LegacyGetByte(15) << 8 | LegacyGetByte(14), LegacyGetByte(13) << 8 | LegacyGetByte(12),
-                         LegacyGetByte(11) << 8 | LegacyGetByte(10), LegacyGetByte(9) << 8 | LegacyGetByte(8),
-                         LegacyGetByte(7) << 8 | LegacyGetByte(6), LegacyGetByte(5) << 8 | LegacyGetByte(4),
-                         LegacyGetByte(3) << 8 | LegacyGetByte(2), LegacyGetByte(1) << 8 | LegacyGetByte(0));
+        return IPv6ToString(m_addr);
 }
 
 std::string CNetAddr::ToString() const
@@ -1021,7 +1012,7 @@ std::string CService::LegacyToStringPort() const
 
 std::string CService::LegacyToStringIPPort(bool fUseGetnameinfo) const
 {
-    if (IsIPv4() || IsTor()) {
+    if (IsIPv4() || IsTor() || IsInternal()) {
         return LegacyToStringIP(fUseGetnameinfo) + ":" + LegacyToStringPort();
     } else {
         return "[" + LegacyToStringIP(fUseGetnameinfo) + "]:" + LegacyToStringPort();

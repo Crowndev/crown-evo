@@ -138,6 +138,7 @@ BITCOIN_CORE_H = \
   crown/instantx.h \
   crown/legacycalls.h \
   crown/legacysigner.h \
+  crown/nodesync.h \
   crown/nodewallet.h \
   crown/spork.h \
   cuckoocache.h \
@@ -307,6 +308,7 @@ libbitcoin_server_a_SOURCES = \
   crown/instantx.cpp \
   crown/legacycalls.cpp \
   crown/legacysigner.cpp \
+  crown/nodesync.cpp \
   crown/nodewallet.cpp \
   crown/spork.cpp \
   dbwrapper.cpp \
@@ -635,16 +637,17 @@ nodist_libbitcoin_util_a_SOURCES = $(srcdir)/obj/build.h
 #
 
 # bitcoind & bitcoin-node binaries #
-bitcoin_daemon_sources = bitcoind.cpp
-bitcoin_bin_cppflags = $(AM_CPPFLAGS) $(BITCOIN_INCLUDES)
-bitcoin_bin_cxxflags = $(AM_CXXFLAGS) $(PIE_FLAGS)
-bitcoin_bin_ldflags = $(RELDFLAGS) $(AM_LDFLAGS) $(LIBTOOL_APP_LDFLAGS) $(PTHREAD_FLAGS)
+crown_daemon_sources = bitcoind.cpp
+crown_bin_cppflags = $(AM_CPPFLAGS) $(BITCOIN_INCLUDES)
+crown_bin_cxxflags = $(AM_CXXFLAGS) $(PIE_FLAGS)
+crown_bin_ldflags = $(RELDFLAGS) $(AM_LDFLAGS) $(LIBTOOL_APP_LDFLAGS) $(PTHREAD_FLAGS)
 
 if TARGET_WINDOWS
-bitcoin_daemon_sources += bitcoind-res.rc
+crown_daemon_sources += bitcoind-res.rc
 endif
 
-bitcoin_bin_ldadd = \
+crown_bin_ldadd = \
+  $(LIBBITCOIN_SERVER) \
   $(LIBBITCOIN_WALLET) \
   $(LIBBITCOIN_COMMON) \
   $(LIBBITCOIN_UTIL) \
@@ -657,19 +660,19 @@ bitcoin_bin_ldadd = \
   $(LIBMEMENV) \
   $(LIBSECP256K1)
 
-bitcoin_bin_ldadd += $(BOOST_LIBS) $(BDB_LIBS) $(MINIUPNPC_LIBS) $(EVENT_PTHREADS_LIBS) $(EVENT_LIBS) $(ZMQ_LIBS) $(SQLITE_LIBS)
+crown_bin_ldadd += $(BOOST_LIBS) $(BDB_LIBS) $(MINIUPNPC_LIBS) $(EVENT_PTHREADS_LIBS) $(EVENT_LIBS) $(ZMQ_LIBS) $(SQLITE_LIBS)
 
-crownd_SOURCES = $(bitcoin_daemon_sources)
-crownd_CPPFLAGS = $(bitcoin_bin_cppflags)
-crownd_CXXFLAGS = $(bitcoin_bin_cxxflags)
-crownd_LDFLAGS = $(bitcoin_bin_ldflags)
-crownd_LDADD = $(LIBBITCOIN_SERVER) $(bitcoin_bin_ldadd)
+crownd_SOURCES = $(crown_daemon_sources)
+crownd_CPPFLAGS = $(crown_bin_cppflags)
+crownd_CXXFLAGS = $(crown_bin_cxxflags)
+crownd_LDFLAGS = $(crown_bin_ldflags)
+crownd_LDADD = $(LIBBITCOIN_SERVER) $(crown_bin_ldadd)
 
-crown_node_SOURCES = $(bitcoin_daemon_sources)
-crown_node_CPPFLAGS = $(bitcoin_bin_cppflags)
-crown_node_CXXFLAGS = $(bitcoin_bin_cxxflags)
-crown_node_LDFLAGS = $(bitcoin_bin_ldflags)
-crown_node_LDADD = $(LIBBITCOIN_SERVER) $(bitcoin_bin_ldadd)
+crown_node_SOURCES = $(crown_daemon_sources)
+crown_node_CPPFLAGS = $(crown_bin_cppflags)
+crown_node_CXXFLAGS = $(crown_bin_cxxflags)
+crown_node_LDFLAGS = $(crown_bin_ldflags)
+crown_node_LDADD = $(LIBBITCOIN_SERVER) $(crown_bin_ldadd)
 
 # bitcoin-cli binary #
 crown_cli_SOURCES = bitcoin-cli.cpp
@@ -716,7 +719,23 @@ crown_wallet_SOURCES = bitcoin-wallet.cpp
 crown_wallet_CPPFLAGS = $(bitcoin_bin_cppflags)
 crown_wallet_CXXFLAGS = $(bitcoin_bin_cxxflags)
 crown_wallet_LDFLAGS = $(bitcoin_bin_ldflags)
-crown_wallet_LDADD = $(LIBBITCOIN_WALLET_TOOL) $(bitcoin_bin_ldadd)
+crown_wallet_LDADD = $(LIBBITCOIN_WALLET_TOOL) $(crown_bin_ldadd)
+
+crown_wallet_LDADD += \
+  $(LIBBITCOIN_SERVER) \
+  $(LIBBITCOIN_WALLET) \
+  $(LIBBITCOIN_COMMON) \
+  $(LIBBITCOIN_UTIL) \
+  $(LIBUNIVALUE) \
+  $(LIBBITCOIN_ZMQ) \
+  $(LIBBITCOIN_CONSENSUS) \
+  $(LIBBITCOIN_CRYPTO) \
+  $(LIBLEVELDB) \
+  $(LIBLEVELDB_SSE42) \
+  $(LIBMEMENV) \
+  $(LIBSECP256K1)
+
+crown_wallet_LDADD += $(BOOST_LIBS) $(BDB_LIBS) $(EVENT_PTHREADS_LIBS) $(EVENT_LIBS) $(MINIUPNPC_LIBS) $(ZMQ_LIBS)
 
 if TARGET_WINDOWS
 crown_wallet_SOURCES += bitcoin-wallet-res.rc

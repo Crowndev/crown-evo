@@ -147,7 +147,6 @@ void CMasternodeSync::GetNextAsset()
 {
     switch (RequestedMasternodeAssets) {
     case (MASTERNODE_SYNC_INITIAL):
-    case (MASTERNODE_SYNC_FAILED):
         ClearFulfilledRequest(*g_rpc_node->connman);
         RequestedMasternodeAssets = MASTERNODE_SYNC_SPORKS;
         break;
@@ -198,7 +197,7 @@ void CMasternodeSync::ProcessMessage(CNode* pfrom, const std::string& strCommand
         int nCount;
         vRecv >> nItemID >> nCount;
 
-        if (RequestedMasternodeAssets >= MASTERNODE_SYNC_FINISHED)
+        if (IsSynced())
             return;
 
         //this means we will receive no further communication

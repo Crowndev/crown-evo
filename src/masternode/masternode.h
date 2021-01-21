@@ -8,6 +8,7 @@
 
 #include <arith_uint256.h>
 #include <base58.h>
+#include <crown/legacycalls.h>
 #include <key.h>
 #include <net.h>
 #include <sync.h>
@@ -261,7 +262,7 @@ public:
             return 0;
 
         if (cacheInputAge == 0) {
-            cacheInputAge = GetUTXOConfirmations(vin.prevout);
+            cacheInputAge = GetInputAge(vin);
             cacheInputAgeBlock = ::ChainActive().Tip()->nHeight;
         }
 

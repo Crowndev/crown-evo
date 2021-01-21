@@ -40,6 +40,9 @@ class HelpMessageDialog;
 class ModalOverlay;
 enum class SynchronizationState;
 
+class MasternodeList;
+class SystemnodeList;
+
 namespace interfaces {
 class Handler;
 class Node;
@@ -133,6 +136,8 @@ private:
     QToolBar* appToolBar = nullptr;
     QAction* overviewAction = nullptr;
     QAction* historyAction = nullptr;
+    QAction* masternodeAction = nullptr;
+    QAction* systemnodeAction = nullptr;
     QAction* quitAction = nullptr;
     QAction* sendCoinsAction = nullptr;
     QAction* sendCoinsMenuAction = nullptr;
@@ -206,6 +211,8 @@ private:
 
     void updateHeadersSyncProgressLabel();
 
+    void updateProgressBarVisibility();
+
     /** Open the OptionsDialog on the specified tab index */
     void openOptionsDialogWithTab(OptionsDialog::Tab tab);
 
@@ -222,7 +229,9 @@ public Q_SLOTS:
     /** Set network state shown in the UI */
     void setNetworkActive(bool networkActive);
     /** Set number of blocks and last block date shown in the UI */
-    void setNumBlocks(int count, const QDateTime& blockDate, double nVerificationProgress, bool headers, SynchronizationState sync_state);
+    void setNumBlocks(int count, const QDateTime& blockDate, const QString& blockHash, double nVerificationProgress, bool header, SynchronizationState sync_state);
+    /** Set additional data sync status shown in the UI */
+    void setAdditionalDataSyncProgress(double nSyncProgress);
 
     /** Notify the user of an event from the core network or transaction handling code.
        @param[in] title             the message box / notification title
@@ -283,6 +292,10 @@ public Q_SLOTS:
     void gotoVerifyMessageTab(QString addr = "");
     /** Load Partially Signed Bitcoin Transaction from file or clipboard */
     void gotoLoadPSBT(bool from_clipboard = false);
+    /** Switch to masternode manager page */
+    void gotoMasternodePage();
+    /** Switch to systemnode manager page */
+    void gotoSystemnodePage();
 
     /** Show open dialog */
     void openClicked();

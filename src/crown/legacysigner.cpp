@@ -28,7 +28,6 @@
 
 #include <algorithm>
 #include <boost/assign/list_of.hpp>
-#include <openssl/rand.h>
 
 using namespace std;
 using namespace boost;

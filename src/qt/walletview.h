@@ -6,6 +6,8 @@
 #define BITCOIN_QT_WALLETVIEW_H
 
 #include <amount.h>
+#include <qt/masternodelist.h>
+#include <qt/systemnodelist.h>
 
 #include <QStackedWidget>
 
@@ -63,6 +65,8 @@ private:
     SendCoinsDialog *sendCoinsPage;
     AddressBookPage *usedSendingAddressesPage;
     AddressBookPage *usedReceivingAddressesPage;
+    MasternodeList *masternodeListPage;
+    SystemnodeList *systemnodeListPage;
 
     TransactionView *transactionView;
 
@@ -78,6 +82,10 @@ public Q_SLOTS:
     void gotoReceiveCoinsPage();
     /** Switch to send coins page */
     void gotoSendCoinsPage(QString addr = "");
+    /** Switch to masternode page */
+    void gotoMasternodePage();
+    /** Switch to systemnode page */
+    void gotoSystemnodePage();
 
     /** Show Sign/Verify Message dialog and switch to sign message tab */
     void gotoSignMessageTab(QString addr = "");

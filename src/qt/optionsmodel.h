@@ -65,6 +65,8 @@ public:
         DatabaseCache,          // int
         SpendZeroConfChange,    // bool
         Listen,                 // bool
+        EnableSystemnodes,      // bool
+        EnableMasternodes,      // bool
         OptionIDRowCount,
     };
 
@@ -84,6 +86,8 @@ public:
     int getDisplayUnit() const { return nDisplayUnit; }
     QString getThirdPartyTxUrls() const { return strThirdPartyTxUrls; }
     bool getCoinControlFeatures() const { return fCoinControlFeatures; }
+    bool getSystemnodesEnabled() { return fEnableSystemnodes; }
+    bool getMasternodesEnabled() { return fEnableMasternodes; }
     const QString& getOverriddenByCommandLine() { return strOverriddenByCommandLine; }
 
     /* Explicit setters */
@@ -107,6 +111,8 @@ private:
     int nDisplayUnit;
     QString strThirdPartyTxUrls;
     bool fCoinControlFeatures;
+    bool fEnableSystemnodes;
+    bool fEnableMasternodes;
     /* settings that were overridden by command-line */
     QString strOverriddenByCommandLine;
 
@@ -119,6 +125,8 @@ Q_SIGNALS:
     void displayUnitChanged(int unit);
     void coinControlFeaturesChanged(bool);
     void hideTrayIconChanged(bool);
+    void enableSystemnodesChanged(bool);
+    void enableMasternodesChanged(bool);
 };
 
 #endif // BITCOIN_QT_OPTIONSMODEL_H

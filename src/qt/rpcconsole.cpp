@@ -22,6 +22,9 @@
 #include <util/system.h>
 #include <util/threadnames.h>
 
+#include <masternode/masternodeman.h>
+#include <systemnode/systemnodeman.h>
+
 #include <univalue.h>
 
 #ifdef ENABLE_WALLET
@@ -853,6 +856,13 @@ void RPCConsole::updateNetworkState()
     }
 
     ui->numberOfConnections->setText(connections);
+
+    std::ostringstream mnCount;
+    std::ostringstream snCount;
+    mnCount << mnodeman.CountEnabled() << " enabled of " << mnodeman.size() << " total";
+    snCount << snodeman.CountEnabled() << " enabled of " << snodeman.size() << " total";
+    ui->masternodeCount->setText(QString::fromStdString(mnCount.str()));
+    ui->systemnodeCount->setText(QString::fromStdString(snCount.str()));
 }
 
 void RPCConsole::setNumConnections(int count)

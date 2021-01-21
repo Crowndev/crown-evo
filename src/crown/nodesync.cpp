@@ -28,7 +28,15 @@
 
 #include <algorithm>
 #include <boost/assign/list_of.hpp>
-#include <openssl/rand.h>
+
+std::string currentSyncStatus()
+{
+    if (masternodeSync.IsSynced())
+        return systemnodeSync.GetSyncStatus();
+    if (masternodeSync.IsBlockchainSynced())
+        return masternodeSync.GetSyncStatus();
+    return "";
+}
 
 void ThreadNodeSync(CConnman& connman)
 {

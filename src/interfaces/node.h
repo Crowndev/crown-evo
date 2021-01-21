@@ -43,6 +43,7 @@ struct BlockAndHeaderTipInfo
 {
     int block_height;
     int64_t block_time;
+    uint256 block_hash;
     int header_height;
     int64_t header_time;
     double verification_progress;
@@ -132,6 +133,9 @@ public:
 
     //! Get last block time.
     virtual int64_t getLastBlockTime() = 0;
+
+    //! Get last block hash.
+    virtual std::string getLastBlockHash() = 0;
 
     //! Get verification progress.
     virtual double getVerificationProgress() = 0;

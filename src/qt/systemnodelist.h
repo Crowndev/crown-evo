@@ -43,8 +43,8 @@ public:
 
 private:
     QMenu* contextMenu;
-    int64_t nTimeFilterUpdated;
-    bool fFilterUpdated;
+    int64_t nTimeFilterUpdated{0};
+    bool fFilterUpdated{false};
 
 public Q_SLOTS:
     void updateMySystemnodeInfo(QString strAlias, QString strAddr, CSystemnode* pmn);

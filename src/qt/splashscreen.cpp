@@ -34,11 +34,11 @@ SplashScreen::SplashScreen(Qt::WindowFlags f, const NetworkStyle *networkStyle) 
     setWindowFlags(Qt::FramelessWindowHint);
 
     // set reference size & points
-    int paddingLeft = 14;
-    int paddingTop = 492;
-    int titleVersionVSpace = 22;
-    int titleCopyrightVSpace = 27;
-    float fontFactor = 0.75;
+    int paddingLeft = 5;
+    int paddingTop = 491;
+    int titleVersionVSpace = 18;
+    int titleCopyrightVSpace = 23;
+    float fontFactor = 1.25;
 
     // define text to place
     QString titleText       = tr(PACKAGE_NAME);
@@ -79,7 +79,7 @@ SplashScreen::SplashScreen(Qt::WindowFlags f, const NetworkStyle *networkStyle) 
 
     // draw additional text if special network
     if(!titleAddText.isEmpty()) {
-        QFont boldFont = QFont(font, 10*fontFactor);
+        QFont boldFont = QFont(font, 7.5*fontFactor);
         boldFont.setWeight(QFont::Bold);
         pixPaint.setFont(boldFont);
         fm = pixPaint.fontMetrics();

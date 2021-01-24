@@ -49,6 +49,7 @@ QT_MOC_CPP = \
   qt/moc_bitcoin.cpp \
   qt/moc_bitcoingui.cpp \
   qt/moc_bitcoinunits.cpp \
+  qt/moc_callback.cpp \
   qt/moc_clientmodel.cpp \
   qt/moc_coincontroldialog.cpp \
   qt/moc_coincontroltreewidget.cpp \
@@ -106,6 +107,7 @@ BITCOIN_MM = \
 
 QT_MOC = \
   qt/bitcoinamountfield.moc \
+  qt/callback.moc \
   qt/intro.moc \
   qt/overviewpage.moc \
   qt/rpcconsole.moc
@@ -125,6 +127,7 @@ CROWN_QT_H = \
   qt/bitcoin.h \
   qt/bitcoingui.h \
   qt/bitcoinunits.h \
+  qt/callback.h \
   qt/clientmodel.h \
   qt/coincontroldialog.h \
   qt/coincontroltreewidget.h \
@@ -288,6 +291,8 @@ CROWN_QT_WALLET_CPP = \
   qt/privatekeywidget.cpp \
   qt/createnodedialog.cpp \
   qt/startmissingdialog.cpp \
+  qt/createsystemnodedialog.h \
+  qt/createmasternodedialog.h \
   qt/transactiondesc.cpp \
   qt/transactiondescdialog.cpp \
   qt/transactionfilterproxy.cpp \

@@ -225,7 +225,6 @@ namespace GUIUtil
     {
         public:
               explicit QTableWidgetNumberItem(const int64_t numValue);
-              virtual bool operator<(QTableWidgetItem const& item) const;
 
           private:
               int64_t m_value;

@@ -859,8 +859,8 @@ void RPCConsole::updateNetworkState()
 
     std::ostringstream mnCount;
     std::ostringstream snCount;
-    mnCount << mnodeman.CountEnabled() << " enabled of " << mnodeman.size() << " total";
-    snCount << snodeman.CountEnabled() << " enabled of " << snodeman.size() << " total";
+    mnCount << mnodeman.CountEnabled() << " enabled (" << mnodeman.size() << " total)";
+    snCount << snodeman.CountEnabled() << " enabled (" << snodeman.size() << " total)";
     ui->masternodeCount->setText(QString::fromStdString(mnCount.str()));
     ui->systemnodeCount->setText(QString::fromStdString(snCount.str()));
 }

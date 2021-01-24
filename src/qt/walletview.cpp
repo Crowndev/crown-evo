@@ -104,8 +104,8 @@ void WalletView::setClientModel(ClientModel *_clientModel)
 
     overviewPage->setClientModel(_clientModel);
     sendCoinsPage->setClientModel(_clientModel);
-    masternodeListPage->setClientModel(_clientModel);
-    systemnodeListPage->setClientModel(_clientModel);
+    if (walletModel) masternodeListPage->setClientModel(_clientModel);
+    if (walletModel) systemnodeListPage->setClientModel(_clientModel);
     if (walletModel) walletModel->setClientModel(_clientModel);
 }
 

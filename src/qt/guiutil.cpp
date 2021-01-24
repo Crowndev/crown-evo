@@ -929,19 +929,4 @@ QTableWidgetNumberItem::QTableWidgetNumberItem(const int64_t numValue) : QTableW
     this->setText(QString::number(numValue));
 }
 
-/**
- * Comparator overload to ensure that the QStrings internally set as numbers are compared as numbers and not strings.
- * @param[QTableWidgetItem] item      Right hand side of the less than operator
- */
-bool QTableWidgetNumberItem::operator<(QTableWidgetItem const& item) const
-{
-    QTableWidgetNumberItem const* rhs = dynamic_cast<QTableWidgetNumberItem const*>(&item);
-
-    if (!rhs) {
-        return QTableWidgetItem::operator<(item);
-    }
-
-    return m_value < rhs->m_value;
-}
-
 } // namespace GUIUtil

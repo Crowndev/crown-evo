@@ -170,14 +170,9 @@ UniValue systemnodecurrent(const JSONRPCRequest& request)
     throw std::runtime_error("unknown");
 }
 
-bool StartSystemnodeEntry(UniValue& statusObjRet, CSystemnodeBroadcast& snbRet, bool& fSuccessRet, const CSystemnodeConfig::CSystemnodeEntry& sne, std::string& errorMessage, std::string strCommand = "")
+bool StartSystemnodeEntry(UniValue& statusObjRet, CSystemnodeBroadcast& snbRet, bool& fSuccessRet, const CNodeEntry& sne, std::string& errorMessage, std::string strCommand = "")
 {
-    int nIndex;
-    if (!sne.castOutputIndex(nIndex)) {
-        return false;
-    }
-
-    CTxIn vin = CTxIn(uint256S(sne.getTxHash()), uint32_t(nIndex));
+    CTxIn vin = CTxIn(uint256S(sne.getTxHash()), (uint32_t)atoi(sne.getOutputIndex()));
     CSystemnode* psn = snodeman.Find(vin);
     if (psn) {
         if (strCommand == "missing")
@@ -301,7 +296,7 @@ UniValue startsystemnode(const JSONRPCRequest& request)
             throw std::runtime_error("You can't use this command until systemnode list is synced\n");
         }
 
-        std::vector<CSystemnodeConfig::CSystemnodeEntry> snEntries;
+        std::vector<CNodeEntry> snEntries;
         snEntries = systemnodeConfig.getEntries();
 
         int successful = 0;
@@ -309,7 +304,7 @@ UniValue startsystemnode(const JSONRPCRequest& request)
 
         UniValue resultsObj(UniValue::VARR);
 
-        for (CSystemnodeConfig::CSystemnodeEntry sne : systemnodeConfig.getEntries()) {
+        for (CNodeEntry sne : systemnodeConfig.getEntries()) {
             UniValue statusObj(UniValue::VOBJ);
             CSystemnodeBroadcast snb;
             std::string errorMessage;
@@ -337,7 +332,7 @@ UniValue startsystemnode(const JSONRPCRequest& request)
         UniValue resultsObj(UniValue::VARR);
         UniValue statusObj(UniValue::VOBJ);
 
-        for (CSystemnodeConfig::CSystemnodeEntry sne : systemnodeConfig.getEntries()) {
+        for (CNodeEntry sne : systemnodeConfig.getEntries()) {
             if (sne.getAlias() == alias) {
                 CSystemnodeBroadcast snb;
                 found = true;
@@ -446,16 +441,13 @@ UniValue listsystemnodeconf(const JSONRPCRequest& request)
             "\nExamples:\n"
             + HelpExampleCli("listsystemnodeconf", "") + HelpExampleRpc("listsystemnodeconf", ""));
 
-    std::vector<CSystemnodeConfig::CSystemnodeEntry> snEntries;
+    std::vector<CNodeEntry> snEntries;
     snEntries = systemnodeConfig.getEntries();
 
     UniValue ret(UniValue::VARR);
 
-    for (CSystemnodeConfig::CSystemnodeEntry sne : systemnodeConfig.getEntries()) {
-        int nIndex;
-        if (!sne.castOutputIndex(nIndex))
-            continue;
-        CTxIn vin = CTxIn(uint256S(sne.getTxHash()), uint32_t(nIndex));
+    for (CNodeEntry sne : systemnodeConfig.getEntries()) {
+        CTxIn vin = CTxIn(uint256S(sne.getTxHash()), (uint32_t)atoi(sne.getOutputIndex()));
         CSystemnode* psn = snodeman.Find(vin);
 
         std::string strStatus = psn ? psn->Status() : "MISSING";
@@ -582,7 +574,7 @@ UniValue getsystemnodewinners(const JSONRPCRequest& request)
         UniValue obj(UniValue::VOBJ);
         obj.pushKV("nHeight", i);
 
-        std::string strPayment = GetRequiredPaymentsString(i);
+        std::string strPayment = SNGetRequiredPaymentsString(i);
         if (strFilter != "" && strPayment.find(strFilter) == std::string::npos)
             continue;
 
@@ -735,7 +727,7 @@ UniValue createsystemnodebroadcast(const JSONRPCRequest& request)
         UniValue statusObj(UniValue::VOBJ);
         statusObj.pushKV("alias", alias);
 
-        for (CSystemnodeConfig::CSystemnodeEntry sne : systemnodeConfig.getEntries()) {
+        for (CNodeEntry sne : systemnodeConfig.getEntries()) {
             if (sne.getAlias() == alias) {
                 CSystemnodeBroadcast snb;
                 found = true;
@@ -761,7 +753,7 @@ UniValue createsystemnodebroadcast(const JSONRPCRequest& request)
         if (fImporting || fReindex)
             throw JSONRPCError(RPC_INTERNAL_ERROR, "Wait for reindex and/or import to finish");
 
-        std::vector<CSystemnodeConfig::CSystemnodeEntry> snEntries;
+        std::vector<CNodeEntry> snEntries;
         snEntries = systemnodeConfig.getEntries();
 
         int successful = 0;
@@ -769,7 +761,7 @@ UniValue createsystemnodebroadcast(const JSONRPCRequest& request)
 
         UniValue resultsObj(UniValue::VARR);
 
-        for (CSystemnodeConfig::CSystemnodeEntry sne : systemnodeConfig.getEntries()) {
+        for (CNodeEntry sne : systemnodeConfig.getEntries()) {
             UniValue statusObj(UniValue::VOBJ);
             CSystemnodeBroadcast snb;
             std::string errorMessage;

@@ -41,6 +41,7 @@ public:
     void setWalletModel(WalletModel* walletModel);
     void StartAlias(std::string strAlias);
     void StartAll(std::string strCommand = "start-all");
+    void VoteMany(std::string strCommand);
     void on_filterLineEdit_textChanged(const QString &strFilterIn);
 
 private:

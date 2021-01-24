@@ -5,110 +5,17 @@
 
 #include <string>
 #include <vector>
+#include <nodeconfig.h>
 
 class CMasternodeConfig;
 extern CMasternodeConfig masternodeConfig;
 
-class CMasternodeConfig {
-
-public:
-    class CMasternodeEntry {
-    private:
-        std::string alias;
-        std::string ip;
-        std::string privKey;
-        std::string txHash;
-        std::string outputIndex;
-
-    public:
-        CMasternodeEntry(std::string alias, std::string ip, std::string privKey, std::string txHash, std::string outputIndex)
-        {
-            this->alias = alias;
-            this->ip = ip;
-            this->privKey = privKey;
-            this->txHash = txHash;
-            this->outputIndex = outputIndex;
-        }
-
-        const std::string& getAlias() const
-        {
-            return alias;
-        }
-
-        void setAlias(const std::string& alias)
-        {
-            this->alias = alias;
-        }
-
-        const std::string& getOutputIndex() const
-        {
-            return outputIndex;
-        }
-
-        bool castOutputIndex(int& n) const;
-
-        void setOutputIndex(const std::string& outputIndex)
-        {
-            this->outputIndex = outputIndex;
-        }
-
-        const std::string& getPrivKey() const
-        {
-            return privKey;
-        }
-
-        void setPrivKey(const std::string& privKey)
-        {
-            this->privKey = privKey;
-        }
-
-        const std::string& getTxHash() const
-        {
-            return txHash;
-        }
-
-        void setTxHash(const std::string& txHash)
-        {
-            this->txHash = txHash;
-        }
-
-        const std::string& getIp() const
-        {
-            return ip;
-        }
-
-        void setIp(const std::string& ip)
-        {
-            this->ip = ip;
-        }
-    };
-
-    CMasternodeConfig()
-    {
-        entries = std::vector<CMasternodeEntry>();
-    }
-
-    void clear();
-    bool read(std::string& strErr);
-    void add(std::string alias, std::string ip, std::string privKey, std::string txHash, std::string outputIndex);
-
-    std::vector<CMasternodeEntry>& getEntries()
-    {
-        return entries;
-    }
-
-    int getCount()
-    {
-        int c = -1;
-        for (CMasternodeEntry e : entries) {
-            if (e.getAlias() != "")
-                c++;
-        }
-        return c;
-    }
-
+class CMasternodeConfig : public CNodeConfig
+{
 private:
-    std::vector<CMasternodeEntry> entries;
+    boost::filesystem::path getNodeConfigFile() override;
+    std::string getHeader() override;
+    std::string getFileName() override;
 };
 
 #endif /* SRC_MASTERNODECONFIG_H_ */

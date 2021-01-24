@@ -92,7 +92,7 @@ public:
 
     int getCount() {
         int c = -1;
-        for (CNodeEntry e : entries) {
+        for (auto e : entries) {
             if(e.getAlias() != "") c++;
         }
         return c;

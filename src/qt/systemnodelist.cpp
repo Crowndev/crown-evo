@@ -106,7 +106,7 @@ void SystemnodeList::StartAlias(std::string strAlias)
     std::string strStatusHtml;
     strStatusHtml += "<center>Alias: " + strAlias;
 
-    for (CSystemnodeConfig::CSystemnodeEntry mne : systemnodeConfig.getEntries()) {
+    for (CNodeEntry mne : systemnodeConfig.getEntries()) {
         if (mne.getAlias() == strAlias) {
             std::string strError;
             CSystemnodeBroadcast mnb;
@@ -138,15 +138,11 @@ void SystemnodeList::StartAll(std::string strCommand)
     int nCountFailed = 0;
     std::string strFailedHtml;
 
-    for (CSystemnodeConfig::CSystemnodeEntry mne : systemnodeConfig.getEntries()) {
+    for (CNodeEntry mne : systemnodeConfig.getEntries()) {
         std::string strError;
         CSystemnodeBroadcast mnb;
 
-        int nIndex;
-        if(!mne.castOutputIndex(nIndex))
-            continue;
-
-        CTxIn txin = CTxIn(uint256S(mne.getTxHash()), uint32_t(nIndex));
+        CTxIn txin = CTxIn(uint256S(mne.getTxHash()), uint32_t(atoi(mne.getOutputIndex().c_str())));
         CSystemnode* pmn = snodeman.Find(txin);
 
         if (strCommand == "start-missing" && pmn) continue;
@@ -226,12 +222,8 @@ void SystemnodeList::updateMyNodeList(bool fForce)
     nTimeMyListUpdated = GetTime();
 
     ui->tableWidgetMySystemnodes->setSortingEnabled(false);
-    for (CSystemnodeConfig::CSystemnodeEntry mne : systemnodeConfig.getEntries()) {
-        int nIndex;
-        if(!mne.castOutputIndex(nIndex))
-            continue;
-
-        CTxIn txin = CTxIn(uint256S(mne.getTxHash()), uint32_t(nIndex));
+    for (CNodeEntry mne : systemnodeConfig.getEntries()) {
+        CTxIn txin = CTxIn(uint256S(mne.getTxHash()), uint32_t(atoi(mne.getOutputIndex().c_str())));
         CSystemnode* pmn = snodeman.Find(txin);
         updateMySystemnodeInfo(QString::fromStdString(mne.getAlias()), QString::fromStdString(mne.getIp()), pmn);
     }

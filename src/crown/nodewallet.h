@@ -8,13 +8,14 @@
 #define CROWN_NODEWALLET_H
 
 #include <masternode/activemasternode.h>
+#include <masternode/masternodeman.h>
 #include <masternode/masternode-budget.h>
-#include <masternode/masternode.h>
-#include <masternode/masternodeconfig.h>
+#include <masternode/masternode-payments.h>
+#include <systemnode/activesystemnode.h>
+#include <systemnode/systemnodeman.h>
+#include <systemnode/systemnode-payments.h>
 #include <mn-pos/kernel.h>
 #include <mn-pos/stakeminer.h>
-#include <systemnode/activesystemnode.h>
-#include <systemnode/systemnode.h>
 #include <util/translation.h>
 #include <wallet/coincontrol.h>
 #include <wallet/wallet.h>

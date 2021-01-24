@@ -5,13 +5,11 @@
 #ifndef ACTIVESYSTEMNODE_H
 #define ACTIVESYSTEMNODE_H
 
-#include <crown/legacysigner.h>
 #include <init.h>
 #include <key.h>
+#include <systemnode/systemnode.h>
 #include <net.h>
 #include <sync.h>
-#include <systemnode/systemnode-sync.h>
-#include <systemnode/systemnode.h>
 #include <wallet/wallet.h>
 
 #define ACTIVE_SYSTEMNODE_INITIAL 0 // initial state
@@ -21,7 +19,6 @@
 #define ACTIVE_SYSTEMNODE_STARTED 4
 
 class CActiveSystemnode;
-
 extern CActiveSystemnode activeSystemnode;
 
 // Responsible for activating the Systemnode and pinging the network

@@ -6,11 +6,11 @@
 #include <protocol.h>
 #include <systemnode/activesystemnode.h>
 #include <systemnode/systemnode.h>
-#include <systemnode/systemnodeconfig.h>
 #include <systemnode/systemnodeman.h>
 #include <validation.h>
 #include <wallet/coincontrol.h>
 
+class CActiveSystemnode;
 CActiveSystemnode activeSystemnode;
 
 //
@@ -266,34 +266,13 @@ std::vector<COutput> CActiveSystemnode::SelectCoinsSystemnode()
 {
     std::vector<COutput> vCoins;
     std::vector<COutput> filteredCoins;
-    std::vector<COutPoint> confLockedCoins;
 
     auto m_wallet = GetMainWallet();
     if (!m_wallet)
         return filteredCoins;
 
-    // Temporary unlock SN coins from systemnode.conf
-    if (gArgs.GetBoolArg("-snconflock", true)) {
-        uint256 snTxHash = uint256();
-        for (const auto sne : systemnodeConfig.getEntries()) {
-            snTxHash.SetHex(sne.getTxHash());
-            int nIndex = 0;
-            if (!sne.castOutputIndex(nIndex))
-                continue;
-            COutPoint outpoint = COutPoint(snTxHash, nIndex);
-            confLockedCoins.push_back(outpoint);
-            m_wallet->UnlockCoin(outpoint);
-        }
-    }
-
     // Retrieve all possible outputs
     m_wallet->AvailableCoins(vCoins);
-
-    // Lock SN coins from systemnode.conf back if they where temporary unlocked
-    if (!confLockedCoins.empty()) {
-        for (COutPoint outpoint : confLockedCoins)
-            m_wallet->LockCoin(outpoint);
-    }
 
     // Filter appropriate coins
     for (const COutput& out : vCoins) {

@@ -1,6 +1,7 @@
 #include <qt/masternodelist.h>
 #include <qt/forms/ui_masternodelist.h>
 
+#include <crown/legacysigner.h>
 #include <init.h>
 #include <key_io.h>
 #include <masternode/activemasternode.h>
@@ -9,9 +10,15 @@
 #include <masternode/masternodeconfig.h>
 #include <masternode/masternodeman.h>
 #include <node/context.h>
+#include <nodeconfig.h>
 #include <rpc/blockchain.h>
+#include <qt/addresstablemodel.h>
+#include <qt/bitcoinunits.h>
 #include <qt/clientmodel.h>
+#include <qt/createmasternodedialog.h>
+#include <qt/datetablewidgetitem.h>
 #include <qt/guiutil.h>
+#include <qt/optionsmodel.h>
 #include <qt/startmissingdialog.h>
 #include <qt/walletmodel.h>
 #include <sync.h>
@@ -131,7 +138,7 @@ void MasternodeList::StartAlias(std::string strAlias)
     std::string strStatusHtml;
     strStatusHtml += "<center>Alias: " + strAlias;
 
-    for (CMasternodeConfig::CMasternodeEntry mne : masternodeConfig.getEntries()) {
+    for (CNodeEntry mne : masternodeConfig.getEntries()) {
         if (mne.getAlias() == strAlias) {
             std::string strError;
             CMasternodeBroadcast mnb;
@@ -163,15 +170,11 @@ void MasternodeList::StartAll(std::string strCommand)
     int nCountFailed = 0;
     std::string strFailedHtml;
 
-    for (CMasternodeConfig::CMasternodeEntry mne : masternodeConfig.getEntries()) {
+    for (CNodeEntry mne : masternodeConfig.getEntries()) {
         std::string strError;
         CMasternodeBroadcast mnb;
 
-        int nIndex;
-        if(!mne.castOutputIndex(nIndex))
-            continue;
-
-        CTxIn txin = CTxIn(uint256S(mne.getTxHash()), uint32_t(nIndex));
+        CTxIn txin = CTxIn(uint256S(mne.getTxHash()), uint32_t(atoi(mne.getOutputIndex().c_str())));
         CMasternode* pmn = mnodeman.Find(txin);
 
         if (strCommand == "start-missing" && pmn) continue;
@@ -251,12 +254,8 @@ void MasternodeList::updateMyNodeList(bool fForce)
     nTimeMyListUpdated = GetTime();
 
     ui->tableWidgetMyMasternodes->setSortingEnabled(false);
-    for (CMasternodeConfig::CMasternodeEntry mne : masternodeConfig.getEntries()) {
-        int nIndex;
-        if(!mne.castOutputIndex(nIndex))
-            continue;
-
-        CTxIn txin = CTxIn(uint256S(mne.getTxHash()), uint32_t(nIndex));
+    for (CNodeEntry mne : masternodeConfig.getEntries()) {
+        CTxIn txin = CTxIn(uint256S(mne.getTxHash()), uint32_t(atoi(mne.getOutputIndex().c_str())));
         CMasternode* pmn = mnodeman.Find(txin);
         updateMyMasternodeInfo(QString::fromStdString(mne.getAlias()), QString::fromStdString(mne.getIp()), pmn);
     }
@@ -327,6 +326,18 @@ void MasternodeList::updateNodeList()
 
     ui->countLabel->setText(QString::number(ui->tableWidgetMasternodes->rowCount()));
     ui->tableWidgetMasternodes->setSortingEnabled(true);
+}
+
+void MasternodeList::updateNextSuperblock()
+{
+    Q_ASSERT(::ChainActive().Tip() != NULL);
+
+    CBlockIndex* pindexPrev = ::ChainActive().Tip();
+    if (pindexPrev)
+    {
+        const int nextBlock = GetNextSuperblock(pindexPrev->nHeight);
+        ui->superblockLabel->setText(QString::number(nextBlock));
+    }
 }
 
 void MasternodeList::on_filterLineEdit_textChanged(const QString &strFilterIn)
@@ -488,10 +499,8 @@ void MasternodeList::updateVoteList(bool reset)
     std::vector<CBudgetProposal*> winningProps = budget.GetAllProposals();
     for (CBudgetProposal* pbudgetProposal : winningProps)
     {
-
-        CTxDestination address1;
-        ExtractDestination(pbudgetProposal->GetPayee(), address1);
-        CBitcoinAddress address2(address1);
+        CTxDestination address;
+        ExtractDestination(pbudgetProposal->GetPayee(), address);
 
         if((int64_t)pbudgetProposal->GetRemainingPaymentCount() <= 0) continue;
 
@@ -514,7 +523,7 @@ void MasternodeList::updateVoteList(bool reset)
             GUIUtil::QTableWidgetNumberItem *yesVotesItem = new GUIUtil::QTableWidgetNumberItem((int64_t)pbudgetProposal->GetYeas());
             GUIUtil::QTableWidgetNumberItem *noVotesItem = new GUIUtil::QTableWidgetNumberItem((int64_t)pbudgetProposal->GetNays());
             GUIUtil::QTableWidgetNumberItem *abstainVotesItem = new GUIUtil::QTableWidgetNumberItem((int64_t)pbudgetProposal->GetAbstains());
-            QTableWidgetItem *AddressItem = new QTableWidgetItem(QString::fromStdString(address2.ToString()));
+            QTableWidgetItem *AddressItem = new QTableWidgetItem(QString::fromStdString(EncodeDestination(address)));
             GUIUtil::QTableWidgetNumberItem *totalPaymentItem = new GUIUtil::QTableWidgetNumberItem((pbudgetProposal->GetAmount()*pbudgetProposal->GetTotalPaymentCount())/100000000);
             GUIUtil::QTableWidgetNumberItem *monthlyPaymentItem = new GUIUtil::QTableWidgetNumberItem(pbudgetProposal->GetAmount()/100000000);
 
@@ -602,7 +611,7 @@ void MasternodeList::VoteMany(std::string strCommand)
         CPubKey pubKeyMasternode;
         CKey keyMasternode;
 
-        if(!legacySigner.SetKey(mne.getPrivKey(), errorMessage, keyMasternode, pubKeyMasternode)){
+        if(!legacySigner.SetKey(mne.getPrivKey(), keyMasternode, pubKeyMasternode)){
             failed++;
             statusObj += "\nFailed to vote with " + mne.getAlias() + ". Masternode signing error, could not set key correctly: " + errorMessage;
             continue;
@@ -625,7 +634,7 @@ void MasternodeList::VoteMany(std::string strCommand)
 
         std::string strError = "";
         if(budget.SubmitProposalVote(vote, strError)) {
-            vote.Relay();
+            vote.Relay(*g_rpc_node->connman);
             success++;
         } else {
             failed++;
@@ -660,7 +669,7 @@ void MasternodeList::on_voteManyYesButton_clicked()
     WalletModel::EncryptionStatus encStatus = walletModel->getEncryptionStatus();
     if(encStatus == walletModel->Locked)
     {
-        WalletModel::UnlockContext ctx(walletModel->requestUnlock(true));
+        WalletModel::UnlockContext ctx(walletModel->requestUnlock());
         if(!ctx.isValid())
         {
             // Unlock wallet was cancelled
@@ -689,7 +698,7 @@ void MasternodeList::on_voteManyNoButton_clicked()
     WalletModel::EncryptionStatus encStatus = walletModel->getEncryptionStatus();
     if(encStatus == walletModel->Locked)
     {
-        WalletModel::UnlockContext ctx(walletModel->requestUnlock(true));
+        WalletModel::UnlockContext ctx(walletModel->requestUnlock());
         if(!ctx.isValid())
         {
             // Unlock wallet was cancelled
@@ -718,7 +727,7 @@ void MasternodeList::on_voteManyAbstainButton_clicked()
     WalletModel::EncryptionStatus encStatus = walletModel->getEncryptionStatus();
     if(encStatus == walletModel->Locked)
     {
-        WalletModel::UnlockContext ctx(walletModel->requestUnlock(true));
+        WalletModel::UnlockContext ctx(walletModel->requestUnlock());
         if(!ctx.isValid())
         {
             // Unlock wallet was cancelled
@@ -746,32 +755,29 @@ void MasternodeList::on_CreateNewMasternode_clicked()
     dialog.setWindowModality(Qt::ApplicationModal);
     dialog.setWindowTitle("Create a New Masternode");
     QString formattedAmount = BitcoinUnits::formatWithUnit(walletModel->getOptionsModel()->getDisplayUnit(), 
-                                                           MASTERNODE_COLLATERAL * COIN);
+                                                           Params().GetConsensus().nMasternodeCollateral);
     dialog.setNoteLabel("*This action will send " + formattedAmount + " to yourself");
     if (dialog.exec())
     {
         // OK Pressed
         auto m_wallet = GetMainWallet();
         QString label = dialog.getLabel();
-        QString address = walletModel->getAddressTableModel()->addRow(AddressTableModel::Receive, label, "");
-        SendCoinsRecipient recipient(address, label, MASTERNODE_COLLATERAL * COIN, "");
+        QString address = walletModel->getAddressTableModel()->addRow(AddressTableModel::Receive, label, "", OutputType::LEGACY);
+        SendCoinsRecipient recipient(address, label, Params().GetConsensus().nMasternodeCollateral, "");
         QList<SendCoinsRecipient> recipients;
         recipients.append(recipient);
 
         // Get outputs before and after transaction
         std::vector<COutput> vPossibleCoinsBefore;
-        m_wallet->AvailableCoins(vPossibleCoinsBefore, true, NULL, ONLY_10000);
+        vPossibleCoinsBefore = activeMasternode.SelectCoinsMasternode();
 
         sendDialog->setModel(walletModel);
         sendDialog->send(recipients);
 
         std::vector<COutput> vPossibleCoinsAfter;
-        m_wallet->AvailableCoins(vPossibleCoinsAfter, true, NULL, ONLY_10000);
+        vPossibleCoinsAfter = activeMasternode.SelectCoinsMasternode();
 
-        for (COutput& out : vPossibleCoinsAfter) {
-            std::vector<COutput>::iterator it = std::find(vPossibleCoinsBefore.begin(), vPossibleCoinsBefore.end(), out);
-            if (it == vPossibleCoinsBefore.end()) {
-                // Not found so this is a new element
+        for (const auto& out : vPossibleCoinsAfter) {
 
                 COutPoint outpoint = COutPoint(out.tx->GetHash(), boost::lexical_cast<unsigned int>(out.i));
                 m_wallet->LockCoin(outpoint);
@@ -779,9 +785,9 @@ void MasternodeList::on_CreateNewMasternode_clicked()
                 // Generate a key
                 CKey secret;
                 secret.MakeNewKey(false);
-                std::string privateKey = CBitcoinSecret(secret).ToString();
+                std::string privateKey = EncodeSecret(secret);
                 std::string port = "9340";
-                if (Params().NetworkID() == CBaseChainParams::TESTNET) {
+                if (Params().NetworkIDString() == CBaseChainParams::TESTNET) {
                     port = "19340";
                 }
 
@@ -789,7 +795,6 @@ void MasternodeList::on_CreateNewMasternode_clicked()
                         privateKey, out.tx->GetHash().ToString(), strprintf("%d", out.i));
                 masternodeConfig.write();
                 updateMyNodeList(true);
-            }
         }
     } else {
         // Cancel Pressed

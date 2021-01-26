@@ -103,6 +103,7 @@ struct Params {
     unsigned int nChainStallDuration;
     CAmount nMasternodeCollateral;
     CAmount nSystemnodeCollateral;
+    int nDIP0003Height;
 
     /** Misc/masternode parameters */
     int PoolMaxTransactions() const { return nPoolMaxTransactions; }

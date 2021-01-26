@@ -14,10 +14,30 @@
 
 #include <tuple>
 
-enum TxType : int16_t
-{
-    TRANSACTION_NORMAL = 0
+#define TX_NFT_VERSION 3
+#define TX_EVO_VERSION 4
+
+enum TxVersion : int16_t {
+    LEGACY = 1,
+    SEGWIT = 2,
+    EVO = 3,
+    NFT = 4
 };
+
+enum TxType : int16_t {
+    TRANSACTION_NORMAL = 0,
+    TRANSACTION_PROVIDER_REGISTER = 1001,
+    TRANSACTION_PROVIDER_UPDATE_SERVICE = 1002,
+    TRANSACTION_PROVIDER_UPDATE_REGISTRAR = 1003,
+    TRANSACTION_PROVIDER_UPDATE_REVOKE = 1004,
+    TRANSACTION_COINBASE = 1005,
+    TRANSACTION_QUORUM_COMMITMENT = 1006,
+    TRANSACTION_NF_TOKEN_REGISTER = 1100,
+    TRANSACTION_NF_TOKEN_PROTOCOL_REGISTER = 1200,
+};
+
+std::string GetTypeName(int nType);
+std::string GetVersionName(int nVersion);
 
 /**
  * A flag that is ORed into the protocol version to designate that a transaction
@@ -237,7 +257,7 @@ inline void UnserializeTransaction(TxType& tx, Stream& s) {
     }
     s >> tx.nLockTime;
     if (tx.nVersion >= 3 && tx.nType != TRANSACTION_NORMAL) {
-        s >> tx.extraPayload;
+        s >> tx.vExtraPayload;
     }
 }
 
@@ -271,7 +291,7 @@ inline void SerializeTransaction(const TxType& tx, Stream& s) {
     }
     s << tx.nLockTime;
     if (tx.nVersion >= 3 && tx.nType != TRANSACTION_NORMAL) {
-        s << tx.extraPayload;
+        s << tx.vExtraPayload;
     }
 }
 
@@ -289,7 +309,7 @@ public:
     // adapting relay policy by bumping MAX_STANDARD_VERSION, and then later date
     // bumping the default CURRENT_VERSION at which point both CURRENT_VERSION and
     // MAX_STANDARD_VERSION will be equal.
-    static const int32_t MAX_STANDARD_VERSION=2;
+    static const int32_t MAX_STANDARD_VERSION=3;
 
     // The local variables are made const to prevent unintended modification
     // without updating the cached hash value. However, CTransaction is not
@@ -301,7 +321,7 @@ public:
     const int16_t nVersion;
     const int16_t nType;
     const uint32_t nLockTime;
-    const std::vector<uint8_t> extraPayload;
+    const std::vector<uint8_t> vExtraPayload;
 
 private:
     /** Memory only. */
@@ -381,7 +401,7 @@ struct CMutableTransaction
     int16_t nVersion;
     int16_t nType;
     uint32_t nLockTime;
-    std::vector<uint8_t> extraPayload;
+    std::vector<uint8_t> vExtraPayload;
 
     CMutableTransaction();
     explicit CMutableTransaction(const CTransaction& tx);

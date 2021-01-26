@@ -12,6 +12,46 @@
 
 #include <assert.h>
 
+std::string GetVersionName(int nVersion)
+{
+    switch (nVersion) {
+       case (LEGACY) :
+          return "LEGACY";
+       case (SEGWIT) :
+          return "SEGWIT";
+       case (EVO) :
+          return "EVO";
+       case (NFT) :
+          return "NFT";
+    }
+    return "UNKNOWN";
+};
+
+std::string GetTypeName(int nType)
+{
+    switch (nType) {
+       case (TRANSACTION_NORMAL):
+          return "TRANSACTION_NORMAL";
+       case (TRANSACTION_PROVIDER_REGISTER):
+          return "TRANSACTION_PROVIDER_REGISTER";
+       case (TRANSACTION_PROVIDER_UPDATE_SERVICE):
+          return "TRANSACTION_PROVIDER_UPDATE_SERVICE";
+       case (TRANSACTION_PROVIDER_UPDATE_REGISTRAR):
+          return "TRANSACTION_PROVIDER_UPDATE_REGISTRAR";
+       case (TRANSACTION_PROVIDER_UPDATE_REVOKE):
+          return "TRANSACTION_PROVIDER_UPDATE_REVOKE";
+       case (TRANSACTION_COINBASE):
+          return "TRANSACTION_COINBASE";
+       case (TRANSACTION_QUORUM_COMMITMENT):
+          return "TRANSACTION_QUORUM_COMMITMENT";
+       case (TRANSACTION_NF_TOKEN_REGISTER):
+          return "TRANSACTION_NF_TOKEN_REGISTER";
+       case (TRANSACTION_NF_TOKEN_PROTOCOL_REGISTER):
+          return "TRANSACTION_NF_TOKEN_PROTOCOL_REGISTER";
+    }
+    return "UNKNOWN";
+};
+
 std::string COutPoint::ToString() const
 {
     return strprintf("COutPoint(%s, %u)", hash.ToString()/*.substr(0,10)*/, n);
@@ -68,7 +108,7 @@ std::string CTxOut::ToString() const
 }
 
 CMutableTransaction::CMutableTransaction() : nVersion(CTransaction::CURRENT_VERSION), nType(TRANSACTION_NORMAL), nLockTime(0) {}
-CMutableTransaction::CMutableTransaction(const CTransaction& tx) : vin(tx.vin), vout(tx.vout), nVersion(tx.nVersion), nType(tx.nType), nLockTime(tx.nLockTime), extraPayload(tx.extraPayload) {}
+CMutableTransaction::CMutableTransaction(const CTransaction& tx) : vin(tx.vin), vout(tx.vout), nVersion(tx.nVersion), nType(tx.nType), nLockTime(tx.nLockTime), vExtraPayload(tx.vExtraPayload) {}
 
 uint256 CMutableTransaction::GetHash() const
 {
@@ -90,8 +130,8 @@ uint256 CTransaction::ComputeWitnessHash() const
 
 /* For backward compatibility, the hash is initialized to 0. TODO: remove the need for this default constructor entirely. */
 CTransaction::CTransaction() : vin(), vout(), nVersion(CTransaction::CURRENT_VERSION), nType(TRANSACTION_NORMAL), nLockTime(0), hash{}, m_witness_hash{} {}
-CTransaction::CTransaction(const CMutableTransaction& tx) : vin(tx.vin), vout(tx.vout), nVersion(tx.nVersion), nType(tx.nType), nLockTime(tx.nLockTime), extraPayload(tx.extraPayload), hash{ComputeHash()}, m_witness_hash{ComputeWitnessHash()} {ComputeHash();}
-CTransaction::CTransaction(CMutableTransaction&& tx) : vin(std::move(tx.vin)), vout(std::move(tx.vout)), nVersion(tx.nVersion), nType(tx.nType), nLockTime(tx.nLockTime), extraPayload(tx.extraPayload), hash{ComputeHash()}, m_witness_hash{ComputeWitnessHash()} {ComputeHash();}
+CTransaction::CTransaction(const CMutableTransaction& tx) : vin(tx.vin), vout(tx.vout), nVersion(tx.nVersion), nType(tx.nType), nLockTime(tx.nLockTime), vExtraPayload(tx.vExtraPayload), hash{ComputeHash()}, m_witness_hash{ComputeWitnessHash()} {ComputeHash();}
+CTransaction::CTransaction(CMutableTransaction&& tx) : vin(std::move(tx.vin)), vout(std::move(tx.vout)), nVersion(tx.nVersion), nType(tx.nType), nLockTime(tx.nLockTime), vExtraPayload(tx.vExtraPayload), hash{ComputeHash()}, m_witness_hash{ComputeWitnessHash()} {ComputeHash();}
 
 CAmount CTransaction::GetValueOut() const
 {
@@ -129,14 +169,14 @@ bool CTransaction::IsCoinStake() const
 std::string CTransaction::ToString() const
 {
     std::string str;
-    str += strprintf("CTransaction(hash=%s, ver=%d, type=%d, vin.size=%u, vout.size=%u, nLockTime=%u, extraPayload.size=%d)\n",
+    str += strprintf("CTransaction(hash=%s, ver=%s, type=%s, vin.size=%u, vout.size=%u, nLockTime=%u, vExtraPayload.size=%d)\n",
         GetHash().ToString().substr(0,10),
-        nVersion,
-        nType,
+        GetVersionName(nVersion),
+        GetTypeName(nType),
         vin.size(),
         vout.size(),
         nLockTime,
-        extraPayload.size());
+        vExtraPayload.size());
     for (const auto& tx_in : vin)
         str += "    " + tx_in.ToString() + "\n";
     for (const auto& tx_in : vin)

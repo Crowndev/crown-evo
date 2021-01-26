@@ -15,6 +15,7 @@
 #include <consensus/tx_verify.h>
 #include <consensus/validation.h>
 #include <cuckoocache.h>
+#include <evo/specialtx.h>
 #include <flatfile.h>
 #include <hash.h>
 #include <index/disktxpos.h>
@@ -22,6 +23,7 @@
 #include <key_io.h>
 #include <logging.h>
 #include <logging/timer.h>
+#include <nft/specialtx.h>
 #include <node/ui_interface.h>
 #include <optional.h>
 #include <policy/fees.h>
@@ -1819,6 +1821,14 @@ DisconnectResult CChainState::DisconnectBlock(const CBlock& block, const CBlockI
         nSizeCheck++;
     if (nSizeCheck != block.vtx.size()) {
         error("DisconnectBlock(): block and undo data inconsistent");
+        return DISCONNECT_FAILED;
+    }
+
+    if (!UndoNftTxsInBlock(block, pindex)) {
+        return DISCONNECT_FAILED;
+    }
+
+    if (!UndoEvoTxsInBlock(block, pindex)) {
         return DISCONNECT_FAILED;
     }
 

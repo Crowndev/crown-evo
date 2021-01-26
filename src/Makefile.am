@@ -143,6 +143,7 @@ BITCOIN_CORE_H = \
   crown/spork.h \
   cuckoocache.h \
   dbwrapper.h \
+  evo/specialtx.h \
   flat-database.h \
   flatfile.h \
   fs.h \
@@ -175,6 +176,7 @@ BITCOIN_CORE_H = \
   netaddress.h \
   netbase.h \
   netmessagemaker.h \
+  nft/specialtx.h \
   nodeconfig.h \
   node/coin.h \
   node/coinstats.h \
@@ -312,6 +314,7 @@ libbitcoin_server_a_SOURCES = \
   crown/nodewallet.cpp \
   crown/spork.cpp \
   dbwrapper.cpp \
+  evo/specialtx.cpp \
   flatfile.cpp \
   httprpc.cpp \
   httpserver.cpp \
@@ -352,6 +355,7 @@ libbitcoin_server_a_SOURCES = \
   net.cpp \
   netfulfilledman.cpp \
   net_processing.cpp \
+  nft/specialtx.cpp \
   node/coin.cpp \
   node/coinstats.cpp \
   node/context.cpp \

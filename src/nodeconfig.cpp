@@ -81,7 +81,7 @@ bool CNodeConfig::read(std::string& strErr) {
 
 bool CNodeConfig::aliasExists(const std::string& alias)
 {
-    BOOST_FOREACH(CNodeEntry mne, getEntries()) {
+    for (CNodeEntry mne : getEntries()) {
         if (mne.getAlias() == alias)
         {
             return true;
@@ -95,7 +95,7 @@ bool CNodeConfig::write()
     boost::filesystem::path pathNodeConfigFile = getNodeConfigFile();
     boost::filesystem::ofstream streamConfig(pathNodeConfigFile, std::ofstream::out);
     streamConfig << getHeader() << "\n";
-    BOOST_FOREACH(CNodeEntry sne, getEntries()) {
+    for (CNodeEntry sne : getEntries()) {
         streamConfig << sne.getAlias() << " " << sne.getIp() << " " << sne.getPrivKey() << " " << sne.getTxHash() << " " << sne.getOutputIndex() << "\n";
     }
     streamConfig.close();

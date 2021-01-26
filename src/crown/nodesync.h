@@ -10,6 +10,7 @@
 
 class CConnman;
 
+std::string currentSyncStatus();
 void ThreadNodeSync(CConnman& connman);
 
 #endif // CROWN_NODESYNC_H

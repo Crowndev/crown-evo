@@ -4,11 +4,6 @@
 
 #include <init.h>
 #include <key_io.h>
-#include <masternode/activemasternode.h>
-#include <masternode/masternode-payments.h>
-#include <masternode/masternode-sync.h>
-#include <masternode/masternodeconfig.h>
-#include <masternode/masternodeman.h>
 #include <net.h>
 #include <net_processing.h>
 #include <node/context.h>
@@ -18,6 +13,12 @@
 #include <util/moneystr.h>
 #include <util/system.h>
 #include <validation.h>
+
+#include <masternode/activemasternode.h>
+#include <masternode/masternode-payments.h>
+#include <masternode/masternode-sync.h>
+#include <masternode/masternodeconfig.h>
+#include <masternode/masternodeman.h>
 
 #include <boost/lexical_cast.hpp>
 #include <boost/tokenizer.hpp>
@@ -170,14 +171,9 @@ UniValue masternodecurrent(const JSONRPCRequest& request)
     throw std::runtime_error("unknown");
 }
 
-bool StartMasternodeEntry(UniValue& statusObjRet, CMasternodeBroadcast& mnbRet, bool& fSuccessRet, const CMasternodeConfig::CMasternodeEntry& mne, std::string& errorMessage, std::string strCommand = "")
+bool StartMasternodeEntry(UniValue& statusObjRet, CMasternodeBroadcast& mnbRet, bool& fSuccessRet, const CNodeEntry& mne, std::string& errorMessage, std::string strCommand = "")
 {
-    int nIndex;
-    if (!mne.castOutputIndex(nIndex)) {
-        return false;
-    }
-
-    CTxIn vin = CTxIn(uint256S(mne.getTxHash()), uint32_t(nIndex));
+    CTxIn vin = CTxIn(uint256S(mne.getTxHash()), (uint32_t)atoi(mne.getOutputIndex()));
     CMasternode* pmn = mnodeman.Find(vin);
     if (pmn) {
         if (strCommand == "missing")
@@ -301,7 +297,7 @@ UniValue startmasternode(const JSONRPCRequest& request)
             throw std::runtime_error("You can't use this command until masternode list is synced\n");
         }
 
-        std::vector<CMasternodeConfig::CMasternodeEntry> mnEntries;
+        std::vector<CNodeEntry> mnEntries;
         mnEntries = masternodeConfig.getEntries();
 
         int successful = 0;
@@ -309,7 +305,7 @@ UniValue startmasternode(const JSONRPCRequest& request)
 
         UniValue resultsObj(UniValue::VARR);
 
-        for (CMasternodeConfig::CMasternodeEntry mne : masternodeConfig.getEntries()) {
+        for (CNodeEntry mne : masternodeConfig.getEntries()) {
             UniValue statusObj(UniValue::VOBJ);
             CMasternodeBroadcast mnb;
             std::string errorMessage;
@@ -337,7 +333,7 @@ UniValue startmasternode(const JSONRPCRequest& request)
         UniValue resultsObj(UniValue::VARR);
         UniValue statusObj(UniValue::VOBJ);
 
-        for (CMasternodeConfig::CMasternodeEntry mne : masternodeConfig.getEntries()) {
+        for (CNodeEntry mne : masternodeConfig.getEntries()) {
             if (mne.getAlias() == alias) {
                 CMasternodeBroadcast mnb;
                 found = true;
@@ -446,16 +442,13 @@ UniValue listmasternodeconf(const JSONRPCRequest& request)
             "\nExamples:\n"
             + HelpExampleCli("listmasternodeconf", "") + HelpExampleRpc("listmasternodeconf", ""));
 
-    std::vector<CMasternodeConfig::CMasternodeEntry> mnEntries;
+    std::vector<CNodeEntry> mnEntries;
     mnEntries = masternodeConfig.getEntries();
 
     UniValue ret(UniValue::VARR);
 
-    for (CMasternodeConfig::CMasternodeEntry mne : masternodeConfig.getEntries()) {
-        int nIndex;
-        if (!mne.castOutputIndex(nIndex))
-            continue;
-        CTxIn vin = CTxIn(uint256S(mne.getTxHash()), uint32_t(nIndex));
+    for (CNodeEntry mne : masternodeConfig.getEntries()) {
+        CTxIn vin = CTxIn(uint256S(mne.getTxHash()), (uint32_t)atoi(mne.getOutputIndex()));
         CMasternode* pmn = mnodeman.Find(vin);
 
         std::string strStatus = pmn ? pmn->Status() : "MISSING";
@@ -735,7 +728,7 @@ UniValue createmasternodebroadcast(const JSONRPCRequest& request)
         UniValue statusObj(UniValue::VOBJ);
         statusObj.pushKV("alias", alias);
 
-        for (CMasternodeConfig::CMasternodeEntry mne : masternodeConfig.getEntries()) {
+        for (CNodeEntry mne : masternodeConfig.getEntries()) {
             if (mne.getAlias() == alias) {
                 CMasternodeBroadcast mnb;
                 found = true;
@@ -761,7 +754,7 @@ UniValue createmasternodebroadcast(const JSONRPCRequest& request)
         if (fImporting || fReindex)
             throw JSONRPCError(RPC_INTERNAL_ERROR, "Wait for reindex and/or import to finish");
 
-        std::vector<CMasternodeConfig::CMasternodeEntry> mnEntries;
+        std::vector<CNodeEntry> mnEntries;
         mnEntries = masternodeConfig.getEntries();
 
         int successful = 0;
@@ -769,7 +762,7 @@ UniValue createmasternodebroadcast(const JSONRPCRequest& request)
 
         UniValue resultsObj(UniValue::VARR);
 
-        for (CMasternodeConfig::CMasternodeEntry mne : masternodeConfig.getEntries()) {
+        for (CNodeEntry mne : masternodeConfig.getEntries()) {
             UniValue statusObj(UniValue::VOBJ);
             CMasternodeBroadcast mnb;
             std::string errorMessage;

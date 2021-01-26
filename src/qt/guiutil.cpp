@@ -920,4 +920,13 @@ void PopupMenu(QMenu* menu, const QPoint& point, QAction* at_action)
     menu->popup(point, at_action);
 }
 
+/**
+ * Class constructor.
+ * @param[int64_t] numValue   The Number to convert to a QString for display
+ */
+QTableWidgetNumberItem::QTableWidgetNumberItem(const int64_t numValue) : QTableWidgetItem(), m_value(numValue)
+{
+    this->setText(QString::number(numValue));
+}
+
 } // namespace GUIUtil

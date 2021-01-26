@@ -38,6 +38,7 @@ public:
 
     void setClientModel(ClientModel *clientModel);
     void setModel(WalletModel *model);
+    WalletModel* getModel();
 
     /** Set up the tab chain manually, as Qt messes up the tab chain by default in some cases (issue https://bugreports.qt-project.org/browse/QTBUG-10907).
      */
@@ -46,6 +47,16 @@ public:
     void setAddress(const QString &address);
     void pasteEntry(const SendCoinsRecipient &rv);
     bool handlePaymentRequest(const SendCoinsRecipient &recipient);
+
+    //! crw legacy routines TODO
+    QStringList constructConfirmationMessage(QList<SendCoinsRecipient> &recipients);
+    void checkAndSend(const QList<SendCoinsRecipient> &recipients, QStringList formatted);
+    void send(const QList<SendCoinsRecipient> &recipients, QStringList formatted);
+
+    // Process WalletModel::SendCoinsReturn and generate a pair consisting
+    // of a message and message flags for use in Q_EMIT message().
+    // Additional parameter msgArg can be used via .arg(msgArg).
+    void processSendCoinsReturn(const WalletModel::SendCoinsReturn &sendCoinsReturn, const QString &msgArg = QString());
 
 public Q_SLOTS:
     void clear();
@@ -67,11 +78,6 @@ private:
     bool fNewRecipientAllowed;
     bool fFeeMinimized;
     const PlatformStyle *platformStyle;
-
-    // Process WalletModel::SendCoinsReturn and generate a pair consisting
-    // of a message and message flags for use in Q_EMIT message().
-    // Additional parameter msgArg can be used via .arg(msgArg).
-    void processSendCoinsReturn(const WalletModel::SendCoinsReturn &sendCoinsReturn, const QString &msgArg = QString());
     void minimizeFeeSection(bool fMinimize);
     // Format confirmation message
     bool PrepareSendText(QString& question_string, QString& informative_text, QString& detailed_text);

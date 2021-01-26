@@ -32,7 +32,11 @@ QT_FORMS_UI = \
   qt/forms/sendcoinsdialog.ui \
   qt/forms/sendcoinsentry.ui \
   qt/forms/signverifymessagedialog.ui \
-  qt/forms/transactiondescdialog.ui
+  qt/forms/masternodelist.ui \
+  qt/forms/systemnodelist.ui \
+  qt/forms/transactiondescdialog.ui \
+  qt/forms/createnodedialog.ui \
+  qt/forms/startmissingdialog.ui
 
 QT_MOC_CPP = \
   qt/moc_addressbookpage.cpp \
@@ -45,6 +49,7 @@ QT_MOC_CPP = \
   qt/moc_bitcoin.cpp \
   qt/moc_bitcoingui.cpp \
   qt/moc_bitcoinunits.cpp \
+  qt/moc_callback.cpp \
   qt/moc_clientmodel.cpp \
   qt/moc_coincontroldialog.cpp \
   qt/moc_coincontroltreewidget.cpp \
@@ -55,6 +60,7 @@ QT_MOC_CPP = \
   qt/moc_macdockiconhandler.cpp \
   qt/moc_macnotificationhandler.cpp \
   qt/moc_modaloverlay.cpp \
+  qt/moc_masternodelist.cpp \
   qt/moc_notificator.cpp \
   qt/moc_openuridialog.cpp \
   qt/moc_optionsdialog.cpp \
@@ -71,9 +77,12 @@ QT_MOC_CPP = \
   qt/moc_recentrequeststablemodel.cpp \
   qt/moc_rpcconsole.cpp \
   qt/moc_sendcoinsdialog.cpp \
+  qt/moc_sendcollateraldialog.cpp \
   qt/moc_sendcoinsentry.cpp \
   qt/moc_signverifymessagedialog.cpp \
   qt/moc_splashscreen.cpp \
+  qt/moc_masternodelist.cpp \
+  qt/moc_systemnodelist.cpp \
   qt/moc_trafficgraphwidget.cpp \
   qt/moc_transactiondesc.cpp \
   qt/moc_transactiondescdialog.cpp \
@@ -83,6 +92,11 @@ QT_MOC_CPP = \
   qt/moc_utilitydialog.cpp \
   qt/moc_walletcontroller.cpp \
   qt/moc_walletframe.cpp \
+  qt/moc_privatekeywidget.cpp \
+  qt/moc_createsystemnodedialog.cpp \
+  qt/moc_createmasternodedialog.cpp \
+  qt/moc_createnodedialog.cpp \
+  qt/moc_startmissingdialog.cpp \
   qt/moc_walletmodel.cpp \
   qt/moc_walletview.cpp
 
@@ -93,6 +107,7 @@ BITCOIN_MM = \
 
 QT_MOC = \
   qt/bitcoinamountfield.moc \
+  qt/callback.moc \
   qt/intro.moc \
   qt/overviewpage.moc \
   qt/rpcconsole.moc
@@ -112,6 +127,7 @@ CROWN_QT_H = \
   qt/bitcoin.h \
   qt/bitcoingui.h \
   qt/bitcoinunits.h \
+  qt/callback.h \
   qt/clientmodel.h \
   qt/coincontroldialog.h \
   qt/coincontroltreewidget.h \
@@ -145,8 +161,17 @@ CROWN_QT_H = \
   qt/sendcoinsdialog.h \
   qt/sendcoinsentry.h \
   qt/sendcoinsrecipient.h \
+  qt/sendcollateraldialog.h \
   qt/signverifymessagedialog.h \
   qt/splashscreen.h \
+  qt/masternodelist.h \
+  qt/systemnodelist.h \
+  qt/datetablewidgetitem.h \
+  qt/privatekeywidget.h \
+  qt/createsystemnodedialog.h \
+  qt/createmasternodedialog.h \
+  qt/createnodedialog.h \
+  qt/startmissingdialog.h \
   qt/trafficgraphwidget.h \
   qt/transactiondesc.h \
   qt/transactiondescdialog.h \
@@ -179,6 +204,7 @@ RES_ICONS = \
   qt/res/icons/connect2.png \
   qt/res/icons/connect3.png \
   qt/res/icons/connect4.png \
+  qt/res/icons/crown.png \
   qt/res/icons/edit.png \
   qt/res/icons/editcopy.png \
   qt/res/icons/editpaste.png \
@@ -200,6 +226,8 @@ RES_ICONS = \
   qt/res/icons/remove.png \
   qt/res/icons/send.png \
   qt/res/icons/synced.png \
+  qt/res/icons/masternode.png \
+  qt/res/icons/systemnode.png \
   qt/res/icons/transaction0.png \
   qt/res/icons/transaction2.png \
   qt/res/icons/transaction_abandoned.png \
@@ -254,8 +282,17 @@ CROWN_QT_WALLET_CPP = \
   qt/receiverequestdialog.cpp \
   qt/recentrequeststablemodel.cpp \
   qt/sendcoinsdialog.cpp \
+  qt/sendcollateraldialog.cpp \
   qt/sendcoinsentry.cpp \
   qt/signverifymessagedialog.cpp \
+  qt/masternodelist.cpp \
+  qt/systemnodelist.cpp \
+  qt/datetablewidgetitem.cpp \
+  qt/privatekeywidget.cpp \
+  qt/createnodedialog.cpp \
+  qt/startmissingdialog.cpp \
+  qt/createsystemnodedialog.h \
+  qt/createmasternodedialog.h \
   qt/transactiondesc.cpp \
   qt/transactiondescdialog.cpp \
   qt/transactionfilterproxy.cpp \

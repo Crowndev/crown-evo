@@ -17,6 +17,7 @@
 #include <qt/optionsmodel.h>
 #include <qt/platformstyle.h>
 #include <qt/sendcoinsentry.h>
+#include <qt/sendcoinsrecipient.h>
 
 #include <chainparams.h>
 #include <interfaces/node.h>
@@ -131,6 +132,11 @@ SendCoinsDialog::SendCoinsDialog(const PlatformStyle *_platformStyle, QWidget *p
     minimizeFeeSection(settings.value("fFeeSectionMinimized").toBool());
 }
 
+WalletModel* SendCoinsDialog::getModel()
+{
+    return model;
+}
+
 void SendCoinsDialog::setClientModel(ClientModel *_clientModel)
 {
     this->clientModel = _clientModel;
@@ -220,6 +226,51 @@ SendCoinsDialog::~SendCoinsDialog()
     settings.setValue("nTransactionFee", (qint64)ui->customFee->value());
 
     delete ui;
+}
+
+void SendCoinsDialog::checkAndSend(const QList<SendCoinsRecipient> &recipients, QStringList formatted)
+{
+    fNewRecipientAllowed = false;
+    WalletModel::EncryptionStatus encStatus = model->getEncryptionStatus();
+    if(encStatus == model->Locked) {
+        WalletModel::UnlockContext ctx(model->requestUnlock());
+        if(!ctx.isValid()) {
+            fNewRecipientAllowed = true;
+            return;
+        }
+        send(recipients, formatted);
+        return;
+    }
+    send(recipients, formatted);
+}
+
+QStringList SendCoinsDialog::constructConfirmationMessage(QList<SendCoinsRecipient>& recipients)
+{
+    QString strFunds = "";
+    QString strFee = "";
+    strFunds = tr("using") + " <b>" + tr("any available funds (not recommended)") + "</b> " + "and InstantX";
+    QStringList formatted;
+    for (const SendCoinsRecipient& rcp : recipients) {
+        QString amount = "<b>" + BitcoinUnits::formatHtmlWithUnit(model->getOptionsModel()->getDisplayUnit(), rcp.amount);
+        amount.append("</b> ").append(strFunds);
+        QString address = "<span style='font-family: monospace;'>" + rcp.address;
+        address.append("</span>");
+        QString recipientElement;
+        if (rcp.sPaymentRequest.empty()) {
+            if (rcp.label.length() > 0) {
+                recipientElement = tr("%1 to %2").arg(amount, GUIUtil::HtmlEscape(rcp.label));
+                recipientElement.append(QString(" (%1)").arg(address));
+            } else {
+                recipientElement = tr("%1 to %2").arg(amount, address);
+            }
+        } else if (!rcp.authenticatedMerchant.isEmpty()) {
+            recipientElement = tr("%1 to %2").arg(amount, GUIUtil::HtmlEscape(rcp.authenticatedMerchant));
+        } else {
+            recipientElement = tr("%1 to %2").arg(amount, address);
+        }
+        formatted.append(recipientElement);
+    }
+    return formatted;
 }
 
 bool SendCoinsDialog::PrepareSendText(QString& question_string, QString& informative_text, QString& detailed_text)
@@ -366,6 +417,100 @@ bool SendCoinsDialog::PrepareSendText(QString& question_string, QString& informa
     }
 
     return true;
+}
+
+void SendCoinsDialog::send(const QList<SendCoinsRecipient> &recipients, QStringList formatted)
+{
+    QString strFee = "";
+    // prepare transaction for getting txFee earlier
+    WalletModelTransaction currentTransaction(recipients);
+    WalletModel::SendCoinsReturn prepareStatus;
+    CCoinControl coinControl;
+    if (model->getOptionsModel()->getCoinControlFeatures()) // coin control enabled
+        prepareStatus = model->prepareTransaction(currentTransaction, coinControl);
+
+    // process prepareStatus and on error generate message shown to user
+    processSendCoinsReturn(prepareStatus,
+        BitcoinUnits::formatWithUnit(model->getOptionsModel()->getDisplayUnit(), currentTransaction.getTransactionFee()));
+
+    if(prepareStatus.status != WalletModel::OK) {
+        fNewRecipientAllowed = true;
+        return;
+    }
+
+    CAmount txFee = currentTransaction.getTransactionFee();
+    QString questionString = tr("Are you sure you want to send?");
+    questionString.append("<br /><br />%1");
+
+    if(txFee > 0)
+    {
+        // append fee string if a fee is required
+        questionString.append("<hr /><span style='color:#aa0000;'>");
+        questionString.append(BitcoinUnits::formatHtmlWithUnit(model->getOptionsModel()->getDisplayUnit(), txFee));
+        questionString.append("</span> ");
+        questionString.append(tr("are added as transaction fee"));
+        questionString.append(" ");
+        questionString.append(strFee);
+
+        // append transaction size
+        questionString.append(" (" + QString::number((double)currentTransaction.getTransactionSize() / 1000) + " kB)");
+    }
+
+    // add total amount in all subdivision units
+    questionString.append("<hr />");
+    CAmount totalAmount = currentTransaction.getTotalTransactionAmount() + txFee;
+    QStringList alternativeUnits;
+    for (BitcoinUnits::Unit u : BitcoinUnits::availableUnits())
+    {
+        if(u != model->getOptionsModel()->getDisplayUnit())
+            alternativeUnits.append(BitcoinUnits::formatHtmlWithUnit(u, totalAmount));
+    }
+
+    // Show total amount + all alternative units
+    questionString.append(tr("Total Amount = <b>%1</b><br />= %2")
+        .arg(BitcoinUnits::formatHtmlWithUnit(model->getOptionsModel()->getDisplayUnit(), totalAmount))
+        .arg(alternativeUnits.join("<br />= ")));
+
+    // Limit number of displayed entries
+    int messageEntries = formatted.size();
+    int displayedEntries = 0;
+    for(int i = 0; i < formatted.size(); i++){
+        //! 10 below is const for MAX_SEND_POPUP_ENTRIES (TODO)
+        if (i >= 10) {
+            formatted.removeLast();
+            i--;
+        }
+        else{
+            displayedEntries = i+1;
+        }
+    }
+    questionString.append("<hr />");
+    questionString.append(tr("<b>(%1 of %2 entries displayed)</b>").arg(displayedEntries).arg(messageEntries));
+
+    // Display message box
+    QMessageBox::StandardButton retval = QMessageBox::question(this, tr("Confirm send coins"),
+        questionString.arg(formatted.join("<br />")),
+        QMessageBox::Yes | QMessageBox::Cancel,
+        QMessageBox::Cancel);
+
+    if(retval != QMessageBox::Yes)
+    {
+        fNewRecipientAllowed = true;
+        return;
+    }
+
+    // now send the prepared transaction
+    WalletModel::SendCoinsReturn sendStatus = model->sendCoins(currentTransaction);
+    // process sendStatus and on error generate message shown to user
+    processSendCoinsReturn(sendStatus);
+
+    if (sendStatus.status == WalletModel::OK)
+    {
+        accept();
+        coinControl.UnSelectAll();
+        coinControlUpdateLabels();
+    }
+    fNewRecipientAllowed = true;
 }
 
 void SendCoinsDialog::on_sendButton_clicked()

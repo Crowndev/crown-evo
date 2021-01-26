@@ -134,6 +134,16 @@ static const std::map<std::string,WalletFlags> WALLET_FLAG_MAP{
 
 extern const std::map<uint64_t,std::string> WALLET_FLAG_CAVEATS;
 
+enum AvailableCoinsType
+{
+    ALL_COINS = 1,
+    ONLY_DENOMINATED = 2,
+    ONLY_NOT10000IFMN = 3,
+    ONLY_NONDENOMINATED_NOT10000IFMN = 4,
+    ONLY_10000 = 5,
+    ONLY_500 = 6
+};
+
 /** A wrapper to reserve an address from a wallet
  *
  * ReserveDestination is used to reserve an address.

@@ -824,6 +824,13 @@ bool MemPoolAccept::PreChecks(ATMPArgs& args, Workspace& ws)
         }
     }
 
+    // check special TXs after all the other checks. If we'd do this before the other checks, we might end up
+    // DoS scoring a node for non-critical errors, e.g. duplicate keys because a TX is received that was already mined
+    if (!CheckEvoTx(tx, ::ChainActive().Tip(), state) || !CheckNftTx(tx, ::ChainActive().Tip(), state))
+        return false;
+    if (m_pool.exists(tx.GetHash()))
+        return state.Invalid(TxValidationResult::TX_CONSENSUS, "specialtx-duplicate");
+
     // A transaction that spends outputs that would be replaced by it is invalid. Now
     // that we have the set of all ancestors we can detect this
     // pathological case by making sure setConflicts and setAncestors don't
@@ -2189,6 +2196,11 @@ bool CheckStake(const CBlockIndex* pindex, const CBlock& block, uint256& hashPro
 static int64_t nTimeCheck = 0;
 static int64_t nTimeForks = 0;
 static int64_t nTimeVerify = 0;
+static int64_t nTimeSubsidy = 0;
+static int64_t nTimePayeeValid = 0;
+static int64_t nTimeSNPayeeValid = 0;
+static int64_t nTimeProcessEvoValid = 0;
+static int64_t nTimeProcessNftValid = 0;
 static int64_t nTimeConnect = 0;
 static int64_t nTimeIndex = 0;
 static int64_t nTimeCallbacks = 0;
@@ -2408,6 +2420,10 @@ bool CChainState::ConnectBlock(const CBlock& block, BlockValidationState& state,
 
         nInputs += tx.vin.size();
 
+        // Contextual checks for evo/nft txes
+        if (!IsValidTypeAndVersion(tx.nVersion, tx.nType))
+            return error("%s: CTransaction::IsValidTypeAndVersion: %s, %s", __func__, tx.GetHash().ToString(), state.ToString());
+
         if (!tx.IsCoinBase() && !tx.IsCoinStake())
         {
             CAmount txfee = 0;
@@ -2482,17 +2498,48 @@ bool CChainState::ConnectBlock(const CBlock& block, BlockValidationState& state,
     if (block.IsProofOfStake())
         blockCreated += block.vtx[1]->GetValueOut();
 
+    //! nTimeSubsidyValid
+    int64_t nTime4_1 = GetTimeMicros();
     if (!IsBlockValueValid(block, blockReward)) {
         return state.Invalid(BlockValidationResult::BLOCK_CONSENSUS, "bad-cb-amount");
     }
+    int64_t nTime4_2 = GetTimeMicros(); nTimeSubsidy += nTime4_2 - nTime4_1;
+    LogPrint(BCLog::BENCH, "      - IsBlockValueValid: %.2fms [%.2fs (%.2fms/blk)]\n", MICRO * (nTime4_2 - nTime4_1), nTimeSubsidy * MICRO, nTimeSubsidy * MILLI / nBlocksTotal);
 
+    //! nTimeBlockPayeeValid
+    int64_t nTime5_1 = GetTimeMicros();
     if(!IsBlockPayeeValid(blockCreated, *block.vtx[0], nHeight, block.nTime, pindex->pprev->nTime)) {
         return state.Invalid(BlockValidationResult::BLOCK_CONSENSUS, "bad-mn-payee");
     }
+    int64_t nTime5_2 = GetTimeMicros(); nTimePayeeValid += nTime5_2 - nTime5_1;
+    LogPrint(BCLog::BENCH, "      - IsBlockPayeeValid: %.2fms [%.2fs (%.2fms/blk)]\n", MICRO * (nTime5_2 - nTime5_1), nTimePayeeValid * MICRO, nTimePayeeValid * MILLI / nBlocksTotal);
 
+    //! nTimeSNPayeeValid
+    int64_t nTime6_1 = GetTimeMicros();
     if(!SNIsBlockPayeeValid(blockCreated, *block.vtx[0], nHeight, block.nTime, pindex->pprev->nTime)) {
         return state.Invalid(BlockValidationResult::BLOCK_CONSENSUS, "bad-sn-payee");
     }
+    int64_t nTime6_2 = GetTimeMicros(); nTimeSNPayeeValid += nTime6_2 - nTime6_1;
+    LogPrint(BCLog::BENCH, "      - SNIsBlockPayeeValid: %.2fms [%.2fs (%.2fms/blk)]\n", MICRO * (nTime6_2 - nTime6_1), nTimeSNPayeeValid * MICRO, nTimeSNPayeeValid * MILLI / nBlocksTotal);
+
+    //! validationstate for evo/nft transactions
+    TxValidationState txState;
+
+    //! nTimeProcessEvoValid
+    int64_t nTime7_1 = GetTimeMicros();
+    if (!ProcessEvoTxsInBlock(block, pindex, txState, fJustCheck)) {
+        return error("ConnectBlock(CROWN): ProcessEvoTxsInBlock for block %s failed with %s", pindex->GetBlockHash().ToString(), txState.ToString());
+    }
+    int64_t nTime7_2 = GetTimeMicros(); nTimeProcessEvoValid += nTime7_2 - nTime7_1;
+    LogPrint(BCLog::BENCH, "      - ProcessEvoTxsInBlock: %.2fms [%.2fs (%.2fms/blk)]\n", MICRO * (nTime7_2 - nTime7_1), nTimeProcessEvoValid * MICRO, nTimeProcessEvoValid * MILLI / nBlocksTotal);
+
+    //! nTimeProcessNftValid
+    int64_t nTime8_1 = GetTimeMicros();
+    if (!ProcessNftTxsInBlock(block, pindex, txState, fJustCheck)) {
+        return error("ConnectBlock(CROWN): ProcessNftTxsInBlock for block %s failed with %s", pindex->GetBlockHash().ToString(), txState.ToString());
+    }
+    int64_t nTime8_2 = GetTimeMicros(); nTimeProcessNftValid += nTime8_2 - nTime8_1;
+    LogPrint(BCLog::BENCH, "      - ProcessNftTxsInBlock: %.2fms [%.2fs (%.2fms/blk)]\n", MICRO * (nTime8_2 - nTime8_1), nTimeProcessNftValid * MICRO, nTimeProcessNftValid * MILLI / nBlocksTotal);
 
     // CROWN : FINISH //////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -4724,6 +4771,15 @@ bool CChainState::RollforwardBlock(const CBlockIndex* pindex, CCoinsViewCache& i
         // Pass check = true as every addition may be an overwrite.
         AddCoins(inputs, *tx, pindex->nHeight, true);
     }
+
+    TxValidationState state;
+    if (!ProcessEvoTxsInBlock(block, pindex, state, false /*fJustCheck*/)) {
+        return error("RollforwardBlock(CROWN): ProcessEvoTxsInBlock for block %s failed with %s", pindex->GetBlockHash().ToString(), state.ToString());
+    }
+    if (!ProcessNftTxsInBlock(block, pindex, state, false /*fJustCheck*/)) {
+        return error("RollforwardBlock(CROWN): ProcessNftTxsInBlock for block %s failed with %s", pindex->GetBlockHash().ToString(), state.ToString());
+    }
+
     return true;
 }
 

@@ -9,6 +9,7 @@
 #include <hash.h>
 #include <tinyformat.h>
 #include <util/strencodings.h>
+#include <util/system.h>
 
 #include <assert.h>
 
@@ -19,10 +20,10 @@ std::string GetVersionName(int nVersion)
           return "LEGACY";
        case (SEGWIT) :
           return "SEGWIT";
-       case (EVO) :
-          return "EVO";
        case (NFT) :
           return "NFT";
+       case (EVO) :
+          return "EVO";
     }
     return "UNKNOWN";
 };
@@ -51,6 +52,24 @@ std::string GetTypeName(int nType)
     }
     return "UNKNOWN";
 };
+
+bool IsValidTypeAndVersion(int nVersion, int nType)
+{
+    if (nVersion == LEGACY)
+        return true;
+    if (nVersion == SEGWIT)
+        return true;
+    if (nVersion == NFT) {
+        if (nType >= TRANSACTION_NF_TOKEN_REGISTER && nType <= TRANSACTION_NF_TOKEN_PROTOCOL_REGISTER)
+            return true;
+    } else if (nVersion == EVO) {
+        if (nType > TRANSACTION_NORMAL && nType <= TRANSACTION_QUORUM_COMMITMENT)
+            return true;
+    }
+    //! debug
+    LogPrintf("%s failed (nVersion was %d, nType was %d)\n", __func__, nVersion, nType);
+    return false;
+}
 
 std::string COutPoint::ToString() const
 {

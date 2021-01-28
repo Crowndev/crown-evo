@@ -13,11 +13,13 @@
 #include <primitives/transaction.h>
 #include <util/system.h>
 
-bool CheckNftTx(const CTransaction& tx, const CBlockIndex* pindexLast, CValidationState& state)
+bool CheckNftTx(const CTransaction& tx, const CBlockIndex* pindexLast, TxValidationState& state)
 {
     if (tx.nVersion != TX_NFT_VERSION || tx.nType == TRANSACTION_NORMAL) {
         return true;
     }
+
+    LogPrintf("    - found NFT transaction %s (version: %s type: %s)\n", tx.GetHash().ToString(), GetVersionName(tx.nVersion), GetTypeName(tx.nType));
 
     try {
         switch (tx.nType) {
@@ -32,7 +34,7 @@ bool CheckNftTx(const CTransaction& tx, const CBlockIndex* pindexLast, CValidati
     return true;
 }
 
-bool ProcessNftTx(const CTransaction& tx, const CBlockIndex* pindex, CValidationState& state)
+bool ProcessNftTx(const CTransaction& tx, const CBlockIndex* pindex, TxValidationState& state)
 {
     if (tx.nVersion != TX_NFT_VERSION || tx.nType == TRANSACTION_NORMAL) {
         return true;
@@ -62,11 +64,9 @@ bool UndoNftTx(const CTransaction& tx, const CBlockIndex* pindex)
     return false;
 }
 
-bool ProcessNftTxsInBlock(const CBlock& block, const CBlockIndex* pindex, CValidationState& state)
+bool ProcessNftTxsInBlock(const CBlock& block, const CBlockIndex* pindex, TxValidationState& state, bool fJustCheck)
 {
-    int64_t nTimeLoop = 0;
     try {
-        int64_t nTime1 = GetTimeMicros();
         for (int i = 0; i < (int)block.vtx.size(); i++) {
             const CTransaction& tx = *block.vtx[i];
             if (!CheckNftTx(tx, pindex->pprev, state)) {
@@ -76,9 +76,6 @@ bool ProcessNftTxsInBlock(const CBlock& block, const CBlockIndex* pindex, CValid
                 return false;
             }
         }
-        int64_t nTime2 = GetTimeMicros();
-        nTimeLoop += nTime2 - nTime1;
-        LogPrint(BCLog::BENCH, "        - ProcessNftTxsInBlock: %.2fms [%.2fs]\n", 0.001 * (nTime2 - nTime1), nTimeLoop * 0.000001);
     } catch (const std::exception& e) {
         LogPrintf("%s -- failed: %s\n", __func__, e.what());
     }
@@ -88,18 +85,13 @@ bool ProcessNftTxsInBlock(const CBlock& block, const CBlockIndex* pindex, CValid
 
 bool UndoNftTxsInBlock(const CBlock& block, const CBlockIndex* pindex)
 {
-    int64_t nTimeLoop = 0;
     try {
-        int64_t nTime1 = GetTimeMicros();
         for (int i = (int)block.vtx.size() - 1; i >= 0; --i) {
             const CTransaction& tx = *block.vtx[i];
             if (!UndoNftTx(tx, pindex)) {
                 return false;
             }
         }
-        int64_t nTime2 = GetTimeMicros();
-        nTimeLoop += nTime2 - nTime1;
-        LogPrint(BCLog::BENCH, "        - UndoNftTxsInBlock: %.2fms [%.2fs]\n", 0.001 * (nTime2 - nTime1), nTimeLoop * 0.000001);
     } catch (const std::exception& e) {
         return error(strprintf("%s -- failed: %s\n", __func__, e.what()).c_str());
     }

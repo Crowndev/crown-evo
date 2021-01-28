@@ -20,8 +20,8 @@
 enum TxVersion : int16_t {
     LEGACY = 1,
     SEGWIT = 2,
-    EVO = 3,
-    NFT = 4
+    NFT = 3,
+    EVO = 4
 };
 
 enum TxType : int16_t {
@@ -36,6 +36,7 @@ enum TxType : int16_t {
     TRANSACTION_NF_TOKEN_PROTOCOL_REGISTER = 1200,
 };
 
+bool IsValidTypeAndVersion(int nVersion, int nType);
 std::string GetTypeName(int nType);
 std::string GetVersionName(int nVersion);
 

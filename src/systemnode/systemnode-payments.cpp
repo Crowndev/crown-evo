@@ -29,8 +29,6 @@ RecursiveMutex cs_mapSystemnodePayeeVotes;
 bool SNIsBlockPayeeValid(const CAmount& nValueCreated, const CTransaction& txNew, int nBlockHeight, const uint32_t& nTime, const uint32_t& nTimePrevBlock)
 {
     if (!systemnodeSync.IsSynced()) { //there is no budget data to use to check anything -- find the longest chain
-        if (gArgs.GetBoolArg("-debug", false))
-            LogPrint(BCLog::SYSTEMNODE, "Client not synced, skipping block payee checks\n");
         return true;
     }
 

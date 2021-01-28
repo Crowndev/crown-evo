@@ -16,7 +16,7 @@ class CTransaction;
 class TxValidationState;
 
 bool CheckEvoTx(const CTransaction& tx, const CBlockIndex* pindexPrev, TxValidationState& state);
-bool ProcessEvoTxsInBlock(const CBlock& block, const CBlockIndex* pindex, TxValidationState& state, bool fCheckCbTxMerkleRoots = true);
+bool ProcessEvoTxsInBlock(const CBlock& block, const CBlockIndex* pindex, TxValidationState& state, bool fJustCheck, bool fCheckCbTxMerkleRoots = true);
 bool UndoEvoTxsInBlock(const CBlock& block, const CBlockIndex* pindex);
 
 template <typename T>

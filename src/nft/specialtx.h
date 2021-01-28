@@ -16,7 +16,7 @@ class CTransaction;
 class TxValidationState;
 
 bool CheckNftTx(const CTransaction& tx, const CBlockIndex* pindex, TxValidationState& state);
-bool ProcessNftTxsInBlock(const CBlock& block, const CBlockIndex* pindex, TxValidationState& state);
+bool ProcessNftTxsInBlock(const CBlock& block, const CBlockIndex* pindex, TxValidationState& state, bool fJustCheck);
 bool UndoNftTxsInBlock(const CBlock& block, const CBlockIndex* pindex);
 
 template <typename T>

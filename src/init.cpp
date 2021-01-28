@@ -1137,6 +1137,10 @@ bool AppInitParameterInteraction(const ArgsManager& args)
         fPruneMode = true;
     }
 
+    // above code left in for convenience of future rebase work, pruning always disabled
+    fPruneMode = false;
+    assert(!fPruneMode);
+
     nConnectTimeout = args.GetArg("-timeout", DEFAULT_CONNECT_TIMEOUT);
     if (nConnectTimeout <= 0) {
         nConnectTimeout = DEFAULT_CONNECT_TIMEOUT;

@@ -2148,6 +2148,10 @@ bool IsMasternodeOrSystemnodeReward(const CTransactionRef& tx, const COutPoint& 
 
 bool CheckStake(const CBlockIndex* pindex, const CBlock& block, uint256& hashProofOfStake)
 {
+    //Do not validate blockproof's during reindex/block import
+    if (fImporting || fReindex)
+        return true;
+
     AssertLockHeld(cs_main);
     //Coinbase has to be 0 value
     if (block.vtx[0]->vout[0].nValue > 0)
@@ -4116,25 +4120,26 @@ bool CChainState::AcceptBlock(const std::shared_ptr<const CBlock>& pblock, Block
         return error("%s: %s", __func__, state.ToString());
     }
 
-    if (pindex->nHeight >= chainparams.GetConsensus().PoSStartHeight())
-    {
-        uint256 hashProofOfStake;
-        bool checkStakeResult = CheckStake(pindex, block, hashProofOfStake);
-        LogPrintf("%s - hashProof %s\n", __func__, hashProofOfStake.ToString());
-        if (!checkStakeResult)
-            return error("%s: Proof of stake check failed", __func__);
+    if (!fReindex && !fImporting) {
+        if (pindex->nHeight >= chainparams.GetConsensus().PoSStartHeight()) {
+            uint256 hashProofOfStake;
+            bool checkStakeResult = CheckStake(pindex, block, hashProofOfStake);
+            LogPrintf("%s - hashProof %s\n", __func__, hashProofOfStake.ToString());
+            if (!checkStakeResult)
+                return error("%s: Proof of stake check failed", __func__);
 
-        // Check if this proof hash has been used to package other blocks
-        if (g_proofTracker->IsSuspicious(hashProofOfStake, pindex->GetBlockHash(), pindex->nHeight)) {
-            //Stake has been packaged into many different blocks. At this point we wait until enough masternodes have approved
-            //this block as on the main chain
-            return state.Suspicious(strprintf("%s: hashProofOfStake has appeared in too many blocks, waiting for masternode approval for "
-                         "block %s", __func__, pindex->GetBlockHash().GetHex()));
+            // Check if this proof hash has been used to package other blocks
+            if (g_proofTracker->IsSuspicious(hashProofOfStake, pindex->GetBlockHash(), pindex->nHeight)) {
+                //Stake has been packaged into many different blocks. At this point we wait until enough masternodes have approved
+                //this block as on the main chain
+                return state.Suspicious(strprintf("%s: hashProofOfStake has appeared in too many blocks, waiting for masternode approval for "
+                             "block %s", __func__, pindex->GetBlockHash().GetHex()));
+            }
+
+            // Remove any stale witnesses
+            const int nMaxReorganizationDepth = 100;
+            g_proofTracker->EraseBeforeHeight(pindex->nHeight - nMaxReorganizationDepth);
         }
-
-        // Remove any stale witnesses
-        const int nMaxReorganizationDepth = 100;
-        g_proofTracker->EraseBeforeHeight(pindex->nHeight - nMaxReorganizationDepth);
     }
 
     // Header is valid/has work, merkle tree and segwit merkle tree are good...RELAY NOW

@@ -36,6 +36,10 @@ CLegacySigner legacySigner;
 
 bool CLegacySigner::IsVinAssociatedWithPubkey(CTxIn& vin, CPubKey& pubkey, int nodeType, const Consensus::Params& consensusParams)
 {
+    // Return true if txindex isnt ready
+    if (!g_txindex->IsTxIndexSynced())
+        return true;
+
     uint256 hash;
     CTransactionRef txVin;
     g_txindex->BlockUntilSyncedToCurrentChain();

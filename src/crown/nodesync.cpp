@@ -31,11 +31,20 @@
 
 std::string currentSyncStatus()
 {
-    if (masternodeSync.IsSynced())
-        return systemnodeSync.GetSyncStatus();
-    if (masternodeSync.IsBlockchainSynced())
-        return masternodeSync.GetSyncStatus();
-    return "";
+    static int64_t lastStatusTime;
+    static std::string lastStatusMessage;
+
+    if (lastStatusTime != GetTime()) {
+        lastStatusTime = GetTime();
+        if (lastStatusMessage != systemnodeSync.GetSyncStatus()) {
+            lastStatusMessage = systemnodeSync.GetSyncStatus();
+        } else {
+            lastStatusMessage = masternodeSync.GetSyncStatus();
+        }
+        return lastStatusMessage;
+    }
+
+    return lastStatusMessage;
 }
 
 void ThreadNodeSync(CConnman& connman)
@@ -52,15 +61,11 @@ void ThreadNodeSync(CConnman& connman)
     static unsigned int c1 = 0;
     static unsigned int c2 = 0;
 
-    bool stageone = masternodeSync.IsBlockchainSynced();
-    bool stagetwo = masternodeSync.IsSynced();
-
     // try to sync from all available nodes, one step at a time
     masternodeSync.Process(connman);
-    if (stagetwo)
-        systemnodeSync.Process(connman);
+    systemnodeSync.Process(connman);
 
-    if (stageone) {
+    {
 
         c1++;
 
@@ -79,7 +84,7 @@ void ThreadNodeSync(CConnman& connman)
         }
     }
 
-    if (stageone && stagetwo) {
+    {
 
         c2++;
 

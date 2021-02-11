@@ -999,7 +999,7 @@ void BitcoinGUI::updateProgressBarVisibility()
     }
 
     // Show the progress bar label if masternode or systemnode lists aren't synced
-    bool fShowProgressBar = !masternodeSync.IsSynced() || !systemnodeSync.IsSynced();
+    bool fShowProgressBar = !(masternodeSync.IsSynced() && systemnodeSync.IsSynced());
     progressBarLabel->setVisible(fShowProgressBar);
     progressBar->setVisible(fShowProgressBar);
 }

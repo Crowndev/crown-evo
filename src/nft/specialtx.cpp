@@ -1,14 +1,14 @@
-// Copyright (c) 2018-2019 The Dash Core developers
-// Copyright (c) 2014-2020 Crown Core developers
+// Copyright (c) 2020-2021 Crown Core developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <nft/specialtx.h>
 
-#include <clientversion.h>
 #include <chainparams.h>
+#include <clientversion.h>
 #include <consensus/validation.h>
 #include <hash.h>
+#include <nft/token.h>
 #include <primitives/block.h>
 #include <primitives/transaction.h>
 #include <util/system.h>
@@ -24,8 +24,9 @@ bool CheckNftTx(const CTransaction& tx, const CBlockIndex* pindexLast, TxValidat
     try {
         switch (tx.nType) {
         case TRANSACTION_NF_TOKEN_REGISTER:
+            return ContextualCheckTokenRegister(tx, pindexLast, state);
         case TRANSACTION_NF_TOKEN_PROTOCOL_REGISTER:
-            return true;
+            return ContextualCheckTokenProtocolRegister(tx, pindexLast, state);
         }
     } catch (const std::exception& e) {
         LogPrintf("%s -- failed: %s\n", __func__, e.what());
@@ -34,16 +35,17 @@ bool CheckNftTx(const CTransaction& tx, const CBlockIndex* pindexLast, TxValidat
     return true;
 }
 
-bool ProcessNftTx(const CTransaction& tx, const CBlockIndex* pindex, TxValidationState& state)
+bool ProcessNftTx(const CTransaction& tx, const CBlockIndex* pindexLast, TxValidationState& state)
 {
     if (tx.nVersion != TX_NFT_VERSION || tx.nType == TRANSACTION_NORMAL) {
         return true;
     }
 
     switch (tx.nType) {
-        case TRANSACTION_NF_TOKEN_REGISTER:
-        case TRANSACTION_NF_TOKEN_PROTOCOL_REGISTER:
-            return true;
+    case TRANSACTION_NF_TOKEN_REGISTER:
+        return CheckTokenRegister(tx, pindexLast, state);
+    case TRANSACTION_NF_TOKEN_PROTOCOL_REGISTER:
+        return CheckTokenProtocolRegister(tx, pindexLast, state);
     }
 
     return true;
@@ -56,9 +58,9 @@ bool UndoNftTx(const CTransaction& tx, const CBlockIndex* pindex)
     }
 
     switch (tx.nType) {
-        case TRANSACTION_NF_TOKEN_REGISTER:
-        case TRANSACTION_NF_TOKEN_PROTOCOL_REGISTER:
-            return true;
+    case TRANSACTION_NF_TOKEN_REGISTER:
+    case TRANSACTION_NF_TOKEN_PROTOCOL_REGISTER:
+        return true;
     }
 
     return false;

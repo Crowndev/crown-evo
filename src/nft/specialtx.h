@@ -7,16 +7,16 @@
 
 #include <primitives/transaction.h>
 #include <streams.h>
-#include <version.h>
 #include <validation.h>
+#include <version.h>
 
 class CBlock;
 class CBlockIndex;
 class CTransaction;
 class TxValidationState;
 
-bool CheckNftTx(const CTransaction& tx, const CBlockIndex* pindex, TxValidationState& state);
-bool ProcessNftTxsInBlock(const CBlock& block, const CBlockIndex* pindex, TxValidationState& state, bool fJustCheck);
+bool CheckNftTx(const CTransaction& tx, const CBlockIndex* pindexLast, TxValidationState& state);
+bool ProcessNftTxsInBlock(const CBlock& block, const CBlockIndex* pindexLast, TxValidationState& state, bool fJustCheck);
 bool UndoNftTxsInBlock(const CBlock& block, const CBlockIndex* pindex);
 
 template <typename T>

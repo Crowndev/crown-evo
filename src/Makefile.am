@@ -176,7 +176,10 @@ BITCOIN_CORE_H = \
   netaddress.h \
   netbase.h \
   netmessagemaker.h \
+  nft/nftdb.h \
   nft/specialtx.h \
+  nft/token.h \
+  nft/util.h \
   nodeconfig.h \
   node/coin.h \
   node/coinstats.h \
@@ -355,7 +358,10 @@ libbitcoin_server_a_SOURCES = \
   net.cpp \
   netfulfilledman.cpp \
   net_processing.cpp \
+  nft/nftdb.cpp \
   nft/specialtx.cpp \
+  nft/token.cpp \
+  nft/util.cpp \
   node/coin.cpp \
   node/coinstats.cpp \
   node/context.cpp \

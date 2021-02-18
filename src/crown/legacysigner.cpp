@@ -58,11 +58,14 @@ bool CLegacySigner::IsVinAssociatedWithPubkey(CTxIn& vin, CPubKey& pubkey, int n
             continue;
         // LogPrintf("     vout %d - found %s - expected %s\n", voutn, out.scriptPubKey.ToString(), payee.ToString());
         if (out.scriptPubKey == payee) {
-            if (out.nValue * COIN == nodeType ? consensusParams.nSystemnodeCollateral : consensusParams.nMasternodeCollateral) {
-                return true;
+            if (nodeType == 0) {
+                if (out.nValue == consensusParams.nMasternodeCollateral)
+                    return true;
             } else {
-                LogPrintf("     pubkeys match but value incorrect (expecting %llu, got %llu)\n", nodeType ? consensusParams.nSystemnodeCollateral : consensusParams.nMasternodeCollateral, out.nValue * COIN);
+                if (out.nValue == consensusParams.nSystemnodeCollateral)
+                    return true;
             }
+            LogPrintf("     pubkeys match but value incorrect (expecting %llu, got %llu)\n", nodeType ? consensusParams.nSystemnodeCollateral : consensusParams.nMasternodeCollateral, out.nValue);
         }
     }
 

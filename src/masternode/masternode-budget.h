@@ -112,7 +112,7 @@ private:
 
 private:
     // critical section to protect the inner data structures
-    mutable RecursiveMutex m_cs;
+    mutable RecursiveMutex cs;
 
     // keep track of the scanning errors I've seen
     map<uint256, CBudgetProposal> mapProposals;
@@ -134,7 +134,7 @@ public:
 
     void ClearSeen()
     {
-        LOCK(m_cs);
+        LOCK(cs);
         mapSeenMasternodeBudgetProposals.clear();
         mapSeenMasternodeBudgetVotes.clear();
         mapSeenBudgetDrafts.clear();
@@ -165,7 +165,7 @@ public:
 
     bool HasItem(uint256 hash) const
     {
-        LOCK(m_cs);
+        LOCK(cs);
         return mapSeenMasternodeBudgetVotes.count(hash) || mapSeenBudgetDrafts.count(hash) || mapSeenBudgetDraftVotes.count(hash);
     }
 
@@ -194,7 +194,7 @@ public:
 
     void Clear()
     {
-        LOCK(m_cs);
+        LOCK(cs);
 
         LogPrint(BCLog::MASTERNODE, "Budget object cleared\n");
         mapProposals.clear();
@@ -264,17 +264,20 @@ public:
     BudgetDraft(
         int nBlockStart,
         const std::vector<CTxBudgetPayment>& vecBudgetPayments,
-        uint256 nFeeTXHash);
+        uint256 nFeeTXHash
+     );
     BudgetDraft(
         int nBlockStart,
         const std::vector<CTxBudgetPayment>& vecBudgetPayments,
         const CTxIn& masternodeId,
-        const CKey& keyMasternode);
+        const CKey& keyMasternode
+    );
     BudgetDraft(
         int nBlockStart,
         const std::vector<CTxBudgetPayment>& vecBudgetPayments,
         const CTxIn& masternodeId,
-        const std::vector<unsigned char>& signature);
+        const std::vector<unsigned char>& signature
+     );
 
     void CleanAndRemove(bool fSignatureCheck);
     bool AddOrUpdateVote(bool isOldVote, const BudgetDraftVote& vote, std::string& strError);
@@ -380,8 +383,8 @@ private:
     std::map<uint256, BudgetDraftVote> m_votes;
     std::map<uint256, BudgetDraftVote> m_obsoleteVotes;
     uint256 m_feeTransactionHash;
-    CTxIn m_masternodeSubmittedId;
     std::vector<unsigned char> m_signature;
+    CTxIn m_masternodeSubmittedId;
     boost::optional<int> m_voteSubmittedTime;
 };
 
@@ -472,7 +475,7 @@ public:
 class CBudgetProposal {
 private:
     // critical section to protect the inner data structures
-    mutable RecursiveMutex m_cs;
+    mutable RecursiveMutex cs;
     CAmount nAlloted;
 
 public:

@@ -621,8 +621,7 @@ void BitcoinGUI::setClientModel(ClientModel *_clientModel, interfaces::BlockAndH
 
         modalOverlay->setKnownBestHeight(tip_info->header_height, QDateTime::fromTime_t(tip_info->header_time));
         setNumBlocks(tip_info->block_height, QDateTime::fromTime_t(tip_info->block_time), QString::fromStdString(tip_info->block_hash.ToString()), tip_info->verification_progress, false, SynchronizationState::INIT_DOWNLOAD);
-        connect(_clientModel, SIGNAL(numBlocksChanged(int,QDateTime,QString,double,bool)), this, SLOT(setNumBlocks(int,QDateTime,QString,double,bool)));
-
+        connect(_clientModel, &ClientModel::numBlocksChanged, this, &BitcoinGUI::setNumBlocks);
         connect(_clientModel, SIGNAL(additionalDataSyncProgressChanged(double)), this, SLOT(setAdditionalDataSyncProgress(double)));
 
         // Receive and report messages from client model
@@ -994,12 +993,11 @@ void BitcoinGUI::updateHeadersSyncProgressLabel()
 
 void BitcoinGUI::updateProgressBarVisibility()
 {
-    if (clientModel == nullptr) {
+    if (!clientModel)
         return;
-    }
 
-    // Show the progress bar label if masternode or systemnode lists aren't synced
-    bool fShowProgressBar = !(masternodeSync.IsSynced() && systemnodeSync.IsSynced());
+    // Masternode list will always finish last, so use it definitely as sign things are done
+    bool fShowProgressBar = !masternodeSync.IsSynced();
     progressBarLabel->setVisible(fShowProgressBar);
     progressBar->setVisible(fShowProgressBar);
 }
@@ -1078,7 +1076,7 @@ void BitcoinGUI::setNumBlocks(int count, const QDateTime& blockDate, const QStri
     tooltip = tr("Processed %n block(s) of transaction history.", "", count);
 
     // Set icon state: spinning if catching up, tick otherwise
-    if (masternodeSync.IsBlockchainSynced() && systemnodeSync.IsBlockchainSynced())
+    if (masternodeSync.IsBlockchainSynced())
     {
         QString strSyncStatus;
         tooltip = tr("Up to date") + QString(".<br>") + tooltip;

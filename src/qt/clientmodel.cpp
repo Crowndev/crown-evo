@@ -18,6 +18,9 @@
 #include <util/threadnames.h>
 #include <validation.h>
 
+#include <masternode/masternodeman.h>
+#include <systemnode/systemnodeman.h>
+
 #include <stdint.h>
 
 #include <QDebug>
@@ -82,6 +85,20 @@ int ClientModel::getNumConnections(unsigned int flags) const
     return m_node.getNodeCount(connections);
 }
 
+QString ClientModel::getMasternodeCountString() const
+{
+    return tr("Total: %1 (Enabled: %2)")
+            .arg(QString::number((int)mnodeman.CountMasternodes(true)))
+            .arg(QString::number((int)mnodeman.CountMasternodes()));
+}
+
+QString ClientModel::getSystemnodeCountString() const
+{
+    return tr("Total: %1 (Enabled: %2)")
+            .arg(QString::number((int)snodeman.CountSystemnodes(true)))
+            .arg(QString::number((int)snodeman.CountSystemnodes()));
+}
+
 int ClientModel::getHeaderTipHeight() const
 {
     if (cachedBestHeaderHeight == -1) {
@@ -141,9 +158,31 @@ uint256 ClientModel::getBestBlockHash()
     return m_cached_tip_blocks;
 }
 
+void ClientModel::updateMnTimer()
+{
+    QString newMasternodeCountString = getMasternodeCountString();
+
+    if (cachedMasternodeCountString != newMasternodeCountString) {
+        cachedMasternodeCountString = newMasternodeCountString;
+        Q_EMIT strMasternodesChanged(cachedMasternodeCountString);
+    }
+}
+
+void ClientModel::updateSnTimer()
+{
+    QString newSystemnodeCountString = getSystemnodeCountString();
+
+    if (cachedSystemnodeCountString != newSystemnodeCountString) {
+        cachedSystemnodeCountString = newSystemnodeCountString;
+        Q_EMIT strSystemnodesChanged(cachedSystemnodeCountString);
+    }
+}
+
 void ClientModel::updateNumConnections(int numConnections)
 {
     Q_EMIT numConnectionsChanged(numConnections);
+    updateMnTimer();
+    updateSnTimer();
 }
 
 void ClientModel::updateNetworkActive(bool networkActive)
@@ -290,6 +329,7 @@ static void BlockTipChanged(ClientModel* clientmodel, SynchronizationState sync_
     bool invoked = QMetaObject::invokeMethod(clientmodel, "numBlocksChanged", Qt::QueuedConnection,
         Q_ARG(int, tip.block_height),
         Q_ARG(QDateTime, QDateTime::fromTime_t(tip.block_time)),
+        Q_ARG(QString, QString(tip.block_hash.ToString().c_str())),
         Q_ARG(double, verificationProgress),
         Q_ARG(bool, fHeader),
         Q_ARG(SynchronizationState, sync_state));

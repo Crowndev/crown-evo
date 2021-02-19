@@ -76,6 +76,9 @@ public:
     CMasternodeMan();
     CMasternodeMan(CMasternodeMan& other);
 
+    /// Return total mn
+    int CountMasternodes(bool fEnabled = false);
+
     /// Add an entry
     bool Add(const CMasternode& mn);
 

@@ -50,6 +50,22 @@ CMasternodeMan::CMasternodeMan()
     nDsqCount = 0;
 }
 
+int CMasternodeMan::CountMasternodes(bool fEnabled)
+{
+    LOCK(cs);
+
+    int nCount = 0;
+    for (const auto& mnpair : vMasternodes) {
+        if (fEnabled) {
+            if (!mnpair.IsEnabled())
+                continue;
+        }
+        nCount++;
+    }
+
+    return nCount;
+}
+
 std::vector<pair<int, CMasternode>> CMasternodeMan::GetMasternodeRanks(int64_t nBlockHeight, int minProtocol)
 {
     std::vector<pair<int64_t, CMasternode>> vecMasternodeScores;

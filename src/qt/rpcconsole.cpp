@@ -44,7 +44,6 @@
 #include <QTime>
 #include <QTimer>
 
-
 const int CONSOLE_HISTORY = 50;
 const int INITIAL_TRAFFIC_GRAPH_MINS = 30;
 const QSize FONT_RANGE(4, 40);
@@ -580,8 +579,14 @@ void RPCConsole::setClientModel(ClientModel *model, int bestblock_height, int64_
         setNumConnections(model->getNumConnections());
         connect(model, &ClientModel::numConnectionsChanged, this, &RPCConsole::setNumConnections);
 
+        setMasternodeCount(model->getMasternodeCountString());
+        connect(model, SIGNAL(strMasternodesChanged(QString)), this, SLOT(setMasternodeCount(QString)));
+
+        setSystemnodeCount(model->getSystemnodeCountString());
+        connect(model, SIGNAL(strSystemnodesChanged(QString)), this, SLOT(setSystemnodeCount(QString)));
+
         setNumBlocks(bestblock_height, QDateTime::fromTime_t(bestblock_date), QString::fromUtf8(model->getBestBlockHash().ToString().c_str()), verification_progress, false);
-        connect(model, SIGNAL(numBlocksChanged(int,QDateTime,QString,double,bool)), this, SLOT(setNumBlocks(int,QDateTime,QString,double,bool)));
+        connect(model, &ClientModel::numBlocksChanged, this, &RPCConsole::setNumBlocks);
 
         updateNetworkState();
         connect(model, &ClientModel::networkActiveChanged, this, &RPCConsole::setNetworkActive);
@@ -856,13 +861,6 @@ void RPCConsole::updateNetworkState()
     }
 
     ui->numberOfConnections->setText(connections);
-
-    std::ostringstream mnCount;
-    std::ostringstream snCount;
-    mnCount << mnodeman.CountEnabled() << " enabled (" << mnodeman.size() << " total)";
-    snCount << snodeman.CountEnabled() << " enabled (" << snodeman.size() << " total)";
-    ui->masternodeCount->setText(QString::fromStdString(mnCount.str()));
-    ui->systemnodeCount->setText(QString::fromStdString(snCount.str()));
 }
 
 void RPCConsole::setNumConnections(int count)
@@ -885,6 +883,16 @@ void RPCConsole::setNumBlocks(int count, const QDateTime& blockDate, const QStri
         ui->lastBlockTime->setText(blockDate.toString());
         ui->lastBlockHash->setText(blockHash);
     }
+}
+
+void RPCConsole::setMasternodeCount(const QString &strMasternodes)
+{
+    ui->masternodeCount->setText(strMasternodes);
+}
+
+void RPCConsole::setSystemnodeCount(const QString &strSystemnodes)
+{
+    ui->systemnodeCount->setText(strSystemnodes);
 }
 
 void RPCConsole::setMempoolSize(long numberOfTxs, size_t dynUsage)

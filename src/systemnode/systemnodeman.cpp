@@ -43,6 +43,22 @@ struct CompareScoreSN {
     }
 };
 
+int CSystemnodeMan::CountSystemnodes(bool fEnabled)
+{
+    LOCK(cs);
+
+    int nCount = 0;
+    for (const auto& snpair : vSystemnodes) {
+        if (fEnabled) {
+            if (!snpair.IsEnabled())
+                continue;
+        }
+        nCount++;
+    }
+
+    return nCount;
+}
+
 std::vector<pair<int, CSystemnode>> CSystemnodeMan::GetSystemnodeRanks(int64_t nBlockHeight, int minProtocol)
 {
     std::vector<pair<int64_t, CSystemnode>> vecSystemnodeScores;

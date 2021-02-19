@@ -71,6 +71,9 @@ public:
     //CSystemnodeMan();
     //CSystemnodeMan(CSystemnodeMan& other);
 
+    /// Return total sn
+    int CountSystemnodes(bool fEnabled = false);
+
     /// Add an entry
     bool Add(CSystemnode& mn);
 

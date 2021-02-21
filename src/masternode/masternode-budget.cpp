@@ -111,7 +111,10 @@ bool IsBudgetCollateralValid(uint256 nTxCollateralHash, uint256 nExpectedHash, s
 {
     uint256 nBlockHash;
     CTransactionRef txCollateral;
-    g_txindex->BlockUntilSyncedToCurrentChain();
+
+    CBlockIndex* pindex = ::ChainActive().Tip();
+    if (pindex)
+        g_txindex->BlockUntilSyncedToCurrentChain();
     if (!g_txindex->FindTx(nTxCollateralHash, nBlockHash, txCollateral))
         return false;
 

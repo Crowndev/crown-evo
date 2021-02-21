@@ -203,8 +203,14 @@ CMasternode::CollateralStatus CMasternode::CheckCollateral(const COutPoint& outp
 
 CMasternode::CollateralStatus CMasternode::CheckCollateral(const COutPoint& outpoint, int& nHeightRet)
 {
+    AssertLockHeld(cs_main);
+
     Coin coin;
     if (!GetUTXOCoin(outpoint, coin)) {
+        return COLLATERAL_UTXO_NOT_FOUND;
+    }
+
+    if (coin.IsSpent()) {
         return COLLATERAL_UTXO_NOT_FOUND;
     }
 
@@ -241,6 +247,8 @@ void CMasternode::Check(bool forceCheck)
 
     //test if the collateral is still good
     if (!unitTest) {
+        TRY_LOCK(cs_main, lockMain);
+        if(!lockMain) return;
         CollateralStatus err = CheckCollateral(vin.prevout);
         if (err == COLLATERAL_UTXO_NOT_FOUND) {
             activeState = MASTERNODE_VIN_SPENT;

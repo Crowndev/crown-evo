@@ -64,6 +64,12 @@ void CActiveSystemnode::ManageStatus(CConnman& connman)
 
         const auto pwallet = GetMainWallet();
 
+        if (!pwallet) {
+            notCapableReason = "No wallet loaded.";
+            LogPrintf("CActiveSystemnode::ManageStatus() - no wallet loaded.\n");
+            return;
+        }
+
         if (pwallet->IsLocked()) {
             notCapableReason = "Wallet is locked.";
             LogPrintf("CActiveSystemnode::ManageStatus() - not capable: %s\n", notCapableReason);

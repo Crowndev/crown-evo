@@ -13,9 +13,8 @@ bool setupNodeConfiguration()
         return InitError(strprintf(_("Masternode and Systemnode cannot run together")));
     }
 
-    const auto pwalletMain = GetMainWallet();
-    if (!pwalletMain)
-        return true;
+    std::shared_ptr<CWallet> pwallet = GetMainWallet();
+    if (!pwallet) return true;
 
     if (fMasterNode) {
         LogPrintf("IS MASTERNODE\n");
@@ -70,26 +69,26 @@ bool setupNodeConfiguration()
     strBudgetMode = gArgs.GetArg("-budgetvotemode", "auto");
 
     if (gArgs.GetBoolArg("-mnconflock", true)) {
-        LOCK(pwalletMain->cs_wallet);
+        LOCK(pwallet->cs_wallet);
         LogPrintf("Locking Masternodes:\n");
         uint256 mnTxHash;
         for (auto mne : masternodeConfig.getEntries()) {
             LogPrintf("  %s %s\n", mne.getTxHash(), mne.getOutputIndex());
             mnTxHash.SetHex(mne.getTxHash());
             COutPoint outpoint = COutPoint(mnTxHash, boost::lexical_cast<unsigned int>(mne.getOutputIndex()));
-            pwalletMain->LockCoin(outpoint);
+            pwallet->LockCoin(outpoint);
         }
     }
 
     if (gArgs.GetBoolArg("-snconflock", true)) {
-        LOCK(pwalletMain->cs_wallet);
+        LOCK(pwallet->cs_wallet);
         LogPrintf("Locking Systemnodes:\n");
         uint256 mnTxHash;
         for (auto sne : systemnodeConfig.getEntries()) {
             LogPrintf("  %s %s\n", sne.getTxHash(), sne.getOutputIndex());
             mnTxHash.SetHex(sne.getTxHash());
             COutPoint outpoint = COutPoint(mnTxHash, boost::lexical_cast<unsigned int>(sne.getOutputIndex()));
-            pwalletMain->LockCoin(outpoint);
+            pwallet->LockCoin(outpoint);
         }
     }
 

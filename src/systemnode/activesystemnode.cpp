@@ -14,7 +14,7 @@ class CActiveSystemnode;
 CActiveSystemnode activeSystemnode;
 
 //
-// Bootup the Systemnode, look for a 10000 CRW input and register on the network
+// Bootup the Systemnode, look for a 500 CRW input and register on the network
 //
 void CActiveSystemnode::ManageStatus(CConnman& connman)
 {
@@ -64,21 +64,15 @@ void CActiveSystemnode::ManageStatus(CConnman& connman)
 
         const auto pwallet = GetMainWallet();
 
-        if (!pwallet) {
-            notCapableReason = "No wallet loaded.";
-            LogPrintf("CActiveSystemnode::ManageStatus() - no wallet loaded.\n");
-            return;
-        }
-
-        if (pwallet->IsLocked()) {
+        if (pwallet && pwallet->IsLocked()) {
             notCapableReason = "Wallet is locked.";
             LogPrintf("CActiveSystemnode::ManageStatus() - not capable: %s\n", notCapableReason);
             return;
         }
 
         CCoinControl coin_control;
-        if (pwallet->GetBalance(0, coin_control.m_avoid_address_reuse).m_mine_trusted == 0) {
-            notCapableReason = "Systemnode configured correctly and ready, please use your local wallet to start it -Start alias-.";
+        if (!pwallet || (pwallet && pwallet->GetBalance(0, coin_control.m_avoid_address_reuse).m_mine_trusted == 0)) {
+            notCapableReason = "Systemnode configured correctly and ready, please use your local wallet to start it.";
             LogPrintf("CActiveSystemnode::ManageStatus() - not capable: %s\n", notCapableReason);
             return;
         }

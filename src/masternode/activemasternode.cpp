@@ -64,21 +64,15 @@ void CActiveMasternode::ManageStatus(CConnman& connman)
 
         const auto pwallet = GetMainWallet();
 
-        if (!pwallet) {
-            notCapableReason = "No wallet loaded.";
-            LogPrintf("CActiveMasternode::ManageStatus() - no wallet loaded.\n");
-            return;
-        }
-
-        if (pwallet->IsLocked()) {
+        if (pwallet && pwallet->IsLocked()) {
             notCapableReason = "Wallet is locked.";
             LogPrintf("CActiveMasternode::ManageStatus() - not capable: %s\n", notCapableReason);
             return;
         }
 
         CCoinControl coin_control;
-        if (pwallet->GetBalance(0, coin_control.m_avoid_address_reuse).m_mine_trusted == 0) {
-            notCapableReason = "Masternode configured correctly and ready, please use your local wallet to start it -Start alias-.";
+        if (!pwallet || (pwallet && pwallet->GetBalance(0, coin_control.m_avoid_address_reuse).m_mine_trusted == 0)) {
+            notCapableReason = "Masternode configured correctly and ready, please use your local wallet to start it.";
             LogPrintf("CActiveMasternode::ManageStatus() - not capable: %s\n", notCapableReason);
             return;
         }

@@ -36,6 +36,11 @@ bool CBlock::IsProofOfWork() const
     return !IsProofOfStake();
 }
 
+bool CBlockHeader::IsProofOfStake() const
+{
+    return nNonce == 0;
+}
+
 std::string CBlock::ToString() const
 {
     std::stringstream s;

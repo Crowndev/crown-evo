@@ -1195,7 +1195,7 @@ static bool ReadBlockOrHeader(T& block, const FlatFilePos& pos, bool fProofOfSta
     }
 
     // Check the header
-    if (!fProofOfStake && !CheckProofOfWork(block, consensusParams))
+    if (!fProofOfStake && gArgs.GetBoolArg("-neckbeard", DEFAULT_CHECKBLOCKPOW) && !CheckProofOfWork(block, consensusParams))
         return error("ReadBlockFromDisk: Errors in block header at %s", pos.ToString());
 
     // Signet only: check block solution
@@ -3617,6 +3617,11 @@ static bool FindUndoPos(BlockValidationState &state, int nFile, FlatFilePos &pos
 
 static bool CheckBlockHeader(const CBlockHeader& block, BlockValidationState& state, const Consensus::Params& consensusParams, bool fCheckPOW = true)
 {
+    // Check proof of work matches claimed amount
+    if (gArgs.GetBoolArg("-neckbeard", DEFAULT_CHECKBLOCKPOW))
+        if (!block.IsProofOfStake() && !CheckProofOfWork(block.GetHash(), block.nBits, consensusParams))
+            return state.Invalid(BlockValidationResult::BLOCK_INVALID_HEADER, "high-hash", "proof of work failed");
+
     return true;
 }
 

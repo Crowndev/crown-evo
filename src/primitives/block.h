@@ -81,6 +81,8 @@ public:
     void SetAuxpow(std::unique_ptr<CAuxPow> apow);
 
     void SetProofOfStake(bool fProofOfStake);
+
+    bool IsProofOfStake() const;
 };
 
 

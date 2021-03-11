@@ -37,6 +37,8 @@ static const int8_t mapBase58[256] = {
 
 NODISCARD static bool DecodeBase58(const char* psz, std::vector<unsigned char>& vch, int max_ret_len)
 {
+    int crown_ret_len = max_ret_len + 2;
+
     // Skip leading spaces.
     while (*psz && IsSpace(*psz))
         psz++;
@@ -45,7 +47,7 @@ NODISCARD static bool DecodeBase58(const char* psz, std::vector<unsigned char>& 
     int length = 0;
     while (*psz == '1') {
         zeroes++;
-        if (zeroes > max_ret_len) return false;
+        if (zeroes > crown_ret_len) return false;
         psz++;
     }
     // Allocate enough space in big-endian base256 representation.
@@ -66,7 +68,7 @@ NODISCARD static bool DecodeBase58(const char* psz, std::vector<unsigned char>& 
         }
         assert(carry == 0);
         length = i;
-        if (length + zeroes > max_ret_len) return false;
+        if (length + zeroes > crown_ret_len) return false;
         psz++;
     }
     // Skip trailing spaces.

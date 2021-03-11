@@ -59,6 +59,10 @@ UniValue listmasternodes(const JSONRPCRequest& request)
             "\nExamples:\n"
             + HelpExampleCli("listmasternodes", "") + HelpExampleRpc("listmasternodes", ""));
 
+    if (!masternodeSync.IsSynced()) {
+        throw std::runtime_error("Masternode sync has not yet completed.\n");
+    }
+
     UniValue ret(UniValue::VARR);
     int nHeight;
     {
@@ -123,6 +127,10 @@ UniValue getmasternodecount(const JSONRPCRequest& request)
             "\nExamples:\n"
             + HelpExampleCli("getmasternodecount", "") + HelpExampleRpc("getmasternodecount", ""));
 
+    if (!masternodeSync.IsSynced()) {
+        throw std::runtime_error("Masternode sync has not yet completed.\n");
+    }
+
     UniValue obj(UniValue::VOBJ);
     int nCount = 0;
 
@@ -154,6 +162,10 @@ UniValue masternodecurrent(const JSONRPCRequest& request)
 
             "\nExamples:\n"
             + HelpExampleCli("masternodecurrent", "") + HelpExampleRpc("masternodecurrent", ""));
+
+    if (!masternodeSync.IsSynced()) {
+        throw std::runtime_error("Masternode sync has not yet completed.\n");
+    }
 
     const int nHeight = WITH_LOCK(cs_main, return ::ChainActive().Height() + 1);
     int nCount = 0;
@@ -245,6 +257,10 @@ UniValue startmasternode(const JSONRPCRequest& request)
             strCommand = "missing";
         if (strCommand == "start-disabled")
             strCommand = "disabled";
+    }
+
+    if (!masternodeSync.IsSynced()) {
+        throw std::runtime_error("Masternode sync has not yet completed.\n");
     }
 
     if (request.fHelp || request.params.size() < 2 || request.params.size() > 3 || (request.params.size() == 2 && (strCommand != "local" && strCommand != "all" && strCommand != "many" && strCommand != "missing" && strCommand != "disabled")) || (request.params.size() == 3 && strCommand != "alias"))
@@ -551,6 +567,10 @@ UniValue getmasternodewinners(const JSONRPCRequest& request)
             "\nExamples:\n"
             + HelpExampleCli("getmasternodewinners", "") + HelpExampleRpc("getmasternodewinners", ""));
 
+    if (!masternodeSync.IsSynced()) {
+        throw std::runtime_error("Masternode sync has not yet completed.\n");
+    }
+
     int nHeight;
     {
         LOCK(cs_main);
@@ -633,6 +653,10 @@ UniValue getmasternodescores(const JSONRPCRequest& request)
             "\nExamples:\n"
             + HelpExampleCli("getmasternodescores", "") + HelpExampleRpc("getmasternodescores", ""));
 
+    if (!masternodeSync.IsSynced()) {
+        throw std::runtime_error("Masternode sync has not yet completed.\n");
+    }
+
     int nLast = 10;
 
     if (request.params.size() == 1) {
@@ -678,6 +702,7 @@ bool DecodeHexMnb(CMasternodeBroadcast& mnb, std::string strHexMnb)
 
     return true;
 }
+
 UniValue createmasternodebroadcast(const JSONRPCRequest& request)
 {
     std::string strCommand;
@@ -716,6 +741,10 @@ UniValue createmasternodebroadcast(const JSONRPCRequest& request)
 
             "\nExamples:\n"
             + HelpExampleCli("createmasternodebroadcast", "alias mymn1") + HelpExampleRpc("createmasternodebroadcast", "alias mymn1"));
+
+    if (!masternodeSync.IsSynced()) {
+        throw std::runtime_error("Masternode sync has not yet completed.\n");
+    }
 
     if (strCommand == "alias") {
         // wait for reindex and/or import to finish

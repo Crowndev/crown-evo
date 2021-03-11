@@ -222,6 +222,10 @@ static RPCHelpMan generatetodescriptor()
             "\nGenerate 11 blocks to mydesc\n" + HelpExampleCli("generatetodescriptor", "11 \"mydesc\"")},
         [&](const RPCHelpMan& self, const JSONRPCRequest& request) -> UniValue
 {
+    if (Params().NetworkIDString() == CBaseChainParams::MAIN) {
+        throw JSONRPCError(RPC_INVALID_PARAMETER, "Generation commands no longer valid on MAINNET.");
+    }
+
     const int num_blocks{request.params[0].get_int()};
     const uint64_t max_tries{request.params[2].isNull() ? DEFAULT_MAX_TRIES : request.params[2].get_int()};
 
@@ -273,6 +277,10 @@ static RPCHelpMan generatetoaddress()
                 },
         [&](const RPCHelpMan& self, const JSONRPCRequest& request) -> UniValue
 {
+    if (Params().NetworkIDString() == CBaseChainParams::MAIN) {
+        throw JSONRPCError(RPC_INVALID_PARAMETER, "Generation commands no longer valid on MAINNET.");
+    }
+
     const int num_blocks{request.params[0].get_int()};
     const uint64_t max_tries{request.params[2].isNull() ? DEFAULT_MAX_TRIES : request.params[2].get_int()};
 
@@ -317,6 +325,10 @@ static RPCHelpMan generateblock()
         },
         [&](const RPCHelpMan& self, const JSONRPCRequest& request) -> UniValue
 {
+    if (Params().NetworkIDString() == CBaseChainParams::MAIN) {
+        throw JSONRPCError(RPC_INVALID_PARAMETER, "Generation commands no longer valid on MAINNET.");
+    }
+
     const auto address_or_descriptor = request.params[0].get_str();
     CScript coinbase_script;
     std::string error;

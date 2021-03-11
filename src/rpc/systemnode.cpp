@@ -58,6 +58,10 @@ UniValue listsystemnodes(const JSONRPCRequest& request)
             "\nExamples:\n"
             + HelpExampleCli("listsystemnodes", "") + HelpExampleRpc("listsystemnodes", ""));
 
+    if (!systemnodeSync.IsSynced()) {
+        throw std::runtime_error("Systemnode sync has not yet completed.\n");
+    }
+
     UniValue ret(UniValue::VARR);
     int nHeight;
     {
@@ -122,6 +126,10 @@ UniValue getsystemnodecount(const JSONRPCRequest& request)
             "\nExamples:\n"
             + HelpExampleCli("getsystemnodecount", "") + HelpExampleRpc("getsystemnodecount", ""));
 
+    if (!systemnodeSync.IsSynced()) {
+        throw std::runtime_error("Systemnode sync has not yet completed.\n");
+    }
+
     UniValue obj(UniValue::VOBJ);
     int nCount = 0;
 
@@ -153,6 +161,10 @@ UniValue systemnodecurrent(const JSONRPCRequest& request)
 
             "\nExamples:\n"
             + HelpExampleCli("systemnodecurrent", "") + HelpExampleRpc("systemnodecurrent", ""));
+
+    if (!systemnodeSync.IsSynced()) {
+        throw std::runtime_error("Systemnode sync has not yet completed.\n");
+    }
 
     const int nHeight = WITH_LOCK(cs_main, return ::ChainActive().Height() + 1);
     int nCount = 0;
@@ -244,6 +256,10 @@ UniValue startsystemnode(const JSONRPCRequest& request)
             strCommand = "missing";
         if (strCommand == "start-disabled")
             strCommand = "disabled";
+    }
+
+    if (!systemnodeSync.IsSynced()) {
+        throw std::runtime_error("Systemnode sync has not yet completed.\n");
     }
 
     if (request.fHelp || request.params.size() < 2 || request.params.size() > 3 || (request.params.size() == 2 && (strCommand != "local" && strCommand != "all" && strCommand != "many" && strCommand != "missing" && strCommand != "disabled")) || (request.params.size() == 3 && strCommand != "alias"))
@@ -550,6 +566,10 @@ UniValue getsystemnodewinners(const JSONRPCRequest& request)
             "\nExamples:\n"
             + HelpExampleCli("getsystemnodewinners", "") + HelpExampleRpc("getsystemnodewinners", ""));
 
+    if (!systemnodeSync.IsSynced()) {
+        throw std::runtime_error("Systemnode sync has not yet completed.\n");
+    }
+
     int nHeight;
     {
         LOCK(cs_main);
@@ -631,6 +651,10 @@ UniValue getsystemnodescores(const JSONRPCRequest& request)
 
             "\nExamples:\n"
             + HelpExampleCli("getsystemnodescores", "") + HelpExampleRpc("getsystemnodescores", ""));
+
+    if (!systemnodeSync.IsSynced()) {
+        throw std::runtime_error("Systemnode sync has not yet completed.\n");
+    }
 
     int nLast = 10;
 

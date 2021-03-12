@@ -11,8 +11,8 @@
 #include <key_io.h>
 #include <masternode/masternode.h>
 #include <masternode/masternodeman.h>
-#include <mn-pos/blockwitness.h>
-#include <mn-pos/prooftracker.h>
+#include <pos/blockwitness.h>
+#include <pos/prooftracker.h>
 #include <net_processing.h>
 #include <shutdown.h>
 #include <sync.h>

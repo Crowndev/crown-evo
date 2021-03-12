@@ -14,8 +14,8 @@
 #include <systemnode/activesystemnode.h>
 #include <systemnode/systemnodeman.h>
 #include <systemnode/systemnode-payments.h>
-#include <mn-pos/kernel.h>
-#include <mn-pos/stakeminer.h>
+#include <pos/kernel.h>
+#include <pos/stakeminer.h>
 #include <util/translation.h>
 #include <wallet/coincontrol.h>
 #include <wallet/wallet.h>

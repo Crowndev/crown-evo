@@ -29,9 +29,9 @@
 #include <masternode/masternode-payments.h>
 #include <masternode/masternodeconfig.h>
 #include <systemnode/systemnode-payments.h>
-#include <mn-pos/stakepointer.h>
-#include <mn-pos/stakeminer.h>
-#include <mn-pos/stakevalidation.h>
+#include <pos/stakepointer.h>
+#include <pos/stakeminer.h>
+#include <pos/stakevalidation.h>
 
 #include <boost/thread.hpp>
 

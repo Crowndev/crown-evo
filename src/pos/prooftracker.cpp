@@ -1,5 +1,5 @@
-#include <mn-pos/blockwitness.h>
-#include <mn-pos/prooftracker.h>
+#include <pos/blockwitness.h>
+#include <pos/prooftracker.h>
 
 #define REQUIRED_WITNESS_SIGS 6
 #define STAKE_REPACKAGE_THRESHOLD 3

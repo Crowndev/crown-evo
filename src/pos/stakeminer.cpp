@@ -1,8 +1,8 @@
 #include <crown/legacysigner.h>
 #include <key.h>
-#include <mn-pos/kernel.h>
-#include <mn-pos/stakeminer.h>
-#include <mn-pos/stakevalidation.h>
+#include <pos/kernel.h>
+#include <pos/stakeminer.h>
+#include <pos/stakevalidation.h>
 #include <util/system.h>
 
 //! Search a specific period of timestamps to see if a valid proof hash is created

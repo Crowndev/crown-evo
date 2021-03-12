@@ -8,8 +8,8 @@
 #include <crown/legacysigner.h>
 #include <crown/nodewallet.h>
 #include <key_io.h>
-#include <mn-pos/blockwitness.h>
-#include <mn-pos/prooftracker.h>
+#include <pos/blockwitness.h>
+#include <pos/prooftracker.h>
 #include <net_processing.h>
 #include <shutdown.h>
 #include <sync.h>

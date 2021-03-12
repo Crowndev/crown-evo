@@ -24,12 +24,12 @@
 #include <versionbits.h>
 #include <serialize.h>
 
-#include <mn-pos/blockwitness.h>
-#include <mn-pos/kernel.h>
-#include <mn-pos/prooftracker.h>
-#include <mn-pos/stakeminer.h>
-#include <mn-pos/stakepointer.h>
-#include <mn-pos/stakevalidation.h>
+#include <pos/blockwitness.h>
+#include <pos/kernel.h>
+#include <pos/prooftracker.h>
+#include <pos/stakeminer.h>
+#include <pos/stakepointer.h>
+#include <pos/stakevalidation.h>
 
 #include <atomic>
 #include <map>

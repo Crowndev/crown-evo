@@ -1,5 +1,5 @@
-#include <mn-pos/kernel.h>
-#include <mn-pos/stakevalidation.h>
+#include <pos/kernel.h>
+#include <pos/stakevalidation.h>
 
 #include <arith_uint256.h>
 #include <chain.h>

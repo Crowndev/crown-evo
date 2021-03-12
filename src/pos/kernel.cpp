@@ -1,7 +1,7 @@
 #include <arith_uint256.h>
 #include <hash.h>
-#include <mn-pos/kernel.h>
-#include <mn-pos/stakepointer.h>
+#include <pos/kernel.h>
+#include <pos/stakepointer.h>
 #include <streams.h>
 #include <tinyformat.h>
 #include <util/strencodings.h>

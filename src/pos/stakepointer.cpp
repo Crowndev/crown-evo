@@ -1,4 +1,4 @@
-#include <mn-pos/stakepointer.h>
+#include <pos/stakepointer.h>
 
 bool StakePointer::VerifyCollateralSignOver() const
 {

@@ -336,17 +336,6 @@ libbitcoin_server_a_SOURCES = \
   masternode/masternode-sync.cpp \
   masternode/masternode-sync.h \
   miner.cpp \
-  mn-pos/kernel.cpp \
-  mn-pos/prooftracker.cpp \
-  mn-pos/stakeminer.cpp \
-  mn-pos/stakepointer.cpp \
-  mn-pos/stakevalidation.cpp \
-  mn-pos/blockwitness.h \
-  mn-pos/kernel.h \
-  mn-pos/prooftracker.h \
-  mn-pos/stakeminer.h \
-  mn-pos/stakepointer.h \
-  mn-pos/stakevalidation.h \
   mn_processing.cpp \
   nodeconfig.cpp \
   net.cpp \
@@ -362,6 +351,17 @@ libbitcoin_server_a_SOURCES = \
   policy/fees.cpp \
   policy/rbf.cpp \
   policy/settings.cpp \
+  pos/kernel.cpp \
+  pos/prooftracker.cpp \
+  pos/stakeminer.cpp \
+  pos/stakepointer.cpp \
+  pos/stakevalidation.cpp \
+  pos/blockwitness.h \
+  pos/kernel.h \
+  pos/prooftracker.h \
+  pos/stakeminer.h \
+  pos/stakepointer.h \
+  pos/stakevalidation.h \
   pow.cpp \
   rest.cpp \
   rpc/blockchain.cpp \
@@ -776,7 +776,7 @@ CLEANFILES += crypto/*.gcda crypto/*.gcno
 CLEANFILES += crown/*.gcda crown/*.gcno
 CLEANFILES += masternode/*.gcda masternode/*.gcno
 CLEANFILES += systemnode/*.gcda systemnode/*.gcno
-CLEANFILES += mn-pos/*.gcda mn-pos/*.gcno
+CLEANFILES += pos/*.gcda pos/*.gcno
 CLEANFILES += index/*.gcda index/*.gcno
 CLEANFILES += interfaces/*.gcda interfaces/*.gcno
 CLEANFILES += node/*.gcda node/*.gcno

@@ -3,6 +3,7 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
+#include <crown/nodewallet.h>
 #include <httpserver.h>
 #include <index/blockfilterindex.h>
 #include <index/txindex.h>
@@ -20,6 +21,7 @@
 #include <util/ref.h>
 #include <util/strencodings.h>
 #include <util/system.h>
+#include <wallet/wallet.h>
 
 #include <stdint.h>
 #include <tuple>
@@ -692,6 +694,37 @@ static RPCHelpMan getindexinfo()
     };
 }
 
+static RPCHelpMan getstakepointers()
+{
+    return RPCHelpMan{"getstakepointers",
+                "\nReturns current stake pointers\n",
+                {},
+                RPCResult{RPCResult::Type::NONE, "", ""},
+                RPCExamples{
+                    HelpExampleCli("getstakepointers", "")
+            + HelpExampleRpc("getstakepointers", "")
+                },
+        [&](const RPCHelpMan& self, const JSONRPCRequest& request) -> UniValue
+{
+    std::vector<StakePointer> vStakePointers;
+    currentNode.GetRecentStakePointers(vStakePointers);
+
+    UniValue ret(UniValue::VARR);
+
+    for (auto p : vStakePointers) {
+        UniValue obj(UniValue::VOBJ);
+        obj.pushKV("blockhash", p.hashBlock.GetHex());
+        obj.pushKV("hashpubkey", p.pubKeyProofOfStake.GetID().GetHex());
+        obj.pushKV("pos", (int64_t)p.nPos);
+        obj.pushKV("txid", p.txid.GetHex());
+        ret.push_back(obj);
+    }
+
+    return ret;
+},
+    };
+}
+
 void RegisterMiscRPCCommands(CRPCTable &t)
 {
 // clang-format off
@@ -707,6 +740,7 @@ static const CRPCCommand commands[] =
     { "util",               "verifymessage",          &verifymessage,          {"address","signature","message"} },
     { "util",               "signmessagewithprivkey", &signmessagewithprivkey, {"privkey","message"} },
     { "util",               "getindexinfo",           &getindexinfo,           {"index_name"} },
+    { "util",               "getstakepointers",       &getstakepointers,       {} },
 
     /* Not shown in help */
     { "hidden",             "setmocktime",            &setmocktime,            {"timestamp"}},

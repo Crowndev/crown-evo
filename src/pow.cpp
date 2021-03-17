@@ -13,10 +13,11 @@
 #include <validation.h>
 
 arith_uint256 powLimit = UintToArith256(uint256S("00000000ffffffffffffffffffffffffffffffffffffffffffffffffffffffff"));
+arith_uint256 powLimitTestnet = UintToArith256(uint256S("0000ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"));
 
-arith_uint256 GetProofOfWorkLimit()
+arith_uint256 GetProofOfWorkLimit(bool testnet = false)
 {
-    return powLimit;
+    return testnet ? powLimitTestnet : powLimit;
 }
 
 void SetProofOfWorkLimit(uint256 newPowLimit)
@@ -24,7 +25,7 @@ void SetProofOfWorkLimit(uint256 newPowLimit)
     powLimit = UintToArith256(newPowLimit);
 }
 
-unsigned int static KimotoGravityWell(const CBlockIndex* pindexLast, const Consensus::Params& params)
+unsigned int static KimotoGravityWell(const CBlockIndex* pindexLast, const Consensus::Params& params, bool testnet = false)
 {
     const CBlockIndex* BlockLastSolved = pindexLast;
     const CBlockIndex* BlockReading = pindexLast;
@@ -44,7 +45,7 @@ unsigned int static KimotoGravityWell(const CBlockIndex* pindexLast, const Conse
     uint64_t PastBlocksMax = pastSecondsMax / params.nPowTargetSpacing;
 
     if (BlockLastSolved == nullptr || BlockLastSolved->nHeight == 0 || (uint64_t)BlockLastSolved->nHeight < PastBlocksMin) {
-        return GetProofOfWorkLimit().GetCompact();
+        return GetProofOfWorkLimit(testnet).GetCompact();
     }
 
     for (unsigned int i = 1; BlockReading && BlockReading->nHeight > 0; i++) {
@@ -95,8 +96,8 @@ unsigned int static KimotoGravityWell(const CBlockIndex* pindexLast, const Conse
         bnNew /= PastRateTargetSeconds;
     }
 
-    if (bnNew > GetProofOfWorkLimit()) {
-        bnNew = GetProofOfWorkLimit();
+    if (bnNew > GetProofOfWorkLimit(testnet)) {
+        bnNew = GetProofOfWorkLimit(testnet);
     }
 
     return bnNew.GetCompact();
@@ -178,7 +179,7 @@ unsigned int GetNextWorkRequired(const CBlockIndex* pindexLast, const CBlockHead
     }
 
     if (Params().NetworkIDString() == CBaseChainParams::TESTNET) {
-        unsigned int nProofOfWorkLimit = GetProofOfWorkLimit().GetCompact();
+        unsigned int nProofOfWorkLimit = GetProofOfWorkLimit(true).GetCompact();
         if (pindexLast->nHeight+1 < 150)
             return nProofOfWorkLimit;
         return KimotoGravityWell(pindexLast, params);

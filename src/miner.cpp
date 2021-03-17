@@ -213,8 +213,6 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
     if (IsSporkActive(SPORK_4_ENABLE_MASTERNODE_PAYMENTS)) {
         FillBlockPayee(coinbaseTx, nFees);
         SNFillBlockPayee(coinbaseTx, nFees);
-    } else {
-        coinbaseTx.vout[0].nValue = GetBlockValue(pindexPrev->nHeight, nFees, chainparams.GetConsensus());
     }
 
     // Proof of stake blocks pay the mining reward in the coinstake transaction
@@ -245,11 +243,6 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
         if(coinbaseTx.vout.size() > 2)
            pblock->payeeSN = coinbaseTx.vout[SN_PMT_SLOT].scriptPubKey;
     }
-
-    // Compute final coinbase transaction.
-    coinbaseTx.vin[0].scriptSig = CScript() << nHeight << OP_0;
-    pblock->vtx[0] = MakeTransactionRef(std::move(coinbaseTx));
-    pblocktemplate->vTxFees[0] = -nFees;
 
     // Fill in header
     pblock->hashPrevBlock  = pindexPrev->GetBlockHash();

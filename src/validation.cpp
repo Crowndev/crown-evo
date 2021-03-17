@@ -1304,15 +1304,15 @@ CAmount GetSubsidy(int nHeight, const CAmount& nFees, const Consensus::Params& c
 
 CAmount GetBlockValue(int nHeight, const CAmount& nFees, const Consensus::Params& consensusParams)
 {
+    if (Params().NetworkIDString() == CBaseChainParams::TESTNET) {
+        return 1250 * COIN;
+    }
+
     CAmount nSubsidy = GetSubsidy(nHeight, nFees, consensusParams);
     CAmount budgetValue = nSubsidy * 0.25;
-    if (Params().NetworkIDString() == CBaseChainParams::TESTNET) {
-        if (nHeight > 20000)
-            nSubsidy -= budgetValue;
-    } else {
-        if (nHeight > 1265000)
-            nSubsidy -= budgetValue;
-    }
+
+    if (nHeight > 1265000)
+        nSubsidy -= budgetValue;
 
     return nSubsidy + nFees;
 }

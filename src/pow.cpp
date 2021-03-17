@@ -177,12 +177,11 @@ unsigned int GetNextWorkRequired(const CBlockIndex* pindexLast, const CBlockHead
         retarget = DIFF_BTC;
     }
 
-    if (Params().NetworkIDString() == CBaseChainParams::TESTNET && pindexLast->nHeight >= 140400) {
-        retarget = DIFF_DGW;
-    }
-
-    if (Params().NetworkIDString() == CBaseChainParams::TESTNET && pindexLast->nHeight >= 140394) {
-        SetProofOfWorkLimit(uint256S("0003ffff00000000000000000000000000000000000000000000000000000000"));
+    if (Params().NetworkIDString() == CBaseChainParams::TESTNET) {
+        unsigned int nProofOfWorkLimit = GetProofOfWorkLimit().GetCompact();
+        if (pindexLast->nHeight+1 < 150)
+            return nProofOfWorkLimit;
+        return KimotoGravityWell(pindexLast, params);
     }
 
     if (Params().NetworkIDString() == CBaseChainParams::MAIN && pindexLast->nHeight >= params.PoSStartHeight() - 1) {

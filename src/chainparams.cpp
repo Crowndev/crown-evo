@@ -5,6 +5,7 @@
 
 #include <chainparams.h>
 
+#include <arith_uint256.h>
 #include <chainparamsseeds.h>
 #include <consensus/merkle.h>
 #include <hash.h> // for signet block challenge hash
@@ -217,10 +218,10 @@ public:
         consensus.CSVHeight = std::numeric_limits<int>::max();
         consensus.SegwitHeight = std::numeric_limits<int>::max();
         consensus.MinBIP9WarningHeight = std::numeric_limits<int>::max();
-        consensus.powLimit = uint256S("00000000ffffffffffffffffffffffffffffffffffffffffffffffffffffffff");
-        consensus.nPowTargetTimespan = 2 * 24 * 60 * 60;
-        consensus.nPowTargetSpacing = 1.5 * 60;
-        consensus.fPowAllowMinDifficultyBlocks = true;
+        consensus.powLimit = uint256S("0000ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff");
+        consensus.nPowTargetTimespan = 14 * 24 * 60 * 60; // two weeks
+        consensus.nPowTargetSpacing = 1 * 60;
+        consensus.fPowAllowMinDifficultyBlocks = false;
         consensus.fPowNoRetargeting = false;
         consensus.nRuleChangeActivationThreshold = 1916;
         consensus.nMinerConfirmationWindow = 2016;
@@ -238,64 +239,60 @@ public:
         consensus.defaultAssumeValid = uint256S("0x0000000000000000000000000000000000000000000000000000000000000000");
 
         //! PoS parameters
-        consensus.nBlockPoSStart = 141000;
-        consensus.nPoSChainId = 25;
+        consensus.nBlockPoSStart = 1250;
+        consensus.nPoSChainId = 20;
         consensus.nStakePointerValidityPeriod = 4320;
         consensus.nKernelModifierOffset = 100;
 
         //! Merge mining parameters
-        consensus.nAuxpowChainId = 20;
-        consensus.nAuxpowStartHeight = 453273;
+        consensus.nAuxpowChainId = 18;
+        consensus.nAuxpowStartHeight = std::numeric_limits<int>::max();
         consensus.fStrictChainId = true;
         consensus.nLegacyBlocksBefore = consensus.nAuxpowStartHeight;
 
         //! Misc/masternode parameters
         consensus.nPoolMaxTransactions = 3;
-        consensus.strSporkKey = "04EA9AF53E4F12CE41F78B666EBDBE96C966ABDD8832979228BD3299E13089F117936EF97B7B9D4644B8B9D2BC7A30029BD7FDDCAC36E40AAC0E03891E493CF197";
-        consensus.strDevfundAddress = "mr59c3aniaN3qHXej5L8UBsssRZbiUUMnz";
-        consensus.strLegacySignerDummyAddress = "tCRWL8imXWw7SPAU5T275G1j1xQmaK4WgTWoQ";
+        consensus.strSporkKey = "0440409BDACDCE03BFB6D5F16E2D414953038996B49BEE6697CFA400A0001D0837C885C5B57DAD10E5CAAAE36EE975005CC6CBD7001A2A8DE76FF12185904A9BB1";
+        consensus.nMasternodeCollateral = 10000 * COIN;
+        consensus.nSystemnodeCollateral = 500 * COIN;
+        consensus.strDevfundAddress = "16tg5tuZrPKoBwfbmj2tmiEPhVPzyn3gtP";
+        consensus.strLegacySignerDummyAddress = "18WTcWvwrNnfqeQAn6th9QQ2EpnXMq5Th8";
         consensus.nStartMasternodePayments = 1403728576;
 
-        pchMessageStart[0] = 0x0f;
-        pchMessageStart[1] = 0x18;
-        pchMessageStart[2] = 0x0e;
-        pchMessageStart[3] = 0x06;
+        /**
+         * The message start string is designed to be unlikely to occur in normal data.
+         * The characters are rarely used upper ASCII, not valid as UTF-8, and produce
+         * a large 32-bit integer with any alignment.
+         */
+        pchMessageStart[0] = 0xe0;
+        pchMessageStart[1] = 0x58;
+        pchMessageStart[2] = 0x3c;
+        pchMessageStart[3] = 0x12;
         nDefaultPort = 19340;
-        nPruneAfterHeight = 1000;
-        m_assumed_blockchain_size = 40;
-        m_assumed_chain_state_size = 2;
+        nPruneAfterHeight = 100000;
+        m_assumed_blockchain_size = 8;
+        m_assumed_chain_state_size = 1;
 
-        genesis = CreateGenesisBlock(1412760826, 1612467894, 0x1d00ffff, 1, 10 * COIN);
+        genesis = CreateGenesisBlock(1615969419, 15531, 0x1f00ffff, 1, 0 * COIN);
         consensus.hashGenesisBlock = genesis.GetHash();
-        assert(consensus.hashGenesisBlock == uint256S("0x0000000085370d5e122f64f4ab19c68614ff3df78c8d13cb814fd7e69a1dc6da"));
-        assert(genesis.hashMerkleRoot == uint256S("0x80ad356118a9ab8db192db66ef77146cc36d958f959251feace550e4ca3d1446"));
+        assert(consensus.hashGenesisBlock == uint256S("0x0000cb4df5d8e3273fa23a0ac04f0178491a64830dfdfbd622903bb8e7843b4d"));
+        assert(genesis.hashMerkleRoot == uint256S("0xd7a5e4423ed0a9901555ae02ad76755e76082152bfa4b0f2ae79921e901c05a3"));
 
-        vFixedSeeds.clear();
-        vSeeds.clear();
+        base58Prefixes[PUBKEY_ADDRESS] = {0x01, 0x75, 0x07};
+        base58Prefixes[SCRIPT_ADDRESS] = {0x01, 0x74, 0xF1};
+        base58Prefixes[SECRET_KEY] =     std::vector<unsigned char>(1,128);
+        base58Prefixes[EXT_PUBLIC_KEY] = {0x04, 0x88, 0xB2, 0x1E};
+        base58Prefixes[EXT_SECRET_KEY] = {0x04, 0x88, 0xAD, 0xE4};
 
-        // nodes with support for servicebits filtering should be at the top
-        vSeeds.emplace_back("fra-testnet-crwdns.crowndns.info");
-        vSeeds.emplace_back("blr-testnet-crwdns.crowndns.info");
-        vSeeds.emplace_back("sgp-testnet-crwdns.crowndns.info");
-        vSeeds.emplace_back("lon-testnet-crwdns.crowndns.info");
-        vSeeds.emplace_back("nyc-testnet-crwdns.crowndns.info");
-        vSeeds.emplace_back("tor-testnet-crwdns.crowndns.info");
-        vSeeds.emplace_back("sfo-testnet-crwdns.crowndns.info");
-        vSeeds.emplace_back("ams-testnet-crwdns.crowndns.info");
+        bech32_hrp = "tcrw";
 
-        base58Prefixes[PUBKEY_ADDRESS] = std::vector<unsigned char> {0x01, 0x7A, 0xCD, 0x67};
-        base58Prefixes[SCRIPT_ADDRESS] = std::vector<unsigned char> {0x01, 0x7A, 0xCD, 0x51};
-        base58Prefixes[SECRET_KEY] =     std::vector<unsigned char>(1,239);
-        base58Prefixes[EXT_PUBLIC_KEY] = {0x04, 0x35, 0x87, 0xCF};
-        base58Prefixes[EXT_SECRET_KEY] = {0x04, 0x35, 0x83, 0x94};
+        nFulfilledRequestExpireTime = 60*60;
 
-        bech32_hrp = "tb";
-
-        vFixedSeeds = std::vector<SeedSpec6>(pnSeed6_test, pnSeed6_test + ARRAYLEN(pnSeed6_test));
+        vFixedSeeds = std::vector<SeedSpec6>(pnSeed6_main, pnSeed6_main + ARRAYLEN(pnSeed6_main));
 
         fDefaultConsistencyChecks = false;
-        fRequireStandard = false;
-        m_is_test_chain = true;
+        fRequireStandard = true;
+        m_is_test_chain = false;
         m_is_mockable_chain = false;
 
         checkpointData = {

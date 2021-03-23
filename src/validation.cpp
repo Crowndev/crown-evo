@@ -135,6 +135,7 @@ CChain& ChainActive()
 RecursiveMutex cs_main;
 
 int nLastStakeAttempt{0};
+bool g_ibd_completed{false};
 std::map<uint256, int64_t> mapRejectedBlocks;
 std::map<PointerHash, uint256> mapUsedStakePointers;
 ProofTracker* g_proofTracker = new ProofTracker();
@@ -1400,6 +1401,7 @@ bool CChainState::IsInitialBlockDownload() const
         return true;
     LogPrintf("Leaving InitialBlockDownload (latching to false)\n");
     m_cached_finished_ibd.store(true, std::memory_order_relaxed);
+    g_ibd_completed = true;
     return false;
 }
 
@@ -2476,12 +2478,16 @@ bool CChainState::ConnectBlock(const CBlock& block, BlockValidationState& state,
         return state.Invalid(BlockValidationResult::BLOCK_CONSENSUS, "bad-cb-amount");
     }
 
-    if(!IsBlockPayeeValid(blockCreated, *block.vtx[0], nHeight, block.nTime, pindex->pprev->nTime)) {
-        return state.Invalid(BlockValidationResult::BLOCK_CONSENSUS, "bad-mn-payee");
-    }
+    //! no point checking if block payees are correct until we've finished sync
+    if (g_ibd_completed)
+    {
+        if (!IsBlockPayeeValid(blockCreated, *block.vtx[0], nHeight, block.nTime, pindex->pprev->nTime)) {
+            return state.Invalid(BlockValidationResult::BLOCK_CONSENSUS, "bad-mn-payee");
+        }
 
-    if(!SNIsBlockPayeeValid(blockCreated, *block.vtx[0], nHeight, block.nTime, pindex->pprev->nTime)) {
-        return state.Invalid(BlockValidationResult::BLOCK_CONSENSUS, "bad-sn-payee");
+        if (!SNIsBlockPayeeValid(blockCreated, *block.vtx[0], nHeight, block.nTime, pindex->pprev->nTime)) {
+            return state.Invalid(BlockValidationResult::BLOCK_CONSENSUS, "bad-sn-payee");
+        }
     }
 
     // CROWN : FINISH //////////////////////////////////////////////////////////////////////////////////////////////////////////

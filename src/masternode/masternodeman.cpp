@@ -130,8 +130,7 @@ void CMasternodeMan::AskForMN(CNode* pnode, const CTxIn& vin, CConnman& connman)
 
 void CMasternodeMan::Check()
 {
-    LOCK(cs);
-
+    LOCK2(cs_main, cs);
     for (auto& mn : vMasternodes) {
         mn.Check();
     }
@@ -139,7 +138,7 @@ void CMasternodeMan::Check()
 
 void CMasternodeMan::ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStream& vRecv, CConnman* connman)
 {
-    LOCK(cs_process_message);
+    if (!masternodeSync.IsBlockchainSynced()) return;
 
     //! masternode broadcast
     if (strCommand == "mnb" || strCommand == "mnb_new") {
@@ -178,7 +177,6 @@ void CMasternodeMan::ProcessMessage(CNode* pfrom, const std::string& strCommand,
         mapSeenMasternodePing.insert(make_pair(mnp.GetHash(), mnp));
 
         int nDoS = 0;
-        LOCK(cs_main);
         if (mnp.CheckAndUpdate(nDoS, *connman))
             return;
 
@@ -250,9 +248,9 @@ void CMasternodeMan::ProcessMessage(CNode* pfrom, const std::string& strCommand,
 
 void CMasternodeMan::CheckAndRemove(bool forceExpiredRemoval)
 {
-    Check();
+    LOCK2(cs_main, cs);
 
-    LOCK(cs);
+    Check();
 
     //remove inactive and outdated
     vector<CMasternode>::iterator it = vMasternodes.begin();

@@ -61,9 +61,7 @@ void ThreadNodeSync(CConnman& connman)
     static unsigned int c1 = 0;
     static unsigned int c2 = 0;
 
-    // try to sync from all available nodes, one step at a time
     masternodeSync.Process(connman);
-    systemnodeSync.Process(connman);
 
     {
 
@@ -84,6 +82,8 @@ void ThreadNodeSync(CConnman& connman)
         }
     }
 
+    systemnodeSync.Process(connman);
+
     {
 
         c2++;
@@ -99,7 +99,6 @@ void ThreadNodeSync(CConnman& connman)
             snodeman.CheckAndRemove();
             snodeman.ProcessSystemnodeConnections(connman);
             systemnodePayments.CheckAndRemove();
-            instantSend.CheckAndRemove();
         }
     }
 }

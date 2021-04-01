@@ -68,8 +68,8 @@ public:
         READWRITE(obj.mapSeenSystemnodePing);
     }
 
-    //CSystemnodeMan();
-    //CSystemnodeMan(CSystemnodeMan& other);
+    CSystemnodeMan();
+    CSystemnodeMan(CSystemnodeMan& other);
 
     /// Return total sn
     int CountSystemnodes(bool fEnabled = false);

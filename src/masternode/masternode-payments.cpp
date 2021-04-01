@@ -352,11 +352,11 @@ bool CMasternodePayments::AddWinningMasternode(CMasternodePaymentWinner& winnerI
     }
 
     {
-        LOCK2(cs_mapMasternodePayeeVotes, cs_mapMasternodeBlocks);
-
         if (mapMasternodePayeeVotes.count(winnerIn.GetHash())) {
             return false;
         }
+
+        LOCK2(cs_mapMasternodeBlocks, cs_mapMasternodePayeeVotes);
 
         mapMasternodePayeeVotes[winnerIn.GetHash()] = winnerIn;
 
@@ -385,7 +385,7 @@ bool CMasternodeBlockPayees::IsTransactionValid(const CTransaction& txNew, const
 
     //require at least 6 signatures
 
-    for (const auto& payee : vecPayments)
+    for (CMasternodePayee& payee : vecPayments)
         if (payee.nVotes >= nMaxSignatures && payee.nVotes >= MNPAYMENTS_SIGNATURES_REQUIRED)
             nMaxSignatures = payee.nVotes;
 
@@ -393,7 +393,7 @@ bool CMasternodeBlockPayees::IsTransactionValid(const CTransaction& txNew, const
     if (nMaxSignatures < MNPAYMENTS_SIGNATURES_REQUIRED)
         return true;
 
-    for (const auto& payee : vecPayments) {
+    for (CMasternodePayee& payee : vecPayments) {
         bool found = false;
         int pos = -1;
         for (unsigned int i = 0; i < txNew.vout.size(); i++) {
@@ -432,7 +432,7 @@ std::string CMasternodeBlockPayees::GetRequiredPaymentsString()
 
     std::string ret = "Unknown";
 
-    for (const auto& payee : vecPayments) {
+    for (CMasternodePayee& payee : vecPayments) {
         if (ret != "Unknown") {
             ret += ", " + payee.scriptPubKey.ToString() + ":" + boost::lexical_cast<std::string>(payee.nVotes);
         } else {
@@ -467,15 +467,9 @@ bool CMasternodePayments::IsTransactionValid(const CAmount& nValueCreated, const
 
 void CMasternodePayments::CheckAndRemove()
 {
-    LOCK2(cs_mapMasternodePayeeVotes, cs_mapMasternodeBlocks);
+    if(!masternodeSync.IsBlockchainSynced()) return;
 
-    int nHeight;
-    {
-        TRY_LOCK(cs_main, locked);
-        if (!locked || ::ChainActive().Tip() == nullptr)
-            return;
-        nHeight = ::ChainActive().Tip()->nHeight;
-    }
+    LOCK2(cs_mapMasternodeBlocks, cs_mapMasternodePayeeVotes);
 
     //keep up to five cycles for historical sake
     int nLimit = std::max(int(mnodeman.size() * 1.25), 1000);
@@ -483,8 +477,7 @@ void CMasternodePayments::CheckAndRemove()
     std::map<uint256, CMasternodePaymentWinner>::iterator it = mapMasternodePayeeVotes.begin();
     while (it != mapMasternodePayeeVotes.end()) {
         CMasternodePaymentWinner winner = (*it).second;
-
-        if (nHeight - winner.nBlockHeight > nLimit) {
+        if (nCachedBlockHeight - winner.nBlockHeight > nLimit) {
             LogPrint(BCLog::MASTERNODE, "CMasternodePayments::CleanPaymentList - Removing old Masternode payment - block %d\n", winner.nBlockHeight);
             masternodeSync.mapSeenSyncMNW.erase((*it).first);
             mapMasternodePayeeVotes.erase(it++);
@@ -566,7 +559,7 @@ bool CMasternodePayments::ProcessBlock(int nBlockHeight, CConnman& connman)
         }
     }
 
-    if (nBlockHeight <= nLastBlockHeight)
+    if (nBlockHeight <= nCachedBlockHeight)
         return false;
 
     CMasternodePaymentWinner newWinner(activeMasternode.vin);
@@ -609,7 +602,7 @@ bool CMasternodePayments::ProcessBlock(int nBlockHeight, CConnman& connman)
 
         if (AddWinningMasternode(newWinner)) {
             newWinner.Relay(connman);
-            nLastBlockHeight = nBlockHeight;
+            nCachedBlockHeight = nBlockHeight;
             return true;
         }
     }
@@ -682,36 +675,3 @@ std::string CMasternodePayments::ToString() const
     return info.str();
 }
 
-int CMasternodePayments::GetOldestBlock()
-{
-    LOCK(cs_mapMasternodeBlocks);
-
-    int nOldestBlock = std::numeric_limits<int>::max();
-
-    std::map<int, CMasternodeBlockPayees>::iterator it = mapMasternodeBlocks.begin();
-    while (it != mapMasternodeBlocks.end()) {
-        if ((*it).first < nOldestBlock) {
-            nOldestBlock = (*it).first;
-        }
-        it++;
-    }
-
-    return nOldestBlock;
-}
-
-int CMasternodePayments::GetNewestBlock()
-{
-    LOCK(cs_mapMasternodeBlocks);
-
-    int nNewestBlock = 0;
-
-    std::map<int, CMasternodeBlockPayees>::iterator it = mapMasternodeBlocks.begin();
-    while (it != mapMasternodeBlocks.end()) {
-        if ((*it).first > nNewestBlock) {
-            nNewestBlock = (*it).first;
-        }
-        it++;
-    }
-
-    return nNewestBlock;
-}

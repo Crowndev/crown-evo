@@ -11,7 +11,8 @@ NodeWallet currentNode;
 
 bool NodeWallet::GetMasternodeVinAndKeys(CTxIn& txinRet, CPubKey& pubKeyRet, CKey& keyRet, std::shared_ptr<CWallet> pwallet)
 {
-    if (!pwallet) return false;
+    if (!pwallet)
+        return false;
 
     std::vector<COutput> vPossibleCoins;
     pwallet->AvailableCoins(vPossibleCoins, true, nullptr, Params().GetConsensus().nMasternodeCollateral, Params().GetConsensus().nMasternodeCollateral);
@@ -25,7 +26,8 @@ bool NodeWallet::GetMasternodeVinAndKeys(CTxIn& txinRet, CPubKey& pubKeyRet, CKe
 
 bool NodeWallet::GetSystemnodeVinAndKeys(CTxIn& txinRet, CPubKey& pubKeyRet, CKey& keyRet, std::shared_ptr<CWallet> pwallet)
 {
-    if (!pwallet) return false;
+    if (!pwallet)
+        return false;
 
     std::vector<COutput> vPossibleCoins;
     pwallet->AvailableCoins(vPossibleCoins, true, nullptr, Params().GetConsensus().nSystemnodeCollateral, Params().GetConsensus().nSystemnodeCollateral);
@@ -39,7 +41,8 @@ bool NodeWallet::GetSystemnodeVinAndKeys(CTxIn& txinRet, CPubKey& pubKeyRet, CKe
 
 bool NodeWallet::GetVinAndKeysFromOutput(COutput out, CTxIn& txinRet, CPubKey& pubkeyRet, CKey& keyRet, std::shared_ptr<CWallet> pwallet)
 {
-    if (!pwallet) return false;
+    if (!pwallet)
+        return false;
 
     CScript pubScript;
     CKeyID keyID;
@@ -73,7 +76,8 @@ bool NodeWallet::GetVinAndKeysFromOutput(COutput out, CTxIn& txinRet, CPubKey& p
 
 bool NodeWallet::GetBudgetSystemCollateralTX(CTransactionRef& tx, uint256 hash, std::shared_ptr<CWallet> pwallet)
 {
-    if (!pwallet) return false;
+    if (!pwallet)
+        return false;
 
     const CAmount BUDGET_FEE_TX = (25 * COIN);
 
@@ -125,7 +129,8 @@ uint256 NodeWallet::GenerateStakeModifier(const CBlockIndex* prewardBlockIndex) 
 #define STAKE_SEARCH_INTERVAL 30
 bool NodeWallet::CreateCoinStake(const int nHeight, const uint32_t& nBits, const uint32_t& nTime, CMutableTransaction& txCoinStake, uint32_t& nTxNewTime, StakePointer& stakePointer, std::shared_ptr<CWallet> pwallet)
 {
-    if (!pwallet) return false;
+    if (!pwallet)
+        return false;
 
     CTxIn* pvinActiveNode;
     CPubKey* ppubkeyActiveNode;

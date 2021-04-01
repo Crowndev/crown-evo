@@ -69,10 +69,10 @@ public:
         }
     }
 
-    bool CheckAndUpdate(int& nDos, CConnman& connman, bool fRequireEnabled = true, bool fCheckSigTimeOnly = false);
+    bool CheckAndUpdate(int& nDos, CConnman& connman, bool fRequireEnabled = true, bool fCheckSigTimeOnly = false) const;
     bool Sign(const CKey& keyMasternode, const CPubKey& pubKeyMasternode);
     bool VerifySignature(const CPubKey& pubKeyMasternode, int& nDos) const;
-    void Relay(CConnman& connman);
+    void Relay(CConnman& connman) const;
 
     uint256 GetHash() const
     {
@@ -226,7 +226,7 @@ public:
     static CollateralStatus CheckCollateral(const COutPoint& outpoint, int& nHeightRet);
 
     int64_t SecondsSincePayment() const;
-    bool UpdateFromNewBroadcast(CMasternodeBroadcast& mnb, CConnman& connman);
+    bool UpdateFromNewBroadcast(const CMasternodeBroadcast& mnb, CConnman& connman);
     void Check(bool forceCheck = false);
 
     bool IsBroadcastedWithin(int seconds) const
@@ -306,8 +306,8 @@ public:
     static bool Create(CTxIn txin, CService service, CKey keyCollateral, CPubKey pubKeyCollateral, CKey keyMasternodeNew, CPubKey pubKeyMasternodeNew, bool fSignOver, std::string& strErrorMessage, CMasternodeBroadcast& mnb);
     static bool Create(std::string strService, std::string strKey, std::string strTxHash, std::string strOutputIndex, std::string& strErrorMessage, CMasternodeBroadcast& mnb, bool fOffline = false);
 
-    bool CheckAndUpdate(int& nDoS, CConnman& connman);
-    bool CheckInputsAndAdd(int& nDos, CConnman& connman);
+    bool CheckAndUpdate(int& nDoS, CConnman& connman) const;
+    bool CheckInputsAndAdd(int& nDos, CConnman& connman) const;
     bool Sign(const CKey& keyCollateralAddress);
     bool VerifySignature() const;
     void Relay(CConnman& connman) const;

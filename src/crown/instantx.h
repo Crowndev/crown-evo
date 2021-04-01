@@ -35,6 +35,8 @@ extern CInstantSend instantSend;
 
 class CInstantSend {
 public:
+    RecursiveMutex cs_instantsend;
+
     void ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStream& vRecv, CConnman* connman);
     void CheckAndRemove();
     void Clear();

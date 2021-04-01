@@ -3,26 +3,11 @@
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#include <base58.h>
 #include <consensus/validation.h>
 #include <crown/instantx.h>
-#include <crown/legacycalls.h>
-#include <crown/legacysigner.h>
-#include <crown/spork.h>
-#include <key.h>
-#include <masternode/activemasternode.h>
-#include <masternode/masternodeman.h>
-#include <net.h>
-#include <net_processing.h>
 #include <netmessagemaker.h>
 #include <node/context.h>
-#include <protocol.h>
 #include <rpc/blockchain.h>
-#include <sync.h>
-#include <util/system.h>
-#include <wallet/wallet.h>
-
-#include <boost/lexical_cast.hpp>
 
 using namespace std;
 using namespace boost;
@@ -45,6 +30,8 @@ void CInstantSend::ProcessMessage(CNode* pfrom, const std::string& strCommand, C
     if (strCommand == NetMsgType::IX) {
         CMutableTransaction tx;
         vRecv >> tx;
+
+        LOCK2(cs_main, cs_instantsend);
 
         uint256 txHash = tx.GetHash();
         CInv inv(MSG_TXLOCK_REQUEST, txHash);
@@ -119,9 +106,11 @@ void CInstantSend::ProcessMessage(CNode* pfrom, const std::string& strCommand, C
     }
 
     //! instantx lock vote
-    else if (strCommand == NetMsgType::IXLOCKVOTE) {
+    if (strCommand == NetMsgType::IXLOCKVOTE) {
         CConsensusVote ctx;
         vRecv >> ctx;
+
+        LOCK2(cs_main, cs_instantsend);
 
         uint256 ctxHash = ctx.GetHash();
         CInv inv(MSG_TXLOCK_VOTE, ctxHash);
@@ -164,12 +153,11 @@ void CInstantSend::ProcessMessage(CNode* pfrom, const std::string& strCommand, C
     }
 
     //! instantx lock list
-    else if (strCommand == "txllist") {
+    if (strCommand == "txllist") {
         std::map<uint256, CConsensusVote>::const_iterator it = mapTxLockVote.begin();
         for (; it != mapTxLockVote.end(); ++it) {
             CInv inv(MSG_TXLOCK_VOTE, it->second.GetHash());
             pfrom->AddInventoryKnown(inv);
-
             connman->RelayInv(inv);
         }
     }

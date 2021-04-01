@@ -1,19 +1,10 @@
-#include <base58.h>
 #include <consensus/validation.h>
 #include <crown/spork.h>
-#include <key.h>
 #include <masternode/masternode-budget.h>
-#include <net.h>
 #include <net_processing.h>
 #include <netmessagemaker.h>
 #include <node/context.h>
-#include <protocol.h>
 #include <rpc/blockchain.h>
-#include <sync.h>
-#include <util/system.h>
-#include <validation.h>
-
-#include <boost/lexical_cast.hpp>
 
 using namespace std;
 using namespace boost;

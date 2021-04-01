@@ -250,7 +250,7 @@ std::string CSystemnodeBlockPayees::GetRequiredPaymentsString()
 
     std::string ret = "Unknown";
 
-    for (auto& payee : vecPayments) {
+    for (CSystemnodePayee& payee : vecPayments) {
         if (ret != "Unknown") {
             ret += ", " + payee.scriptPubKey.ToString() + ":" + boost::lexical_cast<std::string>(payee.nVotes);
         } else {
@@ -283,7 +283,7 @@ bool CSystemnodeBlockPayees::IsTransactionValid(const CTransaction& txNew, const
 
     //require at least 6 signatures
 
-    for (auto& payee : vecPayments)
+    for (CSystemnodePayee& payee : vecPayments)
         if (payee.nVotes >= nMaxSignatures && payee.nVotes >= SNPAYMENTS_SIGNATURES_REQUIRED)
             nMaxSignatures = payee.nVotes;
 
@@ -291,13 +291,13 @@ bool CSystemnodeBlockPayees::IsTransactionValid(const CTransaction& txNew, const
     if (nMaxSignatures < SNPAYMENTS_SIGNATURES_REQUIRED)
         return true;
 
-    for (auto& payee : vecPayments) {
+    for (CSystemnodePayee& payee : vecPayments) {
         bool found = false;
         int pos = -1;
         for (unsigned int i = 0; i < txNew.vout.size(); i++) {
             if (payee.scriptPubKey == txNew.vout[i].scriptPubKey && systemnodePayment == txNew.vout[i].nValue) {
-                found = true;
                 pos = i;
+                found = true;
                 break;
             }
         }
@@ -333,15 +333,9 @@ bool CSystemnodePayments::GetBlockPayee(int nBlockHeight, CScript& payee)
 
 void CSystemnodePayments::CheckAndRemove()
 {
-    LOCK2(cs_mapSystemnodePayeeVotes, cs_mapSystemnodeBlocks);
+    if(!systemnodeSync.IsBlockchainSynced()) return;
 
-    int nHeight;
-    {
-        TRY_LOCK(cs_main, locked);
-        if (!locked || ::ChainActive().Tip() == nullptr)
-            return;
-        nHeight = ::ChainActive().Tip()->nHeight;
-    }
+    LOCK2(cs_mapSystemnodeBlocks, cs_mapSystemnodePayeeVotes);
 
     //keep up to five cycles for historical sake
     int nLimit = std::max(int(snodeman.size() * 1.25), 1000);
@@ -349,8 +343,7 @@ void CSystemnodePayments::CheckAndRemove()
     std::map<uint256, CSystemnodePaymentWinner>::iterator it = mapSystemnodePayeeVotes.begin();
     while (it != mapSystemnodePayeeVotes.end()) {
         CSystemnodePaymentWinner winner = (*it).second;
-
-        if (nHeight - winner.nBlockHeight > nLimit) {
+        if (nCachedBlockHeight - winner.nBlockHeight > nLimit) {
             LogPrint(BCLog::SYSTEMNODE, "CSystemnodePayments::CleanPaymentList - Removing old Systemnode payment - block %d\n", winner.nBlockHeight);
             systemnodeSync.mapSeenSyncSNW.erase((*it).first);
             mapSystemnodePayeeVotes.erase(it++);
@@ -419,7 +412,7 @@ bool CSystemnodePayments::ProcessBlock(int nBlockHeight, CConnman& connman)
         }
     }
 
-    if (nBlockHeight <= nLastBlockHeight)
+    if (nBlockHeight <= nCachedBlockHeight)
         return false;
 
     CSystemnodePaymentWinner newWinner(activeSystemnode.vin);
@@ -457,7 +450,7 @@ bool CSystemnodePayments::ProcessBlock(int nBlockHeight, CConnman& connman)
 
         if (AddWinningSystemnode(newWinner)) {
             newWinner.Relay(connman);
-            nLastBlockHeight = nBlockHeight;
+            nCachedBlockHeight = nBlockHeight;
             return true;
         }
     }
@@ -473,11 +466,11 @@ bool CSystemnodePayments::AddWinningSystemnode(CSystemnodePaymentWinner& winnerI
     }
 
     {
-        LOCK2(cs_mapSystemnodePayeeVotes, cs_mapSystemnodeBlocks);
-
         if (mapSystemnodePayeeVotes.count(winnerIn.GetHash())) {
             return false;
         }
+
+        LOCK2(cs_mapSystemnodeBlocks, cs_mapSystemnodePayeeVotes);
 
         mapSystemnodePayeeVotes[winnerIn.GetHash()] = winnerIn;
 

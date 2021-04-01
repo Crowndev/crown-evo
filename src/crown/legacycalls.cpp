@@ -2,13 +2,9 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#include <crown/legacycalls.h>
-
 #include <crown/instantx.h>
 #include <node/context.h>
 #include <rpc/blockchain.h>
-#include <util/system.h>
-#include <validation.h>
 
 class uint256;
 
@@ -39,7 +35,7 @@ int GetTransactionAge(const uint256& txid)
 
 int GetInputAge(const CTxIn& vin)
 {
-    int height = ::ChainActive().Tip()->nHeight+1;
+    int height = ::ChainActive().Tip()->nHeight + 1;
 
     CCoinsView viewDummy;
     CCoinsViewCache view(&viewDummy);
@@ -47,7 +43,7 @@ int GetInputAge(const CTxIn& vin)
         const CTxMemPool& mempool = *g_rpc_node->mempool;
         LOCK(cs_main);
         LOCK(mempool.cs);
-        CCoinsViewCache &viewChain = ::ChainstateActive().CoinsTip();
+        CCoinsViewCache& viewChain = ::ChainstateActive().CoinsTip();
         CCoinsViewMemPool viewMempool(&viewChain, mempool);
         view.SetBackend(viewMempool); // temporarily switch cache backend to db+mempool view
 
@@ -55,7 +51,8 @@ int GetInputAge(const CTxIn& vin)
         const Coin& coin = view.AccessCoin(testInput);
 
         if (!coin.IsSpent()) {
-            if(coin.nHeight < 0) return 0;
+            if (coin.nHeight < 0)
+                return 0;
             return height - coin.nHeight;
         } else {
             return -1;
@@ -71,7 +68,7 @@ int GetInputHeight(const CTxIn& vin)
         const CTxMemPool& mempool = *g_rpc_node->mempool;
         LOCK(cs_main);
         LOCK(mempool.cs);
-        CCoinsViewCache &viewChain = ::ChainstateActive().CoinsTip();
+        CCoinsViewCache& viewChain = ::ChainstateActive().CoinsTip();
         CCoinsViewMemPool viewMempool(&viewChain, mempool);
         view.SetBackend(viewMempool); // temporarily switch cache backend to db+mempool view
 
@@ -85,4 +82,3 @@ int GetInputHeight(const CTxIn& vin)
         }
     }
 }
-

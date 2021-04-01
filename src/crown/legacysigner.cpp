@@ -138,4 +138,3 @@ bool CHashSigner::VerifyHash(const uint256& hash, const CKeyID& keyID, const std
 
     return true;
 }
-

@@ -142,7 +142,7 @@ CMasternode::CMasternode(const CMasternodeBroadcast& mnb)
 //
 // When a new masternode broadcast is sent, update our information
 //
-bool CMasternode::UpdateFromNewBroadcast(CMasternodeBroadcast& mnb, CConnman& connman)
+bool CMasternode::UpdateFromNewBroadcast(const CMasternodeBroadcast& mnb, CConnman& connman)
 {
     if (mnb.sigTime > sigTime) {
         pubkey2 = mnb.pubkey2;
@@ -433,11 +433,14 @@ bool CMasternodeBroadcast::Create(std::string strService, std::string strKeyMast
     CPubKey pubKeyMasternodeNew;
     CKey keyMasternodeNew;
 
-    //need correct blocks to send ping
-    if (!fOffline && !masternodeSync.IsBlockchainSynced()) {
-        strErrorMessage = "Sync in progress. Must wait until sync is complete to start Masternode";
-        LogPrint(BCLog::MASTERNODE, "CMasternodeBroadcast::Create -- %s\n", strErrorMessage);
-        return false;
+    if (!gArgs.GetBoolArg("-jumpstart", false))
+    {
+        //need correct blocks to send ping
+        if (!fOffline && !masternodeSync.IsBlockchainSynced()) {
+            strErrorMessage = "Sync in progress. Must wait until sync is complete to start Masternode";
+            LogPrint(BCLog::MASTERNODE, "CMasternodeBroadcast::Create -- %s\n", strErrorMessage);
+            return false;
+        }
     }
 
     if (!legacySigner.SetKey(strKeyMasternode, keyMasternodeNew, pubKeyMasternodeNew)) {
@@ -521,7 +524,7 @@ bool CMasternodeBroadcast::Create(CTxIn txin, CService service, CKey keyCollater
     return true;
 }
 
-bool CMasternodeBroadcast::CheckAndUpdate(int& nDos, CConnman& connman)
+bool CMasternodeBroadcast::CheckAndUpdate(int& nDos, CConnman& connman) const
 {
     nDos = 0;
 
@@ -629,7 +632,7 @@ bool CMasternodeBroadcast::CheckAndUpdate(int& nDos, CConnman& connman)
     return true;
 }
 
-bool CMasternodeBroadcast::CheckInputsAndAdd(int& nDoS, CConnman& connman)
+bool CMasternodeBroadcast::CheckInputsAndAdd(int& nDoS, CConnman& connman) const
 {
     // we are a masternode with the same vin (i.e. already activated) and this mnb is ours (matches our Masternode privkey)
     // so nothing to do here for us
@@ -808,7 +811,7 @@ bool CMasternodePing::VerifySignature(const CPubKey& pubKeyMasternode, int& nDos
     return true;
 }
 
-bool CMasternodePing::CheckAndUpdate(int& nDos, CConnman& connman, bool fRequireEnabled, bool fCheckSigTimeOnly)
+bool CMasternodePing::CheckAndUpdate(int& nDos, CConnman& connman, bool fRequireEnabled, bool fCheckSigTimeOnly) const
 {
     if (sigTime > GetAdjustedTime() + 60 * 60) {
         LogPrint(BCLog::MASTERNODE, "CMasternodePing::CheckAndUpdate - Signature rejected, too far into the future %s\n", vin.ToString());
@@ -895,7 +898,7 @@ bool CMasternodePing::CheckAndUpdate(int& nDos, CConnman& connman, bool fRequire
     return false;
 }
 
-void CMasternodePing::Relay(CConnman& connman)
+void CMasternodePing::Relay(CConnman& connman) const
 {
     CInv inv(MSG_MASTERNODE_PING, GetHash());
     connman.RelayInv(inv);

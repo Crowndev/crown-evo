@@ -80,7 +80,7 @@ public:
     {
         LOCK(cs_vecPayments);
 
-        for (auto& payee : vecPayments) {
+        for (CMasternodePayee& payee : vecPayments) {
             if (payee.scriptPubKey == payeeIn) {
                 payee.nVotes += nIncrement;
                 return;
@@ -96,7 +96,7 @@ public:
         LOCK(cs_vecPayments);
 
         int nVotes = -1;
-        for (auto& p : vecPayments) {
+        for (CMasternodePayee& p : vecPayments) {
             if (p.nVotes > nVotes) {
                 payee = p.scriptPubKey;
                 nVotes = p.nVotes;
@@ -110,7 +110,7 @@ public:
     {
         LOCK(cs_vecPayments);
 
-        for (auto& p : vecPayments) {
+        for (CMasternodePayee& p : vecPayments) {
             if (p.nVotes >= nVotesReq && p.scriptPubKey == payee)
                 return true;
         }
@@ -198,7 +198,9 @@ public:
 class CMasternodePayments {
 private:
     int nSyncedFromPeer;
-    int nLastBlockHeight;
+
+    // Keep track of current block height
+    int nCachedBlockHeight;
 
 public:
     std::map<uint256, CMasternodePaymentWinner> mapMasternodePayeeVotes;
@@ -208,7 +210,7 @@ public:
     CMasternodePayments()
     {
         nSyncedFromPeer = 0;
-        nLastBlockHeight = 0;
+        nCachedBlockHeight = 0;
     }
 
     void Clear()
@@ -236,8 +238,6 @@ public:
     std::string GetRequiredPaymentsString(int nBlockHeight);
     void FillBlockPayee(CMutableTransaction& txNew, int64_t nFees);
     std::string ToString() const;
-    int GetOldestBlock();
-    int GetNewestBlock();
 
     SERIALIZE_METHODS(CMasternodePayments, obj)
     {

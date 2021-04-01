@@ -43,6 +43,10 @@ struct CompareScoreSN {
     }
 };
 
+CSystemnodeMan::CSystemnodeMan()
+{
+}
+
 int CSystemnodeMan::CountSystemnodes(bool fEnabled)
 {
     LOCK(cs);
@@ -122,8 +126,7 @@ void CSystemnodeMan::AskForSN(CNode* pnode, CTxIn& vin, CConnman& connman)
 
 void CSystemnodeMan::Check()
 {
-    LOCK(cs);
-
+    LOCK2(cs_main, cs);
     for (auto& sn : vSystemnodes) {
         sn.Check();
     }
@@ -131,14 +134,12 @@ void CSystemnodeMan::Check()
 
 void CSystemnodeMan::ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStream& vRecv, CConnman* connman)
 {
-    LOCK(cs_process_message);
+    if (!systemnodeSync.IsBlockchainSynced()) return;
 
     //! systemnode broadcast
     if (strCommand == "snb") {
         CSystemnodeBroadcast snb;
         vRecv >> snb;
-
-        LogPrint(BCLog::SYSTEMNODE, "CSystemnodeMan::ProcessMessage - snb");
 
         int nDoS = 0;
         if (CheckSnbAndUpdateSystemnodeList(snb, nDoS, *connman)) {
@@ -213,8 +214,9 @@ void CSystemnodeMan::ProcessMessage(CNode* pfrom, const std::string& strCommand,
                     uint256 hash = snb.GetHash();
                     pfrom->PushInventory(CInv(MSG_SYSTEMNODE_ANNOUNCE, hash));
                     nInvCount++;
-                    if (!mapSeenSystemnodeBroadcast.count(hash))
+                    if (!mapSeenSystemnodeBroadcast.count(hash)) {
                         mapSeenSystemnodeBroadcast.insert(make_pair(hash, snb));
+                    }
                     if (vin == sn.vin) {
                         LogPrint(BCLog::SYSTEMNODE, "sndseg - Sent 1 Systemnode entries to %s\n", pfrom->addr.LegacyToString());
                         return;
@@ -233,9 +235,9 @@ void CSystemnodeMan::ProcessMessage(CNode* pfrom, const std::string& strCommand,
 
 void CSystemnodeMan::CheckAndRemove(bool forceExpiredRemoval)
 {
-    Check();
+    LOCK2(cs_main, cs);
 
-    LOCK(cs);
+    Check();
 
     //remove inactive and outdated
     vector<CSystemnode>::iterator it = vSystemnodes.begin();

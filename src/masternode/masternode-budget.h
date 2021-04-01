@@ -159,13 +159,12 @@ public:
     std::vector<CBudgetProposal*> GetAllProposals();
     std::vector<BudgetDraft*> GetBudgetDrafts();
 
-    bool AddBudgetDraft(const BudgetDraft& budgetDraft, bool checkCollateral = true);
-    bool UpdateBudgetDraft(const BudgetDraftVote& vote, CNode* pfrom, CConnman& connman, std::string& strError);
+    bool AddBudgetDraft(BudgetDraft& budgetDraft);
+    bool UpdateBudgetDraft(BudgetDraftVote& vote, CNode* pfrom, CConnman& connman, std::string& strError);
     void SubmitBudgetDraft(CConnman& connman);
 
     bool HasItem(uint256 hash) const
     {
-        LOCK(cs);
         return mapSeenMasternodeBudgetVotes.count(hash) || mapSeenBudgetDrafts.count(hash) || mapSeenBudgetDraftVotes.count(hash);
     }
 
@@ -174,7 +173,7 @@ public:
     const CBudgetProposalBroadcast* GetSeenProposal(uint256 hash) const;
     const CBudgetVote* GetSeenVote(uint256 hash) const;
 
-    bool AddProposal(const CBudgetProposal& budgetProposal, bool checkCollateral = true);
+    bool AddProposal(const CBudgetProposal& budgetProposal);
 
     // SubmitProposalVote is used when current node submits a vote. ReceiveProposalVote is used when
     // a vote is received from a peer
@@ -182,7 +181,7 @@ public:
     bool SubmitProposalVote(const CBudgetVote& vote, std::string& strError);
     bool ReceiveProposalVote(const CBudgetVote& vote, CNode* pfrom, CConnman& connman, std::string& strError);
 
-    bool IsBudgetPaymentBlock(int nBlockHeight) const;
+    bool IsBudgetPaymentBlock(int nBlockHeight);
     bool IsTransactionValid(const CTransaction& txNew, int nBlockHeight) const;
     void FillBlockPayee(CMutableTransaction& txNew, CAmount nFees) const;
 
@@ -254,10 +253,12 @@ public:
 //
 
 class BudgetDraft {
+private:
+    mutable RecursiveMutex cs;
+
 public:
     static bool ComparePayments(const CTxBudgetPayment& a, const CTxBudgetPayment& b);
 
-public:
     BudgetDraft();
     BudgetDraft(const BudgetDraft& other);
 
@@ -282,13 +283,12 @@ public:
     void CleanAndRemove(bool fSignatureCheck);
     bool AddOrUpdateVote(bool isOldVote, const BudgetDraftVote& vote, std::string& strError);
 
-    bool IsValid(std::string& strError, bool fCheckCollateral = true) const;
-    bool IsValid(bool fCheckCollateral = true) const;
+    bool IsValid(std::string& strError, bool fCheckCollateral = true);
     bool VerifySignature(const CPubKey& pubKey) const;
 
     bool IsVoteSubmitted() const
     {
-        LOCK(m_cs);
+        LOCK(cs);
         return m_voteSubmittedTime.is_initialized();
     }
     void ResetAutoChecked();
@@ -296,34 +296,34 @@ public:
 
     uint256 GetFeeTxHash() const
     {
-        LOCK(m_cs);
+        LOCK(cs);
         return m_feeTransactionHash;
     }
     const std::map<uint256, BudgetDraftVote>& GetVotes() const
     {
-        LOCK(m_cs);
+        LOCK(cs);
         return m_votes;
     }
     const std::map<uint256, BudgetDraftVote>& GetObsoleteVotes() const
     {
-        LOCK(m_cs);
+        LOCK(cs);
         return m_obsoleteVotes;
     }
     void DiscontinueOlderVotes(const BudgetDraftVote& newerVote);
     std::string GetProposals() const;
     int GetBlockStart() const
     {
-        LOCK(m_cs);
+        LOCK(cs);
         return m_blockStart;
     }
     int GetBlockEnd() const
     {
-        LOCK(m_cs);
+        LOCK(cs);
         return m_blockStart;
     } // Paid in single block
     int GetVoteCount() const
     {
-        LOCK(m_cs);
+        LOCK(cs);
         return (int)m_votes.size();
     }
     const std::vector<CTxBudgetPayment>& GetBudgetPayments() const;
@@ -331,7 +331,7 @@ public:
 
     const CTxIn& MasternodeSubmittedId() const
     {
-        LOCK(m_cs);
+        LOCK(cs);
         return m_masternodeSubmittedId;
     }
 
@@ -339,7 +339,7 @@ public:
     bool AutoCheck(CConnman& connman);
     bool IsAutoChecked() const
     {
-        LOCK(m_cs);
+        LOCK(cs);
         return m_autoChecked;
     }
     //total crown paid out by this budget
@@ -376,7 +376,6 @@ private:
 
 private:
     // critical section to protect the inner data structures
-    mutable RecursiveMutex m_cs;
     bool m_autoChecked; //If it matches what we see, we'll auto vote for it (masternode only)
     std::vector<CTxBudgetPayment> m_payments;
     int m_blockStart;
@@ -411,8 +410,7 @@ public:
     const CTxIn& MasternodeSubmittedId() const;
     uint256 GetHash() const;
 
-    bool IsValid(std::string& strError, bool fCheckCollateral = true) const;
-    bool IsValid(bool fCheckCollateral = true) const;
+    bool IsValid(std::string& strError, bool fCheckCollateral = true);
 
     bool IsSubmittedManually() const;
 

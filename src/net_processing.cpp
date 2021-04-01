@@ -2765,11 +2765,10 @@ void PeerManager::ProcessMessage(CNode& pfrom, const std::string& msg_type, CDat
         vRecv >> vInv;
         if (vInv.size() > MAX_INV_SZ)
         {
+            LOCK(cs_main);
             Misbehaving(pfrom.GetId(), 20, strprintf("inv message size = %u", vInv.size()));
             return;
         }
-
-        LOCK(cs_main);
 
         const auto current_time = GetTime<std::chrono::microseconds>();
         uint256* best_block{nullptr};

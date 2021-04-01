@@ -14,7 +14,8 @@ bool setupNodeConfiguration()
     }
 
     std::shared_ptr<CWallet> pwallet = GetMainWallet();
-    if (!pwallet) return true;
+    if (!pwallet)
+        return true;
 
     if (fMasterNode) {
         LogPrintf("IS MASTERNODE\n");

@@ -4,8 +4,6 @@
 
 #include <crown/cache.h>
 
-#include <boost/filesystem.hpp>
-
 void DumpCaches()
 {
     CFlatDB<CMasternodeMan> flatdb1("mncache.dat", "magicMasternodeCache");

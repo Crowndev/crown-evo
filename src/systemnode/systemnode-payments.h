@@ -76,7 +76,7 @@ public:
     {
         LOCK(cs_vecSNPayments);
 
-        for (auto& payee : vecPayments) {
+        for (CSystemnodePayee& payee : vecPayments) {
             if (payee.scriptPubKey == payeeIn) {
                 payee.nVotes += nIncrement;
                 return;
@@ -92,7 +92,7 @@ public:
         LOCK(cs_vecSNPayments);
 
         int nVotes = -1;
-        for (auto& p : vecPayments) {
+        for (CSystemnodePayee& p : vecPayments) {
             if (p.nVotes > nVotes) {
                 payee = p.scriptPubKey;
                 nVotes = p.nVotes;
@@ -106,7 +106,7 @@ public:
     {
         LOCK(cs_vecSNPayments);
 
-        for (auto& p : vecPayments) {
+        for (CSystemnodePayee& p : vecPayments) {
             if (p.nVotes >= nVotesReq && p.scriptPubKey == payee)
                 return true;
         }
@@ -194,7 +194,7 @@ public:
 class CSystemnodePayments {
 private:
     int nSyncedFromPeer;
-    int nLastBlockHeight;
+    int nCachedBlockHeight;
 
 public:
     std::map<uint256, CSystemnodePaymentWinner> mapSystemnodePayeeVotes;
@@ -204,7 +204,7 @@ public:
     CSystemnodePayments()
     {
         nSyncedFromPeer = 0;
-        nLastBlockHeight = 0;
+        nCachedBlockHeight = 0;
     }
     bool AddWinningSystemnode(CSystemnodePaymentWinner& winner);
 

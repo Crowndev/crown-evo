@@ -52,11 +52,7 @@ void CInstantSend::ProcessMessage(CNode* pfrom, const std::string& strCommand, C
             return;
 
         TxValidationState state;
-        bool fAccepted = false;
-        {
-            LOCK(cs_main);
-            fAccepted = AcceptToMemoryPool(*g_rpc_node->mempool, state, MakeTransactionRef(tx), nullptr, true);
-        }
+        bool fAccepted = AcceptToMemoryPool(*g_rpc_node->mempool, state, MakeTransactionRef(tx), nullptr, true);
 
         if (fAccepted) {
             connman->RelayInv(inv);
@@ -622,6 +618,7 @@ void RelayTransactionLockReq(CTransactionRef& tx)
     const CNetMsgMaker msgMaker(PROTOCOL_VERSION);
     CInv inv(MSG_TXLOCK_REQUEST, tx->GetHash());
     for (auto& pnode : g_rpc_node->connman->CopyNodeVector()) {
+        LOCK(pnode->m_tx_relay->cs_feeFilter);
         if (!pnode->m_tx_relay->fRelayTxes)
             continue;
         g_rpc_node->connman->PushMessage(pnode, msgMaker.Make(NetMsgType::IX, tx));

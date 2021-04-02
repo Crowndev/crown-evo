@@ -1774,7 +1774,6 @@ void static ProcessGetData(CNode& pfrom, Peer& peer, const CChainParams& chainpa
     std::vector<CInv> vNotFound;
     const CNetMsgMaker msgMaker(pfrom.GetCommonVersion());
 
-    const std::chrono::seconds now = GetTime<std::chrono::seconds>();
     // Get last mempool request time
     const std::chrono::seconds mempool_req = pfrom.m_tx_relay != nullptr ? pfrom.m_tx_relay->m_last_mempool_req.load()
                                                                           : std::chrono::seconds::min();
@@ -2769,6 +2768,8 @@ void PeerManager::ProcessMessage(CNode& pfrom, const std::string& msg_type, CDat
             Misbehaving(pfrom.GetId(), 20, strprintf("inv message size = %u", vInv.size()));
             return;
         }
+
+        LOCK(cs_main);
 
         const auto current_time = GetTime<std::chrono::microseconds>();
         uint256* best_block{nullptr};

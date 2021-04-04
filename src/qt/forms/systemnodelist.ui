@@ -163,7 +163,7 @@
              <item>
               <widget class="QPushButton" name="startMissingButton">
                <property name="text">
-                <string>Start &amp;MISSING</string>
+                <string>Start &amp;Missing</string>
                </property>
               </widget>
              </item>
@@ -171,6 +171,13 @@
               <widget class="QPushButton" name="UpdateButton">
                <property name="text">
                 <string>&amp;Update status</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QPushButton" name="reloadButton">
+               <property name="text">
+                <string>&amp;Reload conf</string>
                </property>
               </widget>
              </item>

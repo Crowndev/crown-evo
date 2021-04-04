@@ -1,6 +1,8 @@
 #include <qt/systemnodelist.h>
 #include <qt/forms/ui_systemnodelist.h>
 
+#include <crown/legacysigner.h>
+#include <crown/init.h>
 #include <init.h>
 #include <key_io.h>
 #include <systemnode/activesystemnode.h>
@@ -9,10 +11,17 @@
 #include <systemnode/systemnodeman.h>
 #include <node/context.h>
 #include <rpc/blockchain.h>
+#include <qt/addresstablemodel.h>
+#include <qt/bitcoinunits.h>
 #include <qt/clientmodel.h>
+#include <qt/createsystemnodedialog.h>
+#include <qt/datetablewidgetitem.h>
 #include <qt/guiutil.h>
+#include <qt/optionsmodel.h>
+#include <qt/startmissingdialog.h>
 #include <qt/walletmodel.h>
 #include <sync.h>
+#include <util/time.h>
 #include <wallet/wallet.h>
 
 #include <QMessageBox>
@@ -57,11 +66,14 @@ SystemnodeList::SystemnodeList(const PlatformStyle *platformStyle, QWidget *pare
     contextMenu->addAction(startAliasAction);
     connect(ui->tableWidgetMySystemnodes, SIGNAL(customContextMenuRequested(const QPoint&)), this, SLOT(showContextMenu(const QPoint&)));
     connect(startAliasAction, SIGNAL(triggered()), this, SLOT(on_startButton_clicked()));
+    connect(ui->reloadButton, SIGNAL(triggered()), this, SLOT(on_reloadButton_clicked()));
 
     timer = new QTimer(this);
     connect(timer, SIGNAL(timeout()), this, SLOT(updateNodeList()));
     connect(timer, SIGNAL(timeout()), this, SLOT(updateMyNodeList()));
     timer->start(1000);
+
+    updateNodeList();
 
     // Fill MN list
     fFilterUpdated = false;
@@ -134,6 +146,7 @@ void SystemnodeList::StartAlias(std::string strAlias)
 
 void SystemnodeList::StartAll(std::string strCommand)
 {
+    int nTotal = 0;
     int nCountSuccessful = 0;
     int nCountFailed = 0;
     std::string strFailedHtml;
@@ -157,6 +170,7 @@ void SystemnodeList::StartAll(std::string strCommand)
             nCountFailed++;
             strFailedHtml += "\nFailed to start " + mne.getAlias() + ". Error: " + strError;
         }
+        nTotal++;
     }
     GetMainWallet()->Lock();
 
@@ -173,9 +187,9 @@ void SystemnodeList::StartAll(std::string strCommand)
     updateMyNodeList(true);
 }
 
-void SystemnodeList::updateMySystemnodeInfo(QString strAlias, QString strAddr, CSystemnode* pmn)
+void SystemnodeList::updateMySystemnodeInfo(QString strAlias, QString strAddr, QString privkey, QString txHash, QString txIndex, CSystemnode *pmn)
 {
-    LOCK(cs_mnlistupdate);
+    LOCK(cs_snlistupdate);
     bool fOldRowFound = false;
     int nNewRow = 0;
 
@@ -225,7 +239,8 @@ void SystemnodeList::updateMyNodeList(bool fForce)
     for (CNodeEntry mne : systemnodeConfig.getEntries()) {
         CTxIn txin = CTxIn(uint256S(mne.getTxHash()), uint32_t(atoi(mne.getOutputIndex().c_str())));
         CSystemnode* pmn = snodeman.Find(txin);
-        updateMySystemnodeInfo(QString::fromStdString(mne.getAlias()), QString::fromStdString(mne.getIp()), pmn);
+        updateMySystemnodeInfo(QString::fromStdString(mne.getAlias()), QString::fromStdString(mne.getIp()), QString::fromStdString(mne.getPrivKey()), QString::fromStdString(mne.getTxHash()),
+            QString::fromStdString(mne.getOutputIndex()), pmn);
     }
     ui->tableWidgetMySystemnodes->setSortingEnabled(true);
 
@@ -233,9 +248,24 @@ void SystemnodeList::updateMyNodeList(bool fForce)
     ui->secondsLabel->setText("0");
 }
 
+void SystemnodeList::on_reloadButton_clicked()
+{
+    TRY_LOCK(cs_snlistupdate, fLockAcquired);
+    if(!fLockAcquired) {
+        return;
+    }
+
+    ui->tableWidgetMySystemnodes->setSortingEnabled(false);
+    ui->tableWidgetMySystemnodes->clearContents();
+    ui->tableWidgetMySystemnodes->setRowCount(0);
+
+    loadNodeConfiguration();
+    updateMyNodeList(true);
+}
+
 void SystemnodeList::updateNodeList()
 {
-    TRY_LOCK(cs_mnlistupdate, fLockAcquired);
+    TRY_LOCK(cs_snlistupdate, fLockAcquired);
     if(!fLockAcquired) {
         return;
     }

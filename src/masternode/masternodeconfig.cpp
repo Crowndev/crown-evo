@@ -6,10 +6,9 @@
 #include <masternode/masternodeconfig.h>
 #include <util/system.h>
 
-class CMasternodeConfig;
 CMasternodeConfig masternodeConfig;
 
-boost::filesystem::path CMasternodeConfig::getNodeConfigFile()
+fs::path CMasternodeConfig::getNodeConfigFile()
 {
     return GetMasternodeConfigFile();
 }

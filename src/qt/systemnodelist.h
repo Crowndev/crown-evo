@@ -47,7 +47,7 @@ private:
     bool fFilterUpdated{false};
 
 public Q_SLOTS:
-    void updateMySystemnodeInfo(QString strAlias, QString strAddr, CSystemnode* pmn);
+    void updateMySystemnodeInfo(QString strAlias, QString strAddr, QString privkey, QString txHash, QString txIndex, CSystemnode *pmn);
     void updateMyNodeList(bool fForce = false);
     void updateNodeList();
 
@@ -58,7 +58,7 @@ private:
     Ui::SystemnodeList* ui;
     ClientModel* clientModel;
     WalletModel* walletModel;
-    RecursiveMutex cs_mnlistupdate;
+    RecursiveMutex cs_snlistupdate;
     QString strCurrentFilter;
 
 private Q_SLOTS:
@@ -69,5 +69,6 @@ private Q_SLOTS:
     void on_startMissingButton_clicked();
     void on_tableWidgetMySystemnodes_itemSelectionChanged();
     void on_UpdateButton_clicked();
+    void on_reloadButton_clicked();
 };
 #endif // SYSTEMNODELIST_H

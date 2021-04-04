@@ -5,43 +5,51 @@
 
 #include <base58.h>
 #include <net.h>
-#include <nodeconfig.h>
-#include <node/ui_interface.h>
-#include <util/system.h>
 #include <netbase.h>
+#include <node/ui_interface.h>
+#include <nodeconfig.h>
+#include <util/system.h>
+#include <util/translation.h>
 
-void CNodeConfig::add(std::string alias, std::string ip, std::string privKey, std::string txHash, std::string outputIndex) {
+void CNodeConfig::add(std::string alias, std::string ip, std::string privKey, std::string txHash, std::string outputIndex)
+{
     CNodeEntry cme(alias, ip, privKey, txHash, outputIndex);
     entries.push_back(cme);
 }
 
-void CNodeConfig::add(CNodeEntry cne) {
+void CNodeConfig::add(CNodeEntry cne)
+{
     entries.push_back(cne);
 }
 
-bool CNodeConfig::read(std::string& strErr) {
+bool CNodeConfig::read(std::string& strErr)
+{
     int linenumber = 1;
-    boost::filesystem::path pathNodeConfigFile = getNodeConfigFile();
+    const fs::path& pathNodeConfigFile = getNodeConfigFile();
     boost::filesystem::ifstream streamConfig(pathNodeConfigFile);
 
     if (!streamConfig.good()) {
         FILE* configFile = fopen(pathNodeConfigFile.string().c_str(), "a");
         if (configFile != NULL) {
-            fwrite(getHeader().c_str(), std::strlen(getHeader().c_str()), 1, configFile);
+            std::string strHeader = "# Crown node config file\n"
+                                    "# Format: name IP:port nodeprivkey collateral_output_txid collateral_output_index\n"
+                                    "# Example: alias0 127.0.0.2:8369 93HaYBVUCYjEMeeH1Y4sBGLALQZE1Yc1K64xiqgX37tGBDQL8Xg 2bcd3c84c84f87eaa86e4e56834c92927a07f9e18718810b92e0d0324456a67c 0\n";
+            fwrite(strHeader.c_str(), std::strlen(strHeader.c_str()), 1, configFile);
             fclose(configFile);
         }
         return true; // Nothing to read, so just return
     }
 
-    for(std::string line; std::getline(streamConfig, line); linenumber++)
-    {
-        if(line.empty()) continue;
+    for (std::string line; std::getline(streamConfig, line); linenumber++) {
+        if (line.empty())
+            continue;
 
         std::istringstream iss(line);
         std::string comment, alias, ip, privKey, txHash, outputIndex;
 
         if (iss >> comment) {
-            if(comment.at(0) == '#') continue;
+            if (comment.at(0) == '#')
+                continue;
             iss.str(line);
             iss.clear();
         }
@@ -50,28 +58,21 @@ bool CNodeConfig::read(std::string& strErr) {
             iss.str(line);
             iss.clear();
             if (!(iss >> alias >> ip >> privKey >> txHash >> outputIndex)) {
-                strErr = ("Could not parse ") + getFileName() + "\n" +
-                        strprintf(("Line: %d"), linenumber) + "\n\"" + line + "\"";
+                strErr = _("Could not parse masternode.conf").translated + "\n" + strprintf(_("Line: %d").translated, linenumber) + "\n\"" + line + "\"";
                 streamConfig.close();
                 return false;
             }
         }
 
-        if(Params().NetworkIDString() == CBaseChainParams::MAIN) {
-            if(CService(LookupNumeric(ip.c_str())).GetPort() != 9340) {
-                strErr = ("Invalid port detected in ") + getFileName() + "\n" +
-                        strprintf(("Line: %d"), linenumber) + "\n\"" + line + "\"" + "\n" +
-                        ("(must be 9340 for mainnet)");
-                streamConfig.close();
-                return false;
-            }
-        } else if(CService(LookupNumeric(ip.c_str())).GetPort() == 9340) {
-            strErr = ("Invalid port detected in ") + getFileName() + "\n" +
-                    strprintf(("Line: %d"), linenumber) + "\n\"" + line + "\"" + "\n" +
-                    ("(9340 could be used only on mainnet)");
+        int port = 0;
+        std::string hostname = "";
+        SplitHostPort(ip, port, hostname);
+        if (port == 0 || hostname == "") {
+            strErr = _("Failed to parse host:port string").translated + "\n" + strprintf(_("Line: %d").translated, linenumber) + "\n\"" + line + "\"";
             streamConfig.close();
             return false;
         }
+
         add(alias, ip, privKey, txHash, outputIndex);
     }
 
@@ -82,21 +83,29 @@ bool CNodeConfig::read(std::string& strErr) {
 bool CNodeConfig::aliasExists(const std::string& alias)
 {
     for (CNodeEntry mne : getEntries()) {
-        if (mne.getAlias() == alias)
-        {
+        if (mne.getAlias() == alias) {
             return true;
         }
     }
     return false;
 }
 
+void CNodeConfig::clear()
+{
+    entries.clear();
+}
+
 bool CNodeConfig::write()
 {
-    boost::filesystem::path pathNodeConfigFile = getNodeConfigFile();
+    fs::path pathNodeConfigFile = getNodeConfigFile();
     boost::filesystem::ofstream streamConfig(pathNodeConfigFile, std::ofstream::out);
     streamConfig << getHeader() << "\n";
     for (CNodeEntry sne : getEntries()) {
-        streamConfig << sne.getAlias() << " " << sne.getIp() << " " << sne.getPrivKey() << " " << sne.getTxHash() << " " << sne.getOutputIndex() << "\n";
+        streamConfig << sne.getAlias() << " "
+                     << sne.getIp() << " "
+                     << sne.getPrivKey() << " "
+                     << sne.getTxHash() << " "
+                     << sne.getOutputIndex() << "\n";
     }
     streamConfig.close();
     return true;

@@ -3,8 +3,8 @@
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#ifndef SRC_NODECONFIG_H_
-#define SRC_NODECONFIG_H_
+#ifndef SRC_NODECONFIG_H
+#define SRC_NODECONFIG_H
 
 #include <string>
 #include <vector>
@@ -21,9 +21,10 @@ private:
     std::string privKey;
     std::string txHash;
     std::string outputIndex;
-public:
 
-    CNodeEntry(std::string alias, std::string ip, std::string privKey, std::string txHash, std::string outputIndex) {
+public:
+    CNodeEntry(std::string alias, std::string ip, std::string privKey, std::string txHash, std::string outputIndex)
+    {
         this->alias = alias;
         this->ip = ip;
         this->privKey = privKey;
@@ -31,51 +32,61 @@ public:
         this->outputIndex = outputIndex;
     }
 
-    const std::string& getAlias() const {
+    const std::string& getAlias() const
+    {
         return alias;
     }
 
-    void setAlias(const std::string& alias) {
+    void setAlias(const std::string& alias)
+    {
         this->alias = alias;
     }
 
-    const std::string& getOutputIndex() const {
+    const std::string& getOutputIndex() const
+    {
         return outputIndex;
     }
 
-    void setOutputIndex(const std::string& outputIndex) {
+    void setOutputIndex(const std::string& outputIndex)
+    {
         this->outputIndex = outputIndex;
     }
 
-    const std::string& getPrivKey() const {
+    const std::string& getPrivKey() const
+    {
         return privKey;
     }
 
-    void setPrivKey(const std::string& privKey) {
+    void setPrivKey(const std::string& privKey)
+    {
         this->privKey = privKey;
     }
 
-    const std::string& getTxHash() const {
+    const std::string& getTxHash() const
+    {
         return txHash;
     }
 
-    void setTxHash(const std::string& txHash) {
+    void setTxHash(const std::string& txHash)
+    {
         this->txHash = txHash;
     }
 
-    const std::string& getIp() const {
+    const std::string& getIp() const
+    {
         return ip;
     }
 
-    void setIp(const std::string& ip) {
+    void setIp(const std::string& ip)
+    {
         this->ip = ip;
     }
 };
 
-class CNodeConfig
-{
+class CNodeConfig {
 public:
-    CNodeConfig() {
+    CNodeConfig()
+    {
         entries = std::vector<CNodeEntry>();
     }
 
@@ -86,20 +97,20 @@ public:
     void add(std::string alias, std::string ip, std::string privKey, std::string txHash, std::string outputIndex);
     void add(CNodeEntry cne);
 
-    std::vector<CNodeEntry>& getEntries() {
+    std::vector<CNodeEntry>& getEntries()
+    {
         return entries;
     }
 
-    int getCount() {
-        int c = -1;
-        for (auto e : entries) {
-            if(e.getAlias() != "") c++;
-        }
+    int getCount()
+    {
+        int c = 0;
+        for (auto e : entries) c++;
         return c;
     }
 
 private:
-    virtual boost::filesystem::path getNodeConfigFile() = 0;
+    virtual fs::path getNodeConfigFile() = 0;
     virtual std::string getHeader() = 0;
     virtual std::string getFileName() = 0;
     std::vector<CNodeEntry> entries;

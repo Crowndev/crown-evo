@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>723</width>
+    <width>796</width>
     <height>457</height>
    </rect>
   </property>
@@ -47,7 +47,7 @@
      <item>
       <widget class="QTabWidget" name="tabWidget">
        <property name="currentIndex">
-        <number>2</number>
+        <number>0</number>
        </property>
        <widget class="QWidget" name="tabMyMasternodes">
         <attribute name="title">
@@ -163,7 +163,7 @@
              <item>
               <widget class="QPushButton" name="startMissingButton">
                <property name="text">
-                <string>Start &amp;MISSING</string>
+                <string>Start &amp;Missing</string>
                </property>
               </widget>
              </item>
@@ -171,6 +171,13 @@
               <widget class="QPushButton" name="UpdateButton">
                <property name="text">
                 <string>&amp;Update status</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QPushButton" name="reloadButton">
+               <property name="text">
+                <string>&amp;Reload conf</string>
                </property>
               </widget>
              </item>
@@ -519,4 +526,3 @@
  <resources/>
  <connections/>
 </ui>
-

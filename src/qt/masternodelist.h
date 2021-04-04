@@ -50,11 +50,12 @@ private:
     bool fFilterUpdated{false};
 
 public Q_SLOTS:
-    void updateMyMasternodeInfo(QString strAlias, QString strAddr, CMasternode* pmn);
+    void updateMyMasternodeInfo(QString strAlias, QString strAddr, QString privkey, QString txHash, QString txIndex, CMasternode *pmn);
     void updateMyNodeList(bool fForce = false);
     void updateNodeList();
     void updateVoteList(bool reset = false);
     void updateNextSuperblock();
+
     SendCollateralDialog* getSendCollateralDialog()
     {
         return sendDialog;
@@ -85,5 +86,6 @@ private Q_SLOTS:
     void on_voteManyAbstainButton_clicked();
     void on_tableWidgetVoting_itemSelectionChanged();
     void on_UpdateVotesButton_clicked();
+    void on_reloadButton_clicked();
 };
 #endif // MASTERNODELIST_H

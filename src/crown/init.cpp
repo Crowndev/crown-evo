@@ -4,6 +4,23 @@
 
 #include <crown/init.h>
 
+void loadNodeConfiguration()
+{
+    masternodeConfig.clear();
+    systemnodeConfig.clear();
+
+    // parse masternode.conf
+    std::string strErr;
+    if (!masternodeConfig.read(strErr)) {
+        LogPrintf("Error reading masternode configuration file: %s\n", strErr.c_str());
+    }
+
+    // parse systemnode.conf
+    if (!systemnodeConfig.read(strErr)) {
+        LogPrintf("Error reading systemnode configuration file: %s\n", strErr.c_str());
+    }
+}
+
 bool setupNodeConfiguration()
 {
     fMasterNode = gArgs.GetBoolArg("-masternode", false);
@@ -14,8 +31,6 @@ bool setupNodeConfiguration()
     }
 
     std::shared_ptr<CWallet> pwallet = GetMainWallet();
-    if (!pwallet)
-        return true;
 
     if (fMasterNode) {
         LogPrintf("IS MASTERNODE\n");
@@ -69,27 +84,31 @@ bool setupNodeConfiguration()
 
     strBudgetMode = gArgs.GetArg("-budgetvotemode", "auto");
 
-    if (gArgs.GetBoolArg("-mnconflock", true)) {
+    if (gArgs.GetBoolArg("-mnconflock", true) && masternodeConfig.getCount() > 0)
+    {
         LOCK(pwallet->cs_wallet);
         LogPrintf("Locking Masternodes:\n");
         uint256 mnTxHash;
-        for (auto mne : masternodeConfig.getEntries()) {
+        for (CNodeEntry mne : masternodeConfig.getEntries()) {
             LogPrintf("  %s %s\n", mne.getTxHash(), mne.getOutputIndex());
             mnTxHash.SetHex(mne.getTxHash());
             COutPoint outpoint = COutPoint(mnTxHash, boost::lexical_cast<unsigned int>(mne.getOutputIndex()));
-            pwallet->LockCoin(outpoint);
+            if (pwallet)
+                pwallet->LockCoin(outpoint);
         }
     }
 
-    if (gArgs.GetBoolArg("-snconflock", true)) {
+    if (gArgs.GetBoolArg("-snconflock", true) && systemnodeConfig.getCount() > 0)
+    {
         LOCK(pwallet->cs_wallet);
         LogPrintf("Locking Systemnodes:\n");
         uint256 mnTxHash;
-        for (auto sne : systemnodeConfig.getEntries()) {
+        for (CNodeEntry sne : systemnodeConfig.getEntries()) {
             LogPrintf("  %s %s\n", sne.getTxHash(), sne.getOutputIndex());
             mnTxHash.SetHex(sne.getTxHash());
             COutPoint outpoint = COutPoint(mnTxHash, boost::lexical_cast<unsigned int>(sne.getOutputIndex()));
-            pwallet->LockCoin(outpoint);
+            if (pwallet)
+                pwallet->LockCoin(outpoint);
         }
     }
 

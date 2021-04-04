@@ -22,6 +22,7 @@
 #include <util/translation.h>
 #include <validation.h>
 
+void loadNodeConfiguration();
 bool setupNodeConfiguration();
 
 #endif // CROWN_INIT_H

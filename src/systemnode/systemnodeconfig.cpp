@@ -6,10 +6,9 @@
 #include <systemnode/systemnodeconfig.h>
 #include <util/system.h>
 
-class CSystemnodeConfig;
 CSystemnodeConfig systemnodeConfig;
 
-boost::filesystem::path CSystemnodeConfig::getNodeConfigFile()
+fs::path CSystemnodeConfig::getNodeConfigFile()
 {
     return GetSystemnodeConfigFile();
 }

@@ -2,6 +2,7 @@
 #include <qt/forms/ui_masternodelist.h>
 
 #include <crown/legacysigner.h>
+#include <crown/init.h>
 #include <init.h>
 #include <key_io.h>
 #include <masternode/activemasternode.h>
@@ -10,7 +11,6 @@
 #include <masternode/masternodeconfig.h>
 #include <masternode/masternodeman.h>
 #include <node/context.h>
-#include <nodeconfig.h>
 #include <rpc/blockchain.h>
 #include <qt/addresstablemodel.h>
 #include <qt/bitcoinunits.h>
@@ -75,7 +75,7 @@ MasternodeList::MasternodeList(const PlatformStyle *platformStyle, QWidget *pare
 
     ui->tableWidgetMyMasternodes->setContextMenuPolicy(Qt::CustomContextMenu);
 
-    QAction* startAliasAction = new QAction(tr("Start alias"), this);
+    QAction *startAliasAction = new QAction(tr("Start alias"), this);
     QAction *editAction = new QAction(tr("Edit"), this);
     contextMenu = new QMenu();
     contextMenu->addAction(startAliasAction);
@@ -83,6 +83,7 @@ MasternodeList::MasternodeList(const PlatformStyle *platformStyle, QWidget *pare
     connect(ui->tableWidgetMyMasternodes, SIGNAL(customContextMenuRequested(const QPoint&)), this, SLOT(showContextMenu(const QPoint&)));
     connect(startAliasAction, SIGNAL(triggered()), this, SLOT(on_startButton_clicked()));
     connect(editAction, SIGNAL(triggered()), this, SLOT(on_editButton_clicked()));
+    connect(ui->reloadButton, SIGNAL(triggered()), this, SLOT(on_reloadButton_clicked()));
 
     timer = new QTimer(this);
     connect(timer, SIGNAL(timeout()), this, SLOT(updateNodeList()));
@@ -166,6 +167,7 @@ void MasternodeList::StartAlias(std::string strAlias)
 
 void MasternodeList::StartAll(std::string strCommand)
 {
+    int nTotal = 0;
     int nCountSuccessful = 0;
     int nCountFailed = 0;
     std::string strFailedHtml;
@@ -189,6 +191,7 @@ void MasternodeList::StartAll(std::string strCommand)
             nCountFailed++;
             strFailedHtml += "\nFailed to start " + mne.getAlias() + ". Error: " + strError;
         }
+        nTotal++;
     }
     GetMainWallet()->Lock();
 
@@ -205,7 +208,7 @@ void MasternodeList::StartAll(std::string strCommand)
     updateMyNodeList(true);
 }
 
-void MasternodeList::updateMyMasternodeInfo(QString strAlias, QString strAddr, CMasternode* pmn)
+void MasternodeList::updateMyMasternodeInfo(QString strAlias, QString strAddr, QString privkey, QString txHash, QString txIndex, CMasternode *pmn)
 {
     LOCK(cs_mnlistupdate);
     bool fOldRowFound = false;
@@ -257,7 +260,8 @@ void MasternodeList::updateMyNodeList(bool fForce)
     for (CNodeEntry mne : masternodeConfig.getEntries()) {
         CTxIn txin = CTxIn(uint256S(mne.getTxHash()), uint32_t(atoi(mne.getOutputIndex().c_str())));
         CMasternode* pmn = mnodeman.Find(txin);
-        updateMyMasternodeInfo(QString::fromStdString(mne.getAlias()), QString::fromStdString(mne.getIp()), pmn);
+        updateMyMasternodeInfo(QString::fromStdString(mne.getAlias()), QString::fromStdString(mne.getIp()), QString::fromStdString(mne.getPrivKey()), QString::fromStdString(mne.getTxHash()),
+            QString::fromStdString(mne.getOutputIndex()), pmn);
     }
     ui->tableWidgetMyMasternodes->setSortingEnabled(true);
 
@@ -326,6 +330,21 @@ void MasternodeList::updateNodeList()
 
     ui->countLabel->setText(QString::number(ui->tableWidgetMasternodes->rowCount()));
     ui->tableWidgetMasternodes->setSortingEnabled(true);
+}
+
+void MasternodeList::on_reloadButton_clicked()
+{
+    TRY_LOCK(cs_mnlistupdate, fLockAcquired);
+    if(!fLockAcquired) {
+        return;
+    }
+
+    ui->tableWidgetMyMasternodes->setSortingEnabled(false);
+    ui->tableWidgetMyMasternodes->clearContents();
+    ui->tableWidgetMyMasternodes->setRowCount(0);
+
+    loadNodeConfiguration();
+    updateMyNodeList(true);
 }
 
 void MasternodeList::updateNextSuperblock()

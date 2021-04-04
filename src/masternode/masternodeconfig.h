@@ -12,8 +12,8 @@ extern CMasternodeConfig masternodeConfig;
 
 class CMasternodeConfig : public CNodeConfig
 {
-private:
-    boost::filesystem::path getNodeConfigFile() override;
+public:
+    fs::path getNodeConfigFile() override;
     std::string getHeader() override;
     std::string getFileName() override;
 };

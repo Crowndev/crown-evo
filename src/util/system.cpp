@@ -1319,14 +1319,14 @@ fs::path AbsPathForConfigVal(const fs::path& path, bool net_specific)
 
 fs::path GetMasternodeConfigFile()
 {
-    fs::path pathConfigFile;
+    fs::path pathConfigFile(gArgs.GetArg("-mnconf", "masternode.conf"));
     if (!pathConfigFile.is_complete()) pathConfigFile = GetDataDir() / pathConfigFile;
     return pathConfigFile;
 }
 
 fs::path GetSystemnodeConfigFile()
 {
-    fs::path pathConfigFile;
+    fs::path pathConfigFile(gArgs.GetArg("-snconf", "systemnode.conf"));
     if (!pathConfigFile.is_complete()) pathConfigFile = GetDataDir() / pathConfigFile;
     return pathConfigFile;
 }

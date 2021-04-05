@@ -179,10 +179,9 @@ unsigned int GetNextWorkRequired(const CBlockIndex* pindexLast, const CBlockHead
     }
 
     if (Params().NetworkIDString() == CBaseChainParams::TESTNET) {
-        unsigned int nProofOfWorkLimit = GetProofOfWorkLimit(true).GetCompact();
-        if (pindexLast->nHeight+1 < 150)
-            return nProofOfWorkLimit;
-        return KimotoGravityWell(pindexLast, params);
+        if (pindexLast->nHeight + 1 < params.nBlockPoSStart) {
+            return GetProofOfWorkLimit(true).GetCompact();
+        }
     }
 
     if (Params().NetworkIDString() == CBaseChainParams::MAIN && pindexLast->nHeight >= params.PoSStartHeight() - 1) {
@@ -269,10 +268,6 @@ bool CheckProofOfWork(uint256 hash, unsigned int nBits, const Consensus::Params&
     arith_uint256 bnTarget;
 
     bnTarget.SetCompact(nBits, &fNegative, &fOverflow);
-
-    if (Params().NetworkIDString() == CBaseChainParams::TESTNET && ::ChainActive().Height() >= 140394) {
-        SetProofOfWorkLimit(uint256S("0003ffff00000000000000000000000000000000000000000000000000000000"));
-    }
 
     if (Params().NetworkIDString() == CBaseChainParams::MAIN && ::ChainActive().Height() >= params.PoSStartHeight() - 1) {
         SetProofOfWorkLimit(uint256S("000003ffff000000000000000000000000000000000000000000000000000000"));

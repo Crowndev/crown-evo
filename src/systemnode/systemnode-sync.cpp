@@ -2,21 +2,12 @@
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#include <addrman.h>
 #include <crown/spork.h>
 #include <netfulfilledman.h>
 #include <netmessagemaker.h>
 #include <node/context.h>
 #include <node/ui_interface.h>
 #include <rpc/blockchain.h>
-#include <shutdown.h>
-#include <systemnode/activesystemnode.h>
-#include <systemnode/systemnode-payments.h>
-#include <systemnode/systemnode-sync.h>
-#include <systemnode/systemnode.h>
-#include <systemnode/systemnodeman.h>
-#include <util/system.h>
-#include <util/time.h>
 
 class CSystemnodeSync;
 CSystemnodeSync systemnodeSync;

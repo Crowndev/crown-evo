@@ -3,23 +3,9 @@
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#include <addrman.h>
-#include <consensus/validation.h>
-#include <crown/legacycalls.h>
 #include <crown/legacysigner.h>
 #include <crown/nodewallet.h>
-#include <key_io.h>
-#include <masternode/masternode.h>
-#include <masternode/masternodeman.h>
-#include <pos/blockwitness.h>
-#include <pos/prooftracker.h>
-#include <net_processing.h>
 #include <shutdown.h>
-#include <sync.h>
-#include <util/system.h>
-#include <validation.h>
-
-#include <boost/lexical_cast.hpp>
 
 // keep track of the scanning errors I've seen
 map<uint256, int> mapSeenMasternodeScanningErrors;

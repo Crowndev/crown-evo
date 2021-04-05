@@ -1,23 +1,15 @@
+// Copyright (c) 2014-2015 The Dash developers
 // Copyright (c) 2014-2018 The Crown developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#include <addrman.h>
 #include <crown/spork.h>
-#include <masternode/activemasternode.h>
 #include <masternode/masternode-budget.h>
-#include <masternode/masternode-payments.h>
-#include <masternode/masternode-sync.h>
-#include <masternode/masternode.h>
-#include <masternode/masternodeman.h>
 #include <netfulfilledman.h>
 #include <netmessagemaker.h>
 #include <node/context.h>
 #include <node/ui_interface.h>
 #include <rpc/blockchain.h>
-#include <shutdown.h>
-#include <util/system.h>
-#include <util/time.h>
 
 class CMasternodeSync;
 CMasternodeSync masternodeSync;

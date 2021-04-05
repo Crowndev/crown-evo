@@ -2,19 +2,9 @@
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#include <addrman.h>
 #include <crown/legacysigner.h>
-#include <crown/spork.h>
 #include <net_processing.h>
 #include <netmessagemaker.h>
-#include <sync.h>
-#include <systemnode/activesystemnode.h>
-#include <systemnode/systemnode.h>
-#include <systemnode/systemnodeman.h>
-#include <util/system.h>
-
-#include <boost/filesystem.hpp>
-#include <boost/lexical_cast.hpp>
 
 /** Systemnode manager */
 CSystemnodeMan snodeman;

@@ -1,14 +1,10 @@
-#include <addrman.h>
+// Copyright (c) 2014-2018 The Crown developers
+// Distributed under the MIT/X11 software license, see the accompanying
+// file COPYING or http://www.opensource.org/licenses/mit-license.php.
+
 #include <crown/nodewallet.h>
 #include <crown/spork.h>
-#include <net.h>
 #include <netbase.h>
-#include <protocol.h>
-#include <systemnode/activesystemnode.h>
-#include <systemnode/systemnode.h>
-#include <systemnode/systemnodeman.h>
-#include <validation.h>
-#include <wallet/coincontrol.h>
 
 class CActiveSystemnode;
 CActiveSystemnode activeSystemnode;

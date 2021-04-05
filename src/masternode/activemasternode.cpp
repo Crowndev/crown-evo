@@ -1,14 +1,11 @@
-#include <addrman.h>
+// Copyright (c) 2014-2015 The Dash developers
+// Copyright (c) 2014-2018 The Crown developers
+// Distributed under the MIT/X11 software license, see the accompanying
+// file COPYING or http://www.opensource.org/licenses/mit-license.php.
+
 #include <crown/nodewallet.h>
 #include <crown/spork.h>
-#include <masternode/activemasternode.h>
-#include <masternode/masternode.h>
-#include <masternode/masternodeman.h>
-#include <net.h>
 #include <netbase.h>
-#include <protocol.h>
-#include <validation.h>
-#include <wallet/coincontrol.h>
 
 class CActiveMasternode;
 CActiveMasternode activeMasternode;

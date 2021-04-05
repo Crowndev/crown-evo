@@ -147,11 +147,6 @@ bool CMasternode::UpdateFromNewBroadcast(const CMasternodeBroadcast& mnb, CConnm
     return false;
 }
 
-bool CMasternode::IsValidNetAddr() const
-{
-    return (addr.IsIPv4() && addr.IsRoutable());
-}
-
 //
 // Deterministically calculate a given "score" for a Masternode depending on how close it's hash is to
 // the proof of work for that block. The further away they are the better, the furthest will win the election
@@ -181,33 +176,6 @@ arith_uint256 CMasternode::CalculateScore(int64_t nBlockHeight) const
     return UintToArith256(ss.GetHash());
 }
 
-CMasternode::CollateralStatus CMasternode::CheckCollateral(const COutPoint& outpoint)
-{
-    int nHeight;
-    return CheckCollateral(outpoint, nHeight);
-}
-
-CMasternode::CollateralStatus CMasternode::CheckCollateral(const COutPoint& outpoint, int& nHeightRet)
-{
-    AssertLockHeld(cs_main);
-
-    Coin coin;
-    if (!GetUTXOCoin(outpoint, coin)) {
-        return COLLATERAL_UTXO_NOT_FOUND;
-    }
-
-    if (coin.IsSpent()) {
-        return COLLATERAL_UTXO_NOT_FOUND;
-    }
-
-    if (coin.out.nValue != Params().GetConsensus().nMasternodeCollateral) {
-        return COLLATERAL_INVALID_AMOUNT;
-    }
-
-    nHeightRet = coin.nHeight;
-    return COLLATERAL_OK;
-}
-
 void CMasternode::Check(bool forceCheck)
 {
     if (ShutdownRequested())
@@ -234,7 +202,8 @@ void CMasternode::Check(bool forceCheck)
     //test if the collateral is still good
     if (!unitTest) {
         TRY_LOCK(cs_main, lockMain);
-        if(!lockMain) return;
+        if (!lockMain)
+            return;
         CollateralStatus err = CheckCollateral(vin.prevout);
         if (err == COLLATERAL_UTXO_NOT_FOUND) {
             activeState = MASTERNODE_VIN_SPENT;
@@ -244,6 +213,11 @@ void CMasternode::Check(bool forceCheck)
     }
 
     activeState = MASTERNODE_ENABLED; // OK
+}
+
+bool CMasternode::IsValidNetAddr() const
+{
+    return (addr.IsIPv4() && addr.IsRoutable());
 }
 
 int64_t CMasternode::SecondsSincePayment() const
@@ -419,8 +393,7 @@ bool CMasternodeBroadcast::Create(std::string strService, std::string strKeyMast
     CPubKey pubKeyMasternodeNew;
     CKey keyMasternodeNew;
 
-    if (!gArgs.GetBoolArg("-jumpstart", false))
-    {
+    if (!gArgs.GetBoolArg("-jumpstart", false)) {
         //need correct blocks to send ping
         if (!fOffline && !masternodeSync.IsBlockchainSynced()) {
             strErrorMessage = "Sync in progress. Must wait until sync is complete to start Masternode";
@@ -557,16 +530,12 @@ bool CMasternodeBroadcast::CheckAndUpdate(int& nDos, CConnman& connman) const
     std::string errorMessage = "";
     std::string vchPubKey(pubkey.begin(), pubkey.end());
     std::string vchPubKey2(pubkey2.begin(), pubkey2.end());
-    strMessage = addr.LegacyToString(false) + boost::lexical_cast<std::string>(sigTime) +
-                 vchPubKey + vchPubKey2 + boost::lexical_cast<std::string>(protocolVersion);
+    strMessage = addr.LegacyToString(false) + boost::lexical_cast<std::string>(sigTime) + vchPubKey + vchPubKey2 + boost::lexical_cast<std::string>(protocolVersion);
 
-    if (!legacySigner.VerifyMessage(pubkey, sig, strMessage, errorMessage))
-    {
-        if (addr.LegacyToString(true) != addr.LegacyToString(false))
-        {
-            strMessage = addr.LegacyToString(true) + boost::lexical_cast<std::string>(sigTime) +
-                         vchPubKey + vchPubKey2 + boost::lexical_cast<std::string>(protocolVersion);
-            if (!legacySigner.VerifyMessage(pubkey, sig, strMessage, errorMessage)){
+    if (!legacySigner.VerifyMessage(pubkey, sig, strMessage, errorMessage)) {
+        if (addr.LegacyToString(true) != addr.LegacyToString(false)) {
+            strMessage = addr.LegacyToString(true) + boost::lexical_cast<std::string>(sigTime) + vchPubKey + vchPubKey2 + boost::lexical_cast<std::string>(protocolVersion);
+            if (!legacySigner.VerifyMessage(pubkey, sig, strMessage, errorMessage)) {
                 LogPrintf("mnb - Got bad Masternode address signature, sanitized error: %s\n", SanitizeString(errorMessage));
                 return false;
             }
@@ -640,6 +609,8 @@ bool CMasternodeBroadcast::CheckInputsAndAdd(int& nDoS, CConnman& connman) const
         else
             mnodeman.Remove(pmn->vin);
     }
+
+    //! note we normally check collateral here, however we now check this in .check() like dash
 
     if (GetInputAge(vin) < MASTERNODE_MIN_CONFIRMATIONS) {
         LogPrint(BCLog::MASTERNODE, "mnb - Input must have at least %d confirmations\n", MASTERNODE_MIN_CONFIRMATIONS);
@@ -888,4 +859,31 @@ void CMasternodePing::Relay(CConnman& connman) const
 {
     CInv inv(MSG_MASTERNODE_PING, GetHash());
     connman.RelayInv(inv);
+}
+
+CMasternode::CollateralStatus CMasternode::CheckCollateral(const COutPoint& outpoint)
+{
+    int nHeight;
+    return CheckCollateral(outpoint, nHeight);
+}
+
+CMasternode::CollateralStatus CMasternode::CheckCollateral(const COutPoint& outpoint, int& nHeightRet)
+{
+    AssertLockHeld(cs_main);
+
+    Coin coin;
+    if (!GetUTXOCoin(outpoint, coin)) {
+        return COLLATERAL_UTXO_NOT_FOUND;
+    }
+
+    if (coin.IsSpent()) {
+        return COLLATERAL_UTXO_NOT_FOUND;
+    }
+
+    if (coin.out.nValue != Params().GetConsensus().nMasternodeCollateral) {
+        return COLLATERAL_INVALID_AMOUNT;
+    }
+
+    nHeightRet = coin.nHeight;
+    return COLLATERAL_OK;
 }

@@ -7,7 +7,6 @@
 #include <net_processing.h>
 #include <netmessagemaker.h>
 
-
 /** Masternode manager */
 CMasternodeMan mnodeman;
 
@@ -40,65 +39,21 @@ CMasternodeMan::CMasternodeMan()
     nDsqCount = 0;
 }
 
-int CMasternodeMan::CountMasternodes(bool fEnabled)
+bool CMasternodeMan::Add(const CMasternode& mn)
 {
     LOCK(cs);
 
-    int nCount = 0;
-    for (const auto& mnpair : vMasternodes) {
-        if (fEnabled) {
-            if (!mnpair.IsEnabled())
-                continue;
-        }
-        nCount++;
+    if (!mn.IsEnabled())
+        return false;
+
+    CMasternode* pmn = Find(mn.vin);
+    if (!pmn) {
+        LogPrint(BCLog::MASTERNODE, "CMasternodeMan: Adding new Masternode %s - %i now\n", mn.addr.LegacyToString(), size() + 1);
+        vMasternodes.push_back(mn);
+        return true;
     }
 
-    return nCount;
-}
-
-std::vector<pair<int, CMasternode>> CMasternodeMan::GetMasternodeRanks(int64_t nBlockHeight, int minProtocol)
-{
-    std::vector<pair<int64_t, CMasternode>> vecMasternodeScores;
-    std::vector<pair<int, CMasternode>> vecMasternodeRanks;
-
-    //make sure we know about this block
-    uint256 hash = uint256();
-    if (!GetBlockHash(hash, nBlockHeight))
-        return vecMasternodeRanks;
-
-    // scan for winner
-    for (auto& mn : vMasternodes) {
-        mn.Check();
-        if (mn.protocolVersion < minProtocol)
-            continue;
-        if (!mn.IsEnabled())
-            continue;
-        arith_uint256 n = mn.CalculateScore(nBlockHeight);
-        int64_t n2 = n.GetCompact(false);
-        vecMasternodeScores.push_back(make_pair(n2, mn));
-    }
-    sort(vecMasternodeScores.rbegin(), vecMasternodeScores.rend(), CompareScoreMN());
-
-    int rank = 0;
-    for (const auto& s : vecMasternodeScores) {
-        rank++;
-        vecMasternodeRanks.push_back(make_pair(rank, s.second));
-    }
-
-    return vecMasternodeRanks;
-}
-
-void CMasternodeMan::ProcessMasternodeConnections(CConnman& connman)
-{
-    for (const auto& pnode : connman.CopyNodeVector()) {
-        if (pnode->fMasternode) {
-            if (legacySigner.pSubmittedToMasternode && pnode->addr == legacySigner.pSubmittedToMasternode->addr)
-                continue;
-            LogPrint(BCLog::MASTERNODE, "Closing Masternode connection %s \n", pnode->addr.LegacyToString());
-            pnode->fMasternode = false;
-            pnode->Release();
-        }
-    }
+    return false;
 }
 
 void CMasternodeMan::AskForMN(CNode* pnode, const CTxIn& vin, CConnman& connman)
@@ -123,116 +78,6 @@ void CMasternodeMan::Check()
     LOCK2(cs_main, cs);
     for (auto& mn : vMasternodes) {
         mn.Check();
-    }
-}
-
-void CMasternodeMan::ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStream& vRecv, CConnman* connman)
-{
-    if (!masternodeSync.IsBlockchainSynced()) return;
-
-    //! masternode broadcast
-    if (strCommand == "mnb" || strCommand == "mnb_new") {
-        CMasternodeBroadcast mnb;
-        if (strCommand == "mnb") {
-            //Set to old version for old serialization
-            mnb.lastPing.nVersion = 1;
-        } else {
-            mnb.lastPing.nVersion = 2;
-        }
-        vRecv >> mnb;
-
-        int nDoS = 0;
-        if (CheckMnbAndUpdateMasternodeList(mnb, nDoS, *connman)) {
-            // use announced Masternode as a peer
-            connman->addrman.Add(CAddress(mnb.addr, NODE_NETWORK), pfrom->addr, 2 * 60 * 60);
-        } else {
-            if (nDoS > 0)
-                Misbehaving(pfrom->GetId(), nDoS);
-        }
-    }
-
-    //! masternode ping
-    else if (strCommand == "mnp" || strCommand == "mnp_new") {
-        CMasternodePing mnp;
-        if (strCommand == "mnp") {
-            //Set to old version for old serialization
-            mnp.nVersion = 1;
-        }
-        vRecv >> mnp;
-
-        LogPrint(BCLog::MASTERNODE, "mnp - Masternode ping, vin: %s\n", mnp.vin.ToString());
-
-        if (mapSeenMasternodePing.count(mnp.GetHash()))
-            return;
-        mapSeenMasternodePing.insert(make_pair(mnp.GetHash(), mnp));
-
-        int nDoS = 0;
-        if (mnp.CheckAndUpdate(nDoS, *connman))
-            return;
-
-        if (nDoS > 0) {
-            // if anything significant failed, mark that node
-            Misbehaving(pfrom->GetId(), nDoS);
-        } else {
-            // if nothing significant failed, search existing Masternode list
-            CMasternode* pmn = Find(mnp.vin);
-            // if it's known, don't ask for the mnb, just return
-            if (pmn)
-                return;
-        }
-
-        // something significant is broken or mn is unknown,
-        // we might have to ask for a masternode entry once
-        AskForMN(pfrom, mnp.vin, *connman);
-    }
-
-    //! masternode list
-    else if (strCommand == "dseg") {
-        CTxIn vin;
-        vRecv >> vin;
-
-        if (vin == CTxIn()) {
-            bool isLocal = (pfrom->addr.IsRFC1918() || pfrom->addr.IsLocal());
-            if (!isLocal) {
-                std::map<CNetAddr, int64_t>::iterator i = mAskedUsForMasternodeList.find(pfrom->addr);
-                if (i != mAskedUsForMasternodeList.end()) {
-                    int64_t t = (*i).second;
-                    if (GetTime() < t) {
-                        Misbehaving(pfrom->GetId(), 34);
-                        LogPrint(BCLog::MASTERNODE, "dseg - peer already asked me for the list\n");
-                        return;
-                    }
-                }
-                int64_t askAgain = GetTime() + MASTERNODES_DSEG_SECONDS;
-                mAskedUsForMasternodeList[pfrom->addr] = askAgain;
-            }
-        }
-
-        int nInvCount = 0;
-        for (const auto& mn : vMasternodes) {
-            if (mn.IsEnabled()) {
-                LogPrint(BCLog::MASTERNODE, "dseg - Sending Masternode entry - %s \n", mn.addr.LegacyToString());
-                if (vin == CTxIn() || vin == mn.vin) {
-                    CMasternodeBroadcast mnb = CMasternodeBroadcast(mn);
-                    uint256 hash = mnb.GetHash();
-                    pfrom->PushInventory(CInv(MSG_MASTERNODE_ANNOUNCE, hash));
-                    nInvCount++;
-                    if (!mapSeenMasternodeBroadcast.count(hash)) {
-                        mapSeenMasternodeBroadcast.insert(make_pair(hash, mnb));
-                    }
-                    if (vin == mn.vin) {
-                        LogPrint(BCLog::MASTERNODE, "dseg - Sent 1 Masternode entries to %s\n", pfrom->addr.LegacyToString());
-                        return;
-                    }
-                }
-            }
-        }
-
-        if (vin == CTxIn()) {
-            const CNetMsgMaker msgMaker(PROTOCOL_VERSION);
-            connman->PushMessage(pfrom, msgMaker.Make("ssc", MASTERNODE_SYNC_LIST, nInvCount));
-            LogPrint(BCLog::MASTERNODE, "dseg - Sent %d Masternode entries to %s\n", nInvCount, pfrom->addr.LegacyToString());
-        }
     }
 }
 
@@ -493,23 +338,6 @@ CMasternode* CMasternodeMan::GetNextMasternodeInQueueForPayment(int nBlockHeight
     return pBestMasternode;
 }
 
-bool CMasternodeMan::Add(const CMasternode& mn)
-{
-    LOCK(cs);
-
-    if (!mn.IsEnabled())
-        return false;
-
-    CMasternode* pmn = Find(mn.vin);
-    if (!pmn) {
-        LogPrint(BCLog::MASTERNODE, "CMasternodeMan: Adding new Masternode %s - %i now\n", mn.addr.LegacyToString(), size() + 1);
-        vMasternodes.push_back(mn);
-        return true;
-    }
-
-    return false;
-}
-
 CMasternode* CMasternodeMan::FindRandomNotInVec(std::vector<CTxIn>& vecToExclude, int protocolVersion)
 {
     LOCK(cs);
@@ -607,6 +435,38 @@ int CMasternodeMan::GetMasternodeRank(const CTxIn& vin, int64_t nBlockHeight, in
     return -1;
 }
 
+std::vector<pair<int, CMasternode>> CMasternodeMan::GetMasternodeRanks(int64_t nBlockHeight, int minProtocol)
+{
+    std::vector<pair<int64_t, CMasternode>> vecMasternodeScores;
+    std::vector<pair<int, CMasternode>> vecMasternodeRanks;
+
+    //make sure we know about this block
+    uint256 hash = uint256();
+    if (!GetBlockHash(hash, nBlockHeight))
+        return vecMasternodeRanks;
+
+    // scan for winner
+    for (auto& mn : vMasternodes) {
+        mn.Check();
+        if (mn.protocolVersion < minProtocol)
+            continue;
+        if (!mn.IsEnabled())
+            continue;
+        arith_uint256 n = mn.CalculateScore(nBlockHeight);
+        int64_t n2 = n.GetCompact(false);
+        vecMasternodeScores.push_back(make_pair(n2, mn));
+    }
+    sort(vecMasternodeScores.rbegin(), vecMasternodeScores.rend(), CompareScoreMN());
+
+    int rank = 0;
+    for (const auto& s : vecMasternodeScores) {
+        rank++;
+        vecMasternodeRanks.push_back(make_pair(rank, s.second));
+    }
+
+    return vecMasternodeRanks;
+}
+
 CMasternode* CMasternodeMan::GetMasternodeByRank(int nRank, int64_t nBlockHeight, int minProtocol, bool fOnlyActive)
 {
     std::vector<pair<int64_t, CTxIn>> vecMasternodeScores;
@@ -638,6 +498,131 @@ CMasternode* CMasternodeMan::GetMasternodeByRank(int nRank, int64_t nBlockHeight
     }
 
     return nullptr;
+}
+
+void CMasternodeMan::ProcessMasternodeConnections(CConnman& connman)
+{
+    for (const auto& pnode : connman.CopyNodeVector()) {
+        if (pnode->fMasternode) {
+            if (legacySigner.pSubmittedToMasternode && pnode->addr == legacySigner.pSubmittedToMasternode->addr)
+                continue;
+            LogPrint(BCLog::MASTERNODE, "Closing Masternode connection %s \n", pnode->addr.LegacyToString());
+            pnode->fMasternode = false;
+            pnode->Release();
+        }
+    }
+}
+
+void CMasternodeMan::ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStream& vRecv, CConnman* connman)
+{
+    if (!masternodeSync.IsBlockchainSynced())
+        return;
+
+    //! masternode broadcast
+    if (strCommand == "mnb" || strCommand == "mnb_new") {
+        CMasternodeBroadcast mnb;
+        if (strCommand == "mnb") {
+            //Set to old version for old serialization
+            mnb.lastPing.nVersion = 1;
+        } else {
+            mnb.lastPing.nVersion = 2;
+        }
+        vRecv >> mnb;
+
+        int nDoS = 0;
+        if (CheckMnbAndUpdateMasternodeList(mnb, nDoS, *connman)) {
+            // use announced Masternode as a peer
+            connman->addrman.Add(CAddress(mnb.addr, NODE_NETWORK), pfrom->addr, 2 * 60 * 60);
+        } else {
+            if (nDoS > 0)
+                Misbehaving(pfrom->GetId(), nDoS);
+        }
+    }
+
+    //! masternode ping
+    else if (strCommand == "mnp" || strCommand == "mnp_new") {
+        CMasternodePing mnp;
+        if (strCommand == "mnp") {
+            //Set to old version for old serialization
+            mnp.nVersion = 1;
+        }
+        vRecv >> mnp;
+
+        LogPrint(BCLog::MASTERNODE, "mnp - Masternode ping, vin: %s\n", mnp.vin.ToString());
+
+        if (mapSeenMasternodePing.count(mnp.GetHash()))
+            return;
+        mapSeenMasternodePing.insert(make_pair(mnp.GetHash(), mnp));
+
+        int nDoS = 0;
+        if (mnp.CheckAndUpdate(nDoS, *connman))
+            return;
+
+        if (nDoS > 0) {
+            // if anything significant failed, mark that node
+            Misbehaving(pfrom->GetId(), nDoS);
+        } else {
+            // if nothing significant failed, search existing Masternode list
+            CMasternode* pmn = Find(mnp.vin);
+            // if it's known, don't ask for the mnb, just return
+            if (pmn)
+                return;
+        }
+
+        // something significant is broken or mn is unknown,
+        // we might have to ask for a masternode entry once
+        AskForMN(pfrom, mnp.vin, *connman);
+    }
+
+    //! masternode list
+    else if (strCommand == "dseg") {
+
+        CTxIn vin;
+        vRecv >> vin;
+
+        if (vin == CTxIn()) {
+            bool isLocal = (pfrom->addr.IsRFC1918() || pfrom->addr.IsLocal());
+            if (!isLocal) {
+                std::map<CNetAddr, int64_t>::iterator i = mAskedUsForMasternodeList.find(pfrom->addr);
+                if (i != mAskedUsForMasternodeList.end()) {
+                    int64_t t = (*i).second;
+                    if (GetTime() < t) {
+                        Misbehaving(pfrom->GetId(), 34);
+                        LogPrint(BCLog::MASTERNODE, "dseg - peer already asked me for the list\n");
+                        return;
+                    }
+                }
+                int64_t askAgain = GetTime() + MASTERNODES_DSEG_SECONDS;
+                mAskedUsForMasternodeList[pfrom->addr] = askAgain;
+            }
+        }
+
+        int nInvCount = 0;
+        for (const auto& mn : vMasternodes) {
+            if (mn.IsEnabled()) {
+                LogPrint(BCLog::MASTERNODE, "dseg - Sending Masternode entry - %s \n", mn.addr.LegacyToString());
+                if (vin == CTxIn() || vin == mn.vin) {
+                    CMasternodeBroadcast mnb = CMasternodeBroadcast(mn);
+                    uint256 hash = mnb.GetHash();
+                    pfrom->PushInventory(CInv(MSG_MASTERNODE_ANNOUNCE, hash));
+                    nInvCount++;
+                    if (!mapSeenMasternodeBroadcast.count(hash)) {
+                        mapSeenMasternodeBroadcast.insert(make_pair(hash, mnb));
+                    }
+                    if (vin == mn.vin) {
+                        LogPrint(BCLog::MASTERNODE, "dseg - Sent 1 Masternode entries to %s\n", pfrom->addr.LegacyToString());
+                        return;
+                    }
+                }
+            }
+        }
+
+        if (vin == CTxIn()) {
+            const CNetMsgMaker msgMaker(PROTOCOL_VERSION);
+            connman->PushMessage(pfrom, msgMaker.Make("ssc", MASTERNODE_SYNC_LIST, nInvCount));
+            LogPrint(BCLog::MASTERNODE, "dseg - Sent %d Masternode entries to %s\n", nInvCount, pfrom->addr.LegacyToString());
+        }
+    }
 }
 
 void CMasternodeMan::Remove(CTxIn vin)
@@ -701,7 +686,7 @@ bool CMasternodeMan::CheckMnbAndUpdateMasternodeList(CMasternodeBroadcast mnb, i
         return false;
     }
 
-    if(!mnb.CheckAndUpdate(nDos, connman)){
+    if (!mnb.CheckAndUpdate(nDos, connman)) {
         LogPrint(BCLog::MASTERNODE, "CMasternodeMan::CheckMnbAndUpdateMasternodeList - Masternode broadcast, vin: %s CheckAndUpdate failed\n", mnb.vin.ToString());
         return false;
     }
@@ -728,4 +713,20 @@ bool CMasternodeMan::CheckMnbAndUpdateMasternodeList(CMasternodeBroadcast mnb, i
     }
 
     return true;
+}
+
+int CMasternodeMan::CountMasternodes(bool fEnabled)
+{
+    LOCK(cs);
+
+    int nCount = 0;
+    for (const auto& mnpair : vMasternodes) {
+        if (fEnabled) {
+            if (!mnpair.IsEnabled())
+                continue;
+        }
+        nCount++;
+    }
+
+    return nCount;
 }

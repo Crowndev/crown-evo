@@ -218,7 +218,6 @@ void CBudgetManager::SubmitBudgetDraft(CConnman& connman)
         return;
     }
 
-
     BudgetDraftBroadcast tempBudget(blockStart, vecTxBudgetPayments, uint256());
     if (mapSeenBudgetDrafts.count(tempBudget.GetHash())) {
         LogPrint(BCLog::MASTERNODE, "CBudgetManager::SubmitBudgetDraft - Budget already exists - %s\n", tempBudget.GetHash().ToString());
@@ -385,7 +384,7 @@ const BudgetDraft* CBudgetManager::GetMostVotedBudget(int height) const
 
 void CBudgetManager::FillBlockPayee(CMutableTransaction& txNew, CAmount nFees) const
 {
-    assert (txNew.vout.size() == 1); // There is a blank for block creator's reward
+    assert(txNew.vout.size() == 1); // There is a blank for block creator's reward
 
     LOCK(cs);
 
@@ -447,11 +446,11 @@ CBudgetProposal* CBudgetManager::FindProposal(const std::string& strProposalName
     return pbudgetProposal;
 }
 
-CBudgetProposal *CBudgetManager::FindProposal(uint256 nHash)
+CBudgetProposal* CBudgetManager::FindProposal(uint256 nHash)
 {
     LOCK(cs);
 
-    if(mapProposals.count(nHash))
+    if (mapProposals.count(nHash))
         return &mapProposals[nHash];
 
     return NULL;
@@ -462,12 +461,9 @@ bool CBudgetManager::IsBudgetPaymentBlock(int nBlockHeight)
     int nHighestCount = -1;
 
     std::map<uint256, BudgetDraft>::iterator it = mapBudgetDrafts.begin();
-    while(it != mapBudgetDrafts.end())
-    {
+    while (it != mapBudgetDrafts.end()) {
         BudgetDraft* pfinalizedBudget = &((*it).second);
-        if(pfinalizedBudget->GetVoteCount() > nHighestCount && 
-            nBlockHeight >= pfinalizedBudget->GetBlockStart() && 
-            nBlockHeight <= pfinalizedBudget->GetBlockEnd()){
+        if (pfinalizedBudget->GetVoteCount() > nHighestCount && nBlockHeight >= pfinalizedBudget->GetBlockStart() && nBlockHeight <= pfinalizedBudget->GetBlockEnd()) {
             nHighestCount = pfinalizedBudget->GetVoteCount();
         }
 
@@ -477,7 +473,8 @@ bool CBudgetManager::IsBudgetPaymentBlock(int nBlockHeight)
     /*
         If budget doesn't have 5% of the network votes, then we should pay a masternode instead
     */
-    if(nHighestCount > mnodeman.CountEnabled(MIN_BUDGET_PEER_PROTO_VERSION)/20) return true;
+    if (nHighestCount > mnodeman.CountEnabled(MIN_BUDGET_PEER_PROTO_VERSION) / 20)
+        return true;
 
     return false;
 }

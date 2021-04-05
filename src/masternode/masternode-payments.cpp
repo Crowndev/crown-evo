@@ -457,7 +457,8 @@ bool CMasternodePayments::IsTransactionValid(const CAmount& nValueCreated, const
 
 void CMasternodePayments::CheckAndRemove()
 {
-    if(!masternodeSync.IsBlockchainSynced()) return;
+    if (!masternodeSync.IsBlockchainSynced())
+        return;
 
     LOCK2(cs_mapMasternodeBlocks, cs_mapMasternodePayeeVotes);
 
@@ -664,4 +665,3 @@ std::string CMasternodePayments::ToString() const
 
     return info.str();
 }
-

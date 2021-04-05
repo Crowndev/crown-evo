@@ -322,7 +322,8 @@ bool CSystemnodePayments::GetBlockPayee(int nBlockHeight, CScript& payee)
 
 void CSystemnodePayments::CheckAndRemove()
 {
-    if(!systemnodeSync.IsBlockchainSynced()) return;
+    if (!systemnodeSync.IsBlockchainSynced())
+        return;
 
     LOCK2(cs_mapSystemnodeBlocks, cs_mapSystemnodePayeeVotes);
 

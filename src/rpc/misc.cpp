@@ -9,6 +9,8 @@
 #include <index/txindex.h>
 #include <interfaces/chain.h>
 #include <key_io.h>
+#include <masternode/masternode-sync.h>
+#include <systemnode/systemnode-sync.h>
 #include <node/context.h>
 #include <outputtype.h>
 #include <rpc/blockchain.h>
@@ -725,6 +727,49 @@ static RPCHelpMan getstakepointers()
     };
 }
 
+static RPCHelpMan mnsync()
+{
+    return RPCHelpMan{"mnsync",
+            {"\nReturns the sync status, updates to the next step or resets it entirely.\n"},
+            {
+                {"command", RPCArg::Type::STR, RPCArg::Optional::NO, "The command to issue (status|next|reset)"},
+            },
+            RPCResult{RPCResult::Type::STR, "result", "Result"},
+            RPCExamples{
+                HelpExampleCli("mnsync", "status")
+                + HelpExampleRpc("mnsync", "status")
+            },
+        [&](const RPCHelpMan& self, const JSONRPCRequest& request) -> UniValue
+{
+
+    NodeContext& node = EnsureNodeContext(request.context);
+    std::string strMode = request.params[0].get_str();
+
+    if(strMode == "status") {
+        UniValue objStatus(UniValue::VOBJ);
+        objStatus.pushKV("IsBlockchainSynced", masternodeSync.IsBlockchainSynced() && systemnodeSync.IsBlockchainSynced());
+        objStatus.pushKV("IsSynced", masternodeSync.IsSynced() && systemnodeSync.IsSynced());
+        return objStatus;
+    }
+
+    if(strMode == "next")
+    {
+        ++masternodeSync.RequestedMasternodeAssets;
+        ++systemnodeSync.RequestedSystemnodeAssets;
+        return "success";
+    }
+
+    if(strMode == "reset")
+    {
+        masternodeSync.Reset();
+        systemnodeSync.Reset();
+        return "success";
+    }
+    return "failure";
+},
+    };
+}
+
 void RegisterMiscRPCCommands(CRPCTable &t)
 {
 // clang-format off
@@ -741,6 +786,8 @@ static const CRPCCommand commands[] =
     { "util",               "signmessagewithprivkey", &signmessagewithprivkey, {"privkey","message"} },
     { "util",               "getindexinfo",           &getindexinfo,           {"index_name"} },
     { "util",               "getstakepointers",       &getstakepointers,       {} },
+
+    { "crown",              "mnsync",                 &mnsync,                 {"command"} },
 
     /* Not shown in help */
     { "hidden",             "setmocktime",            &setmocktime,            {"timestamp"}},

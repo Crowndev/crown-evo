@@ -199,22 +199,22 @@ void CMasternodePayments::ProcessMessageMasternodePayments(CNode* pfrom, const s
     if (!masternodeSync.IsBlockchainSynced())
         return;
 
-    if (strCommand == "mnget") { //Masternode Payments Request Sync
+    if (strCommand == NetMsgType::GETMNWINNERS) {
 
         int nCountNeeded;
         vRecv >> nCountNeeded;
 
         if (Params().NetworkIDString() == CBaseChainParams::MAIN) {
-            if (netfulfilledman.HasFulfilledRequest(pfrom->addr, "mnget")) {
+            if (netfulfilledman.HasFulfilledRequest(pfrom->addr, NetMsgType::GETMNWINNERS)) {
                 LogPrint(BCLog::MASTERNODE, "mnget - peer already asked me for the list\n");
                 Misbehaving(pfrom->GetId(), 20);
                 return;
             }
         }
-        netfulfilledman.AddFulfilledRequest(pfrom->addr, "mnget");
+        netfulfilledman.AddFulfilledRequest(pfrom->addr, NetMsgType::GETMNWINNERS);
         masternodePayments.Sync(pfrom, nCountNeeded, *connman);
         LogPrint(BCLog::MASTERNODE, "mnget - Sent Masternode winners to %s\n", pfrom->addr.LegacyToString().c_str());
-    } else if (strCommand == "mnw") { //Masternode Payments Declare Winner
+    } else if (strCommand == NetMsgType::MNWINNER) {
         //this is required in litemodef
         CMasternodePaymentWinner winner;
         vRecv >> winner;
@@ -654,7 +654,7 @@ void CMasternodePayments::Sync(CNode* node, int nCountNeeded, CConnman& connman)
     }
 
     const CNetMsgMaker msgMaker(PROTOCOL_VERSION);
-    connman.PushMessage(node, msgMaker.Make("ssc", MASTERNODE_SYNC_MNW, nInvCount));
+    connman.PushMessage(node, msgMaker.Make(NetMsgType::MNSYNCSTATUS, MASTERNODE_SYNC_MNW, nInvCount));
 }
 
 std::string CMasternodePayments::ToString() const

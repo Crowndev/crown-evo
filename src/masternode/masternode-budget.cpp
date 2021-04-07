@@ -793,18 +793,18 @@ void CBudgetManager::ProcessMessage(CNode* pfrom, const std::string& strCommand,
 
     LOCK(cs_budget);
 
-    if (strCommand == "mnvs") { //Masternode vote sync
+    if (strCommand == NetMsgType::BUDGETVOTESYNC) {
         uint256 nProp;
         vRecv >> nProp;
 
         if (Params().NetworkIDString() == CBaseChainParams::MAIN) {
             if (nProp.IsNull()) {
-                if (netfulfilledman.HasFulfilledRequest(pfrom->addr, "mnvs")) {
+                if (netfulfilledman.HasFulfilledRequest(pfrom->addr, NetMsgType::BUDGETVOTESYNC)) {
                     LogPrint(BCLog::MASTERNODE, "mnvs - peer already asked me for the list\n");
                     Misbehaving(pfrom->GetId(), 20);
                     return;
                 }
-                netfulfilledman.AddFulfilledRequest(pfrom->addr, "mnvs");
+                netfulfilledman.AddFulfilledRequest(pfrom->addr, NetMsgType::BUDGETVOTESYNC);
             }
         }
 
@@ -812,7 +812,7 @@ void CBudgetManager::ProcessMessage(CNode* pfrom, const std::string& strCommand,
         LogPrint(BCLog::MASTERNODE, "mnvs - Sent Masternode votes to %s\n", pfrom->addr.ToString());
     }
 
-    if (strCommand == "mprop") { //Masternode Proposal
+    if (strCommand == NetMsgType::BUDGETPROPOSAL) {
         CBudgetProposalBroadcast budgetProposalBroadcast;
         vRecv >> budgetProposalBroadcast;
 
@@ -852,7 +852,7 @@ void CBudgetManager::ProcessMessage(CNode* pfrom, const std::string& strCommand,
         CheckOrphanVotes(*connman);
     }
 
-    if (strCommand == "mvote") { //Masternode Vote
+    if (strCommand == NetMsgType::BUDGETVOTE) {
         CBudgetVote vote;
         vRecv >> vote;
         vote.fValid = true;
@@ -891,7 +891,7 @@ void CBudgetManager::ProcessMessage(CNode* pfrom, const std::string& strCommand,
         LogPrint(BCLog::MASTERNODE, "mvote - new budget vote - %s\n", vote.GetHash().ToString());
     }
 
-    if (strCommand == "fbs") { //Finalized Budget Suggestion
+    if (strCommand == NetMsgType::FINALBUDGET) {
         BudgetDraftBroadcast budgetDraftBroadcast;
         vRecv >> budgetDraftBroadcast;
 
@@ -950,7 +950,7 @@ void CBudgetManager::ProcessMessage(CNode* pfrom, const std::string& strCommand,
         CheckOrphanVotes(*connman);
     }
 
-    if (strCommand == "fbvote") { //Finalized Budget Vote
+    if (strCommand == NetMsgType::FINALBUDGETVOTE) {
         BudgetDraftVote vote;
         vRecv >> vote;
         vote.fValid = true;
@@ -1093,7 +1093,7 @@ void CBudgetManager::Sync(CNode* pfrom, uint256 nProp, CConnman& connman, bool f
     }
 
     const CNetMsgMaker msgMaker(PROTOCOL_VERSION);
-    connman.PushMessage(pfrom, msgMaker.Make("ssc", MASTERNODE_SYNC_BUDGET_PROP, nInvCount));
+    connman.PushMessage(pfrom, msgMaker.Make(NetMsgType::MNSYNCSTATUS, MASTERNODE_SYNC_BUDGET_PROP, nInvCount));
 
     LogPrint(BCLog::MASTERNODE, "CBudgetManager::Sync - sent %d items\n", nInvCount);
 
@@ -1107,7 +1107,7 @@ void CBudgetManager::Sync(CNode* pfrom, uint256 nProp, CConnman& connman, bool f
         ++it3;
     }
 
-    connman.PushMessage(pfrom, msgMaker.Make("ssc", MASTERNODE_SYNC_BUDGET_FIN, nInvCount));
+    connman.PushMessage(pfrom, msgMaker.Make(NetMsgType::MNSYNCSTATUS, MASTERNODE_SYNC_BUDGET_FIN, nInvCount));
     LogPrint(BCLog::MASTERNODE, "CBudgetManager::Sync - sent %d items\n", nInvCount);
 }
 
@@ -1207,7 +1207,7 @@ bool CBudgetManager::ReceiveProposalVote(const CBudgetVote& vote, CNode* pfrom, 
 
             if (!askedForSourceProposalOrBudget.count(vote.nProposalHash)) {
                 const CNetMsgMaker msgMaker(PROTOCOL_VERSION);
-                connman.PushMessage(pfrom, msgMaker.Make("mnvs", vote.nProposalHash));
+                connman.PushMessage(pfrom, msgMaker.Make(NetMsgType::BUDGETVOTESYNC, vote.nProposalHash));
                 askedForSourceProposalOrBudget[vote.nProposalHash] = GetTime();
             }
         }
@@ -1235,7 +1235,7 @@ bool CBudgetManager::UpdateBudgetDraft(BudgetDraftVote& vote, CNode* pfrom, CCon
 
             if (!askedForSourceProposalOrBudget.count(vote.nBudgetHash)) {
                 const CNetMsgMaker msgMaker(PROTOCOL_VERSION);
-                connman.PushMessage(pfrom, msgMaker.Make("mnvs", vote.nBudgetHash));
+                connman.PushMessage(pfrom, msgMaker.Make(NetMsgType::BUDGETVOTESYNC, vote.nBudgetHash));
                 askedForSourceProposalOrBudget[vote.nBudgetHash] = GetTime();
             }
         }

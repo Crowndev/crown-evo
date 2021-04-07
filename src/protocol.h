@@ -260,26 +260,35 @@ extern const char* CFCHECKPT;
  * @since protocol version 70016 as described by BIP 339.
  */
 extern const char* WTXIDRELAY;
-extern const char* IX;
-extern const char* IXLOCKVOTE;
-extern const char* SPORK;
-extern const char* GETSPORKS;
-extern const char* MNBROADCAST;
-extern const char* MNPING;
-extern const char* MNWINNER;
-extern const char* GETMNWINNERS;
+/**
+ * crown command set
+ */
 extern const char* BUDGETPROPOSAL;
 extern const char* BUDGETVOTE;
 extern const char* BUDGETVOTESYNC;
+extern const char* DSEEP;
+extern const char* DSEG;
+extern const char* DSTX;
 extern const char* FINALBUDGET;
 extern const char* FINALBUDGETVOTE;
-extern const char* SYNCSTATUSCOUNT;
-extern const char* DSEG;
-extern const char* DSEEP;
-extern const char* SYSWINNER;
-extern const char* SYSBROADCAST;
-extern const char* SYSPING;
-extern const char* DSTX;
+extern const char* GETMNWINNERS;
+extern const char* GETSNWINNERS;
+extern const char* GETSPORKS;
+extern const char* IX;
+extern const char* IXLOCKLIST;
+extern const char* IXLOCKVOTE;
+extern const char* MNBROADCAST;
+extern const char* MNBROADCAST2;
+extern const char* MNPING;
+extern const char* MNPING2;
+extern const char* MNSYNCSTATUS;
+extern const char* MNWINNER;
+extern const char* SNBROADCAST;
+extern const char* SNPING;
+extern const char* SNWINNER;
+extern const char* SNDSEG;
+extern const char* SNSYNCSTATUS;
+extern const char* SPORK;
 }; // namespace NetMsgType
 
 /* Get a vector of all valid message types (see above) */

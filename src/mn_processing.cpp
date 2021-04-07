@@ -113,13 +113,13 @@ void ProcessGetDataMasternodeTypes(CNode* pfrom, const CChainParams& chainparams
         //! instantsend types
         if (!pushed && inv.type == MSG_TXLOCK_VOTE) {
             if(instantSend.mapTxLockVote.count(inv.hash)) {
-                connman->PushMessage(pfrom, msgMaker.Make("txlvote", instantSend.mapTxLockVote[inv.hash]));
+                connman->PushMessage(pfrom, msgMaker.Make(NetMsgType::IXLOCKVOTE, instantSend.mapTxLockVote[inv.hash]));
                 pushed = true;
             }
         }
         if (!pushed && inv.type == MSG_TXLOCK_REQUEST) {
             if(instantSend.mapTxLockReq.count(inv.hash)) {
-                connman->PushMessage(pfrom, msgMaker.Make("ix", instantSend.mapTxLockReq[inv.hash]));
+                connman->PushMessage(pfrom, msgMaker.Make(NetMsgType::IX, instantSend.mapTxLockReq[inv.hash]));
                 pushed = true;
             }
         }
@@ -134,9 +134,9 @@ void ProcessGetDataMasternodeTypes(CNode* pfrom, const CChainParams& chainparams
         if (!pushed && inv.type == MSG_MASTERNODE_ANNOUNCE) {
             if(mnodeman.mapSeenMasternodeBroadcast.count(inv.hash)) {
                 if (pfrom->nVersion < MIN_MNW_PING_VERSION) {
-                    connman->PushMessage(pfrom, msgMaker.Make("mnb", mnodeman.mapSeenMasternodeBroadcast[inv.hash]));
+                    connman->PushMessage(pfrom, msgMaker.Make(NetMsgType::MNBROADCAST, mnodeman.mapSeenMasternodeBroadcast[inv.hash]));
                 } else {
-                    connman->PushMessage(pfrom, msgMaker.Make("mnb_new", mnodeman.mapSeenMasternodeBroadcast[inv.hash]));
+                    connman->PushMessage(pfrom, msgMaker.Make(NetMsgType::MNBROADCAST2, mnodeman.mapSeenMasternodeBroadcast[inv.hash]));
                 }
                 pushed = true;
             }
@@ -144,9 +144,9 @@ void ProcessGetDataMasternodeTypes(CNode* pfrom, const CChainParams& chainparams
         if (!pushed && inv.type == MSG_MASTERNODE_PING) {
             if(mnodeman.mapSeenMasternodePing.count(inv.hash)){
                 if (pfrom->nVersion < MIN_MNW_PING_VERSION) {
-                    connman->PushMessage(pfrom, msgMaker.Make("mnp", mnodeman.mapSeenMasternodePing[inv.hash]));
+                    connman->PushMessage(pfrom, msgMaker.Make(NetMsgType::MNPING, mnodeman.mapSeenMasternodePing[inv.hash]));
                 } else {
-                    connman->PushMessage(pfrom, msgMaker.Make("mnp_new", mnodeman.mapSeenMasternodePing[inv.hash]));
+                    connman->PushMessage(pfrom, msgMaker.Make(NetMsgType::MNPING2, mnodeman.mapSeenMasternodePing[inv.hash]));
                 }
                 pushed = true;
             }
@@ -155,19 +155,19 @@ void ProcessGetDataMasternodeTypes(CNode* pfrom, const CChainParams& chainparams
         //! systemnode types
         if (!pushed && inv.type == MSG_SYSTEMNODE_WINNER) {
             if(systemnodePayments.mapSystemnodePayeeVotes.count(inv.hash)){
-                connman->PushMessage(pfrom, msgMaker.Make("snw", masternodePayments.mapMasternodePayeeVotes[inv.hash]));
+                connman->PushMessage(pfrom, msgMaker.Make(NetMsgType::SNWINNER, masternodePayments.mapMasternodePayeeVotes[inv.hash]));
                 pushed = true;
             }
         }
         if (!pushed && inv.type == MSG_SYSTEMNODE_ANNOUNCE) {
             if(snodeman.mapSeenSystemnodeBroadcast.count(inv.hash)){
-                connman->PushMessage(pfrom, msgMaker.Make("snb", mnodeman.mapSeenMasternodeBroadcast[inv.hash]));
+                connman->PushMessage(pfrom, msgMaker.Make(NetMsgType::SNBROADCAST, mnodeman.mapSeenMasternodeBroadcast[inv.hash]));
                 pushed = true;
             }
         }
         if (!pushed && inv.type == MSG_SYSTEMNODE_PING) {
             if(snodeman.mapSeenSystemnodePing.count(inv.hash)){
-                connman->PushMessage(pfrom, msgMaker.Make("snp", mnodeman.mapSeenMasternodePing[inv.hash]));
+                connman->PushMessage(pfrom, msgMaker.Make(NetMsgType::SNPING, mnodeman.mapSeenMasternodePing[inv.hash]));
                 pushed = true;
             }
         }
@@ -179,7 +179,7 @@ void ProcessGetDataMasternodeTypes(CNode* pfrom, const CChainParams& chainparams
                 CDataStream ss(SER_NETWORK, PROTOCOL_VERSION);
                 ss.reserve(1000);
                 ss << *item;
-                connman->PushMessage(pfrom, msgMaker.Make("mvote", ss));
+                connman->PushMessage(pfrom, msgMaker.Make(NetMsgType::BUDGETVOTE, ss));
                 pushed = true;
             }
         }
@@ -189,7 +189,7 @@ void ProcessGetDataMasternodeTypes(CNode* pfrom, const CChainParams& chainparams
                 CDataStream ss(SER_NETWORK, PROTOCOL_VERSION);
                 ss.reserve(1000);
                 ss << *item;
-                connman->PushMessage(pfrom, msgMaker.Make("mprop", ss));
+                connman->PushMessage(pfrom, msgMaker.Make(NetMsgType::BUDGETPROPOSAL, ss));
                 pushed = true;
             }
         }
@@ -199,7 +199,7 @@ void ProcessGetDataMasternodeTypes(CNode* pfrom, const CChainParams& chainparams
                 CDataStream ss(SER_NETWORK, PROTOCOL_VERSION);
                 ss.reserve(1000);
                 ss << *item;
-                connman->PushMessage(pfrom, msgMaker.Make("fbvote", ss));
+                connman->PushMessage(pfrom, msgMaker.Make(NetMsgType::FINALBUDGETVOTE, ss));
                 pushed = true;
             }
         }
@@ -209,7 +209,7 @@ void ProcessGetDataMasternodeTypes(CNode* pfrom, const CChainParams& chainparams
                 CDataStream ss(SER_NETWORK, PROTOCOL_VERSION);
                 ss.reserve(1000);
                 ss << *item;
-                connman->PushMessage(pfrom, msgMaker.Make("fbs", ss));
+                connman->PushMessage(pfrom, msgMaker.Make(NetMsgType::FINALBUDGET, ss));
                 pushed = true;
             }
         }

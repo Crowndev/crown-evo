@@ -11,6 +11,8 @@
 static std::atomic<bool> g_initial_block_download_completed(false);
 
 namespace NetMsgType {
+
+//! bitcoin types
 const char *VERSION="version";
 const char *VERACK="verack";
 const char *ADDR="addr";
@@ -45,27 +47,35 @@ const char *CFHEADERS="cfheaders";
 const char *GETCFCHECKPT="getcfcheckpt";
 const char *CFCHECKPT="cfcheckpt";
 const char *WTXIDRELAY="wtxidrelay";
+
 //! crown types
-const char* IX = "ix";
-const char* IXLOCKVOTE = "txlvote";
-const char* SPORK = "spork";
-const char* GETSPORKS = "getsporks";
-const char* MNBROADCAST = "mnb";
-const char* MNPING = "mnp";
-const char* MNWINNER = "mnw";
-const char* GETMNWINNERS = "mnget";
-const char* BUDGETPROPOSAL = "mprop";
-const char* BUDGETVOTE = "mvote";
-const char* BUDGETVOTESYNC = "mnvs";
-const char* FINALBUDGET = "fbs";
-const char* FINALBUDGETVOTE = "fbvote";
-const char* SYNCSTATUSCOUNT = "ssc";
-const char* DSEG = "dseg";
-const char* DSEEP = "dseep";
-const char* SYSWINNER = "snw";
-const char* SYSBROADCAST = "snb";
-const char* SYSPING = "snp";
-const char* DSTX = "dstx";
+const char *BUDGETPROPOSAL = "mprop";
+const char *BUDGETVOTE = "mvote";
+const char *BUDGETVOTESYNC = "mnvs";
+const char *DSEEP = "dseep";
+const char *DSEG = "dseg";
+const char *DSTX = "dstx";
+const char *FINALBUDGET = "fbs";
+const char *FINALBUDGETVOTE = "fbvote";
+const char *GETMNWINNERS = "mnget";
+const char *GETSNWINNERS = "snget";
+const char *GETSPORKS = "getsporks";
+const char *IX = "ix";
+const char *IXLOCKLIST = "txllist";
+const char *IXLOCKVOTE = "txlvote";
+const char *MNBROADCAST = "mnb";
+const char *MNBROADCAST2 = "mnb_new";
+const char *MNPING = "mnp";
+const char *MNPING2 = "mnp_new";
+const char *MNSYNCSTATUS = "ssc";
+const char *MNWINNER = "mnw";
+const char *SNDSEG = "sndseg";
+const char *SNSYNCSTATUS = "snssc";
+const char *SPORK = "spork";
+const char *SNBROADCAST = "snb";
+const char *SNPING = "snp";
+const char *SNWINNER = "snw";
+
 } // namespace NetMsgType
 
 static const char* ppszTypeName[] = {
@@ -95,6 +105,7 @@ static const char* ppszTypeName[] = {
  * messages above and in protocol.h.
  */
 const static std::string allNetMessageTypes[] = {
+    //! bitcoin types
     NetMsgType::VERSION,
     NetMsgType::VERACK,
     NetMsgType::ADDR,
@@ -130,24 +141,32 @@ const static std::string allNetMessageTypes[] = {
     NetMsgType::CFCHECKPT,
     NetMsgType::WTXIDRELAY,
     //! crown types
-    NetMsgType::IX,
-    NetMsgType::IXLOCKVOTE,
-    NetMsgType::SPORK,
-    NetMsgType::GETSPORKS,
-    NetMsgType::MNBROADCAST,
-    NetMsgType::MNPING,
-    NetMsgType::MNWINNER,
-    NetMsgType::GETMNWINNERS,
     NetMsgType::BUDGETPROPOSAL,
     NetMsgType::BUDGETVOTE,
     NetMsgType::BUDGETVOTESYNC,
+    NetMsgType::DSEEP,
+    NetMsgType::DSEG,
+    NetMsgType::DSTX,
     NetMsgType::FINALBUDGET,
     NetMsgType::FINALBUDGETVOTE,
-    NetMsgType::SYNCSTATUSCOUNT,
-    NetMsgType::DSEG,
-    NetMsgType::SYSWINNER,
-    NetMsgType::SYSBROADCAST,
-    NetMsgType::SYSPING
+    NetMsgType::GETMNWINNERS,
+    NetMsgType::GETSNWINNERS,
+    NetMsgType::GETSPORKS,
+    NetMsgType::IX,
+    NetMsgType::IXLOCKLIST,
+    NetMsgType::IXLOCKVOTE,
+    NetMsgType::MNBROADCAST,
+    NetMsgType::MNBROADCAST2,
+    NetMsgType::MNPING,
+    NetMsgType::MNPING2,
+    NetMsgType::MNSYNCSTATUS,
+    NetMsgType::MNWINNER,
+    NetMsgType::SNDSEG,
+    NetMsgType::SNSYNCSTATUS,
+    NetMsgType::SPORK,
+    NetMsgType::SNBROADCAST,
+    NetMsgType::SNPING,
+    NetMsgType::SNWINNER
 };
 const static std::vector<std::string> allNetMessageTypesVec(allNetMessageTypes, allNetMessageTypes+ARRAYLEN(allNetMessageTypes));
 

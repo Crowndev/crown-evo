@@ -149,7 +149,7 @@ void CInstantSend::ProcessMessage(CNode* pfrom, const std::string& strCommand, C
     }
 
     //! instantx lock list
-    if (strCommand == "txllist") {
+    if (strCommand == NetMsgType::IXLOCKLIST) {
         std::map<uint256, CConsensusVote>::const_iterator it = mapTxLockVote.begin();
         for (; it != mapTxLockVote.end(); ++it) {
             CInv inv(MSG_TXLOCK_VOTE, it->second.GetHash());

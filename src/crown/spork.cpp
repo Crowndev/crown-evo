@@ -21,7 +21,7 @@ void UpdateMempoolForReorg(CTxMemPool& mempool, DisconnectedBlockTransactions& d
 
 void ProcessSpork(CNode* pfrom, CConnman* connman, const std::string& strCommand, CDataStream& vRecv)
 {
-    if (strCommand == "spork") {
+    if (strCommand == NetMsgType::SPORK) {
         CDataStream vMsg(vRecv);
         CSporkMessage spork;
         vRecv >> spork;
@@ -54,12 +54,12 @@ void ProcessSpork(CNode* pfrom, CConnman* connman, const std::string& strCommand
         //does a task if needed
         ExecuteSpork(spork.nSporkID, spork.nValue, *connman);
     }
-    if (strCommand == "getsporks") {
+    if (strCommand == NetMsgType::GETSPORKS) {
         std::map<int, CSporkMessage>::iterator it = mapSporksActive.begin();
 
         while (it != mapSporksActive.end()) {
             const CNetMsgMaker msgMaker(PROTOCOL_VERSION);
-            connman->PushMessage(pfrom, msgMaker.Make("spork", it->second));
+            connman->PushMessage(pfrom, msgMaker.Make(NetMsgType::SPORK, it->second));
             it++;
         }
     }

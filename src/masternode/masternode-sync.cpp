@@ -183,7 +183,7 @@ std::string CMasternodeSync::GetSyncStatus()
 
 void CMasternodeSync::ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStream& vRecv, CConnman* connman)
 {
-    if (strCommand == "ssc") {
+    if (strCommand == NetMsgType::MNSYNCSTATUS) {
 
         int nItemID;
         int nCount;
@@ -269,7 +269,7 @@ void CMasternodeSync::Process(CConnman& connman)
             if (netfulfilledman.HasFulfilledRequest(pnode->addr, "getspork"))
                 continue;
             netfulfilledman.AddFulfilledRequest(pnode->addr, "getspork");
-            connman.PushMessage(pnode, msgMaker.Make("getsporks"));
+            connman.PushMessage(pnode, msgMaker.Make(NetMsgType::GETSPORKS));
             if (RequestedMasternodeAttempt >= 2)
                 GetNextAsset();
             RequestedMasternodeAttempt++;
@@ -338,7 +338,7 @@ void CMasternodeSync::Process(CConnman& connman)
                     return;
 
                 int nMnCount = mnodeman.CountEnabled();
-                connman.PushMessage(pnode, msgMaker.Make("mnget", nMnCount)); //sync payees
+                connman.PushMessage(pnode, msgMaker.Make(NetMsgType::GETMNWINNERS, nMnCount));
                 RequestedMasternodeAttempt++;
 
                 return;
@@ -375,7 +375,7 @@ void CMasternodeSync::Process(CConnman& connman)
                     return;
 
                 uint256 n = uint256();
-                connman.PushMessage(pnode, msgMaker.Make("mnvs", n)); //sync masternode votes
+                connman.PushMessage(pnode, msgMaker.Make(NetMsgType::BUDGETVOTESYNC, n));
                 RequestedMasternodeAttempt++;
 
                 return;

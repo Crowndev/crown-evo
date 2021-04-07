@@ -83,22 +83,22 @@ void CSystemnodePayments::ProcessMessageSystemnodePayments(CNode* pfrom, const s
     if (!systemnodeSync.IsBlockchainSynced())
         return;
 
-    if (strCommand == "snget") { //Systemnode Payments Request Sync
+    if (strCommand == NetMsgType::GETSNWINNERS) {
 
         int nCountNeeded;
         vRecv >> nCountNeeded;
 
         if (Params().NetworkIDString() == CBaseChainParams::MAIN) {
-            if (netfulfilledman.HasFulfilledRequest(pfrom->addr, "snget")) {
+            if (netfulfilledman.HasFulfilledRequest(pfrom->addr, NetMsgType::GETSNWINNERS)) {
                 LogPrint(BCLog::SYSTEMNODE, "snget - peer already asked me for the list\n");
                 Misbehaving(pfrom->GetId(), 20);
                 return;
             }
         }
-        netfulfilledman.AddFulfilledRequest(pfrom->addr, "snget");
+        netfulfilledman.AddFulfilledRequest(pfrom->addr, NetMsgType::GETSNWINNERS);
         systemnodePayments.Sync(pfrom, nCountNeeded, *connman);
         LogPrint(BCLog::SYSTEMNODE, "snget - Sent Systemnode winners to %s\n", pfrom->addr.LegacyToString().c_str());
-    } else if (strCommand == "snw") { //Systemnode Payments Declare Winner
+    } else if (strCommand == NetMsgType::SNWINNER) {
         //this is required in litemodef
         CSystemnodePaymentWinner winner;
         vRecv >> winner;
@@ -531,7 +531,7 @@ void CSystemnodePayments::Sync(CNode* node, int nCountNeeded, CConnman& connman)
     }
 
     const CNetMsgMaker msgMaker(PROTOCOL_VERSION);
-    connman.PushMessage(node, msgMaker.Make("snssc", SYSTEMNODE_SYNC_SNW, nInvCount));
+    connman.PushMessage(node, msgMaker.Make(NetMsgType::SNSYNCSTATUS, SYSTEMNODE_SYNC_SNW, nInvCount));
 }
 
 // Is this systemnode scheduled to get paid soon?

@@ -83,7 +83,7 @@ void CSystemnodeMan::ProcessMessage(CNode* pfrom, const std::string& strCommand,
         return;
 
     //! systemnode broadcast
-    if (strCommand == "snb") {
+    if (strCommand == NetMsgType::SNBROADCAST) {
         CSystemnodeBroadcast snb;
         vRecv >> snb;
 
@@ -98,7 +98,7 @@ void CSystemnodeMan::ProcessMessage(CNode* pfrom, const std::string& strCommand,
     }
 
     //! systemnode ping
-    else if (strCommand == "snp") {
+    else if (strCommand == NetMsgType::SNPING) {
         CSystemnodePing snp;
         vRecv >> snp;
 
@@ -128,7 +128,7 @@ void CSystemnodeMan::ProcessMessage(CNode* pfrom, const std::string& strCommand,
         AskForSN(pfrom, snp.vin, *connman);
     }
 
-    else if (strCommand == "sndseg") {
+    else if (strCommand == NetMsgType::SNDSEG) {
         CTxIn vin;
         vRecv >> vin;
 
@@ -172,7 +172,7 @@ void CSystemnodeMan::ProcessMessage(CNode* pfrom, const std::string& strCommand,
 
         if (vin == CTxIn()) {
             const CNetMsgMaker msgMaker(PROTOCOL_VERSION);
-            connman->PushMessage(pfrom, msgMaker.Make("snssc", SYSTEMNODE_SYNC_LIST, nInvCount));
+            connman->PushMessage(pfrom, msgMaker.Make(NetMsgType::SNSYNCSTATUS, SYSTEMNODE_SYNC_LIST, nInvCount));
             LogPrint(BCLog::SYSTEMNODE, "sndseg - Sent %d Systemnode entries to %s\n", nInvCount, pfrom->addr.LegacyToString());
         }
     }
@@ -190,7 +190,7 @@ void CSystemnodeMan::AskForSN(CNode* pnode, CTxIn& vin, CConnman& connman)
     // ask for the snb info once from the node that sent snp
     LogPrint(BCLog::SYSTEMNODE, "CSystemnodeMan::AskForSN - Asking node for missing entry, vin: %s\n", vin.ToString());
     const CNetMsgMaker msgMaker(PROTOCOL_VERSION);
-    connman.PushMessage(pnode, msgMaker.Make("sndseg", vin));
+    connman.PushMessage(pnode, msgMaker.Make(NetMsgType::SNDSEG, vin));
     int64_t askAgain = GetTime() + SYSTEMNODE_MIN_SNP_SECONDS;
     mWeAskedForSystemnodeListEntry[vin.prevout] = askAgain;
 }
@@ -426,7 +426,7 @@ void CSystemnodeMan::DsegUpdate(CNode* pnode, CConnman& connman)
     }
 
     const CNetMsgMaker msgMaker(PROTOCOL_VERSION);
-    connman.PushMessage(pnode, msgMaker.Make("sndseg", CTxIn()));
+    connman.PushMessage(pnode, msgMaker.Make(NetMsgType::SNDSEG, CTxIn()));
     int64_t askAgain = GetTime() + SYSTEMNODES_DSEG_SECONDS;
     mWeAskedForSystemnodeList[pnode->addr] = askAgain;
 }

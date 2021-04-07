@@ -68,7 +68,7 @@ void CMasternodeMan::AskForMN(CNode* pnode, const CTxIn& vin, CConnman& connman)
     // ask for the mnb info once from the node that sent mnp
     LogPrint(BCLog::MASTERNODE, "CMasternodeMan::AskForMN - Asking node for missing entry, vin: %s\n", vin.ToString());
     const CNetMsgMaker msgMaker(PROTOCOL_VERSION);
-    connman.PushMessage(pnode, msgMaker.Make("dseg", vin));
+    connman.PushMessage(pnode, msgMaker.Make(NetMsgType::DSEG, vin));
     int64_t askAgain = GetTime() + MASTERNODE_MIN_MNP_SECONDS;
     mWeAskedForMasternodeListEntry[vin.prevout] = askAgain;
 }
@@ -519,9 +519,9 @@ void CMasternodeMan::ProcessMessage(CNode* pfrom, const std::string& strCommand,
         return;
 
     //! masternode broadcast
-    if (strCommand == "mnb" || strCommand == "mnb_new") {
+    if (strCommand == NetMsgType::MNBROADCAST || strCommand == NetMsgType::MNBROADCAST2) {
         CMasternodeBroadcast mnb;
-        if (strCommand == "mnb") {
+        if (strCommand == NetMsgType::MNBROADCAST) {
             //Set to old version for old serialization
             mnb.lastPing.nVersion = 1;
         } else {
@@ -540,9 +540,9 @@ void CMasternodeMan::ProcessMessage(CNode* pfrom, const std::string& strCommand,
     }
 
     //! masternode ping
-    else if (strCommand == "mnp" || strCommand == "mnp_new") {
+    else if (strCommand == NetMsgType::MNPING || strCommand == NetMsgType::MNPING2) {
         CMasternodePing mnp;
-        if (strCommand == "mnp") {
+        if (strCommand == NetMsgType::MNPING) {
             //Set to old version for old serialization
             mnp.nVersion = 1;
         }
@@ -575,7 +575,7 @@ void CMasternodeMan::ProcessMessage(CNode* pfrom, const std::string& strCommand,
     }
 
     //! masternode list
-    else if (strCommand == "dseg") {
+    else if (strCommand == NetMsgType::DSEG) {
 
         CTxIn vin;
         vRecv >> vin;
@@ -619,7 +619,7 @@ void CMasternodeMan::ProcessMessage(CNode* pfrom, const std::string& strCommand,
 
         if (vin == CTxIn()) {
             const CNetMsgMaker msgMaker(PROTOCOL_VERSION);
-            connman->PushMessage(pfrom, msgMaker.Make("ssc", MASTERNODE_SYNC_LIST, nInvCount));
+            connman->PushMessage(pfrom, msgMaker.Make(NetMsgType::MNSYNCSTATUS, MASTERNODE_SYNC_LIST, nInvCount));
             LogPrint(BCLog::MASTERNODE, "dseg - Sent %d Masternode entries to %s\n", nInvCount, pfrom->addr.LegacyToString());
         }
     }

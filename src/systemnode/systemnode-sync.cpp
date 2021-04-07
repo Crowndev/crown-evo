@@ -147,7 +147,7 @@ std::string CSystemnodeSync::GetSyncStatus()
 
 void CSystemnodeSync::ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStream& vRecv, CConnman* connman)
 {
-    if (strCommand == "snssc") {
+    if (strCommand == NetMsgType::SNSYNCSTATUS) {
 
         if (IsSynced())
             return;
@@ -221,7 +221,7 @@ void CSystemnodeSync::Process(CConnman& connman)
             if (netfulfilledman.HasFulfilledRequest(pnode->addr, "sngetspork"))
                 continue;
             netfulfilledman.AddFulfilledRequest(pnode->addr, "sngetspork");
-            connman.PushMessage(pnode, msgMaker.Make("getsporks")); //get current network sporks
+            connman.PushMessage(pnode, msgMaker.Make(NetMsgType::GETSPORKS));
             if (RequestedSystemnodeAttempt >= 2)
                 GetNextAsset();
             RequestedSystemnodeAttempt++;
@@ -294,7 +294,7 @@ void CSystemnodeSync::Process(CConnman& connman)
                     return;
 
                 int nSnCount = snodeman.CountEnabled();
-                connman.PushMessage(pnode, msgMaker.Make("snget", nSnCount)); //sync payees
+                connman.PushMessage(pnode, msgMaker.Make(NetMsgType::GETSNWINNERS, nSnCount));
                 RequestedSystemnodeAttempt++;
 
                 return;

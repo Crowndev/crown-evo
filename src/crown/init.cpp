@@ -86,29 +86,31 @@ bool setupNodeConfiguration()
 
     if (gArgs.GetBoolArg("-mnconflock", true) && masternodeConfig.getCount() > 0)
     {
-        LOCK(pwallet->cs_wallet);
         LogPrintf("Locking Masternodes:\n");
         uint256 mnTxHash;
         for (CNodeEntry mne : masternodeConfig.getEntries()) {
             LogPrintf("  %s %s\n", mne.getTxHash(), mne.getOutputIndex());
             mnTxHash.SetHex(mne.getTxHash());
             COutPoint outpoint = COutPoint(mnTxHash, boost::lexical_cast<unsigned int>(mne.getOutputIndex()));
-            if (pwallet)
+            if (pwallet) {
+                LOCK(pwallet->cs_wallet);
                 pwallet->LockCoin(outpoint);
+            }
         }
     }
 
     if (gArgs.GetBoolArg("-snconflock", true) && systemnodeConfig.getCount() > 0)
     {
-        LOCK(pwallet->cs_wallet);
         LogPrintf("Locking Systemnodes:\n");
         uint256 mnTxHash;
         for (CNodeEntry sne : systemnodeConfig.getEntries()) {
             LogPrintf("  %s %s\n", sne.getTxHash(), sne.getOutputIndex());
             mnTxHash.SetHex(sne.getTxHash());
             COutPoint outpoint = COutPoint(mnTxHash, boost::lexical_cast<unsigned int>(sne.getOutputIndex()));
-            if (pwallet)
+            if (pwallet) {
+                LOCK(pwallet->cs_wallet);
                 pwallet->LockCoin(outpoint);
+            }
         }
     }
 

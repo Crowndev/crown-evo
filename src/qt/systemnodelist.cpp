@@ -354,17 +354,6 @@ void SystemnodeList::on_startButton_clicked()
 
     if (retval != QMessageBox::Yes) return;
 
-    WalletModel::EncryptionStatus encStatus = walletModel->getEncryptionStatus();
-
-    if(encStatus == walletModel->Locked) {
-        WalletModel::UnlockContext ctx(walletModel->requestUnlock());
-
-        if (!ctx.isValid()) return; // Unlock wallet was cancelled
-
-        StartAlias(strAlias);
-        return;
-    }
-
     StartAlias(strAlias);
 }
 
@@ -382,17 +371,6 @@ void SystemnodeList::on_startAllButton_clicked()
         QMessageBox::Cancel);
 
     if (retval != QMessageBox::Yes) return;
-
-    WalletModel::EncryptionStatus encStatus = walletModel->getEncryptionStatus();
-
-    if(encStatus == walletModel->Locked) {
-        WalletModel::UnlockContext ctx(walletModel->requestUnlock());
-
-        if (!ctx.isValid()) return; // Unlock wallet was cancelled
-
-        StartAll();
-        return;
-    }
 
     StartAll();
 }
@@ -412,17 +390,6 @@ void SystemnodeList::on_startMissingButton_clicked()
         QMessageBox::Cancel);
 
     if (retval != QMessageBox::Yes) return;
-
-    WalletModel::EncryptionStatus encStatus = walletModel->getEncryptionStatus();
-
-    if(encStatus == walletModel->Locked) {
-        WalletModel::UnlockContext ctx(walletModel->requestUnlock());
-
-        if (!ctx.isValid()) return; // Unlock wallet was cancelled
-
-        StartAll("start-missing");
-        return;
-    }
 
     StartAll("start-missing");
 }

@@ -596,6 +596,7 @@ void SetupServerArgs(NodeContext& node)
     argsman.AddArg("-systemnodeprivkey", "Systemnode private key", false, OptionsCategory::RPC);
     argsman.AddArg("-systemnodeaddr", strprintf(_("Set external address:port to get to this systemnode (example: %s)").translated, "1.2.3.4:12345"), false, OptionsCategory::RPC);
     argsman.AddArg("-jumpstart", "Allow network to be jumpstarted if no stake pointers exist.", ArgsManager::ALLOW_ANY, OptionsCategory::OPTIONS);
+    argsman.AddArg("-diagnode", "Enable full masternode/systemnode diagnostic messaging.", ArgsManager::ALLOW_ANY, OptionsCategory::OPTIONS);
 
 #if HAVE_DECL_DAEMON
     argsman.AddArg("-daemon", "Run in the background as a daemon and accept commands", ArgsManager::ALLOW_ANY, OptionsCategory::OPTIONS);

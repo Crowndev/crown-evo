@@ -87,6 +87,8 @@ static const bool DEFAULT_PERSIST_MEMPOOL = true;
 static const bool DEFAULT_FEEFILTER = true;
 /** Default for block pow hash verification */
 static const bool DEFAULT_CHECKBLOCKPOW = false;
+/** Default for node diag logging */
+static const bool DEFAULT_NODEDIAG = false;
 /** Default for -stopatheight */
 static const int DEFAULT_STOPATHEIGHT = 0;
 /** Block files containing a block-height within MIN_BLOCKS_TO_KEEP of ::ChainActive().Tip() will not be pruned. */

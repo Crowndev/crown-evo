@@ -42,8 +42,12 @@ private:
 public:
     // Keep track of all broadcasts I've seen
     map<uint256, CSystemnodeBroadcast> mapSeenSystemnodeBroadcast;
+
     // Keep track of all pings I've seen
     map<uint256, CSystemnodePing> mapSeenSystemnodePing;
+
+    // Set when low-level node diagnostics are requested
+    bool nodeDiag;
 
     SERIALIZE_METHODS(CSystemnodeMan, obj)
     {

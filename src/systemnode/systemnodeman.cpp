@@ -5,6 +5,7 @@
 #include <crown/legacysigner.h>
 #include <net_processing.h>
 #include <netmessagemaker.h>
+#include <nodediag.h>
 
 /** Systemnode manager */
 CSystemnodeMan snodeman;
@@ -86,6 +87,8 @@ void CSystemnodeMan::ProcessMessage(CNode* pfrom, const std::string& strCommand,
     if (strCommand == NetMsgType::SNBROADCAST) {
         CSystemnodeBroadcast snb;
         vRecv >> snb;
+        if (nodeDiag)
+            systemnodeDiag(&snb, nullptr);
 
         int nDoS = 0;
         if (CheckSnbAndUpdateSystemnodeList(snb, nDoS, *connman)) {
@@ -101,6 +104,8 @@ void CSystemnodeMan::ProcessMessage(CNode* pfrom, const std::string& strCommand,
     else if (strCommand == NetMsgType::SNPING) {
         CSystemnodePing snp;
         vRecv >> snp;
+        if (nodeDiag)
+            systemnodeDiag(nullptr, &snp);
 
         LogPrint(BCLog::SYSTEMNODE, "snp - Systemnode ping, vin: %s\n", snp.vin.ToString());
 

@@ -176,6 +176,7 @@ BITCOIN_CORE_H = \
   netbase.h \
   netmessagemaker.h \
   nodeconfig.h \
+  nodediag.h \
   node/coin.h \
   node/coinstats.h \
   node/context.h \
@@ -338,6 +339,7 @@ libbitcoin_server_a_SOURCES = \
   miner.cpp \
   mn_processing.cpp \
   nodeconfig.cpp \
+  nodediag.cpp \
   net.cpp \
   netfulfilledman.cpp \
   net_processing.cpp \

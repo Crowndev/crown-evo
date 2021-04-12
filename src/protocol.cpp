@@ -34,6 +34,7 @@ const char *NOTFOUND="notfound";
 const char *FILTERLOAD="filterload";
 const char *FILTERADD="filteradd";
 const char *FILTERCLEAR="filterclear";
+const char *REJECT="reject";
 const char *SENDHEADERS="sendheaders";
 const char *FEEFILTER="feefilter";
 const char *SENDCMPCT="sendcmpct";
@@ -75,6 +76,7 @@ const char *SPORK = "spork";
 const char *SNBROADCAST = "snb";
 const char *SNPING = "snp";
 const char *SNWINNER = "snw";
+const char *BLOCKPROOF = "blockproof";
 
 } // namespace NetMsgType
 
@@ -127,6 +129,7 @@ const static std::string allNetMessageTypes[] = {
     NetMsgType::FILTERLOAD,
     NetMsgType::FILTERADD,
     NetMsgType::FILTERCLEAR,
+    NetMsgType::REJECT,
     NetMsgType::SENDHEADERS,
     NetMsgType::FEEFILTER,
     NetMsgType::SENDCMPCT,
@@ -166,7 +169,8 @@ const static std::string allNetMessageTypes[] = {
     NetMsgType::SPORK,
     NetMsgType::SNBROADCAST,
     NetMsgType::SNPING,
-    NetMsgType::SNWINNER
+    NetMsgType::SNWINNER,
+    NetMsgType::BLOCKPROOF
 };
 const static std::vector<std::string> allNetMessageTypesVec(allNetMessageTypes, allNetMessageTypes+ARRAYLEN(allNetMessageTypes));
 

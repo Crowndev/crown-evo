@@ -32,6 +32,9 @@
 #include <util/system.h>
 #include <validation.h>
 
+#include <masternode/masternode.h>    //! for CMasternodePing class
+#include <masternode/masternodeman.h> //! for mnodeman
+
 #include <memory>
 #include <typeinfo>
 
@@ -98,6 +101,8 @@ static const unsigned int BLOCK_STALLING_TIMEOUT = 2;
 /** Number of headers sent in one getheaders result. We rely on the assumption that if a peer sends
  *  less than this number, we reached its tip. Changing this value is a protocol upgrade. */
 static const unsigned int MAX_HEADERS_RESULTS = 2000;
+/** Maximum length of reject messages. */
+static const unsigned int MAX_REJECT_MESSAGE_LENGTH = 111;
 /** Maximum depth of blocks we're willing to serve as compact blocks to peers
  *  when requested. For older blocks, a regular BLOCK response will be sent. */
 static const int MAX_CMPCTBLOCK_DEPTH = 5;
@@ -3796,6 +3801,68 @@ void PeerManager::ProcessMessage(CNode& pfrom, const std::string& msg_type, CDat
     if (msg_type == NetMsgType::GETCFCHECKPT) {
         ProcessGetCFCheckPt(pfrom, vRecv, m_chainparams, m_connman);
         return;
+    }
+
+    if (msg_type == NetMsgType::BLOCKPROOF)
+    {
+        uint256 hashBlock;
+        vRecv >> hashBlock;
+
+        LOCK(cs_main);
+        std::vector<CMasternodePing> vPings;
+        vRecv >> vPings;
+
+        for (auto& ping : vPings) {
+            int nDoS;
+            ping.CheckAndUpdate(nDoS, m_connman);
+        }
+
+        //If the pings processed correctly, the prooftracker will be updated
+        if (g_proofTracker->HasSufficientProof(hashBlock)) {
+            MarkBlockAsInFlight(m_mempool, pfrom.GetId(), hashBlock);
+            std::vector<CInv> vGetData = {CInv(MSG_BLOCK, hashBlock)};
+            m_connman.PushMessage(&pfrom, msgMaker.Make(NetMsgType::GETDATA, vGetData));
+        }
+    }
+
+    if (msg_type == NetMsgType::REJECT)
+    {
+        string strMsg; unsigned char ccode; string strReason;
+        vRecv >> LIMITED_STRING(strMsg, CMessageHeader::COMMAND_SIZE) >> ccode >> LIMITED_STRING(strReason, MAX_REJECT_MESSAGE_LENGTH);
+
+        ostringstream ss;
+        ss << strMsg << " code " << strprintf("%d", (int)ccode) << ": " << strReason;
+
+        if (strMsg == NetMsgType::BLOCK || strMsg == NetMsgType::TX)
+        {
+            uint256 hash;
+            vRecv >> hash;
+            ss << ": hash " << hash.ToString();
+
+            //if this is a suspicious block rejection, and we have proof, send it
+            if (strReason == "block-suspicious") {
+                LOCK(cs_main);
+                if (g_proofTracker->HasSufficientProof(hash)) {
+                    auto setWitness = g_proofTracker->GetWitnesses(hash);
+                    //collect pings from witnesses
+                    std::vector<CMasternodePing> vPingsToSend;
+                    for (auto witness : setWitness) {
+                        CMasternode* pmn = mnodeman.Find(witness.m_vin);
+                        if (!pmn) continue;
+                        const auto& ping = pmn->lastPing;
+                        if (ping.nVersion > 1) {
+                            if (std::find(ping.vPrevBlockHash.begin(), ping.vPrevBlockHash.end(), hash) != ping.vPrevBlockHash.end()) {
+                                //Found proof in masternode ping
+                                vPingsToSend.emplace_back(ping);
+                            }
+                        }
+                    }
+
+                    // Send pings back to peer
+                    m_connman.PushMessage(&pfrom, msgMaker.Make(NetMsgType::BLOCKPROOF, hash, vPingsToSend));
+                }
+            }
+        }
     }
 
     if (msg_type == NetMsgType::NOTFOUND) {

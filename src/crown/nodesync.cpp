@@ -47,9 +47,9 @@ std::string currentSyncStatus()
     return lastStatusMessage;
 }
 
-void ThreadNodeSync(CConnman& connman)
+void ThreadMasternodeSync(CConnman& connman)
 {
-    util::ThreadRename("crown-nodesync");
+    util::ThreadRename("crown-mnodesync");
 
     if (fReindex || fImporting)
         return;
@@ -59,12 +59,9 @@ void ThreadNodeSync(CConnman& connman)
         return;
 
     static unsigned int c1 = 0;
-    static unsigned int c2 = 0;
 
     masternodeSync.Process(connman);
-
     {
-
         c1++;
 
         mnodeman.Check();
@@ -81,11 +78,23 @@ void ThreadNodeSync(CConnman& connman)
             instantSend.CheckAndRemove();
         }
     }
+}
+
+void ThreadSystemnodeSync(CConnman& connman)
+{
+    util::ThreadRename("crown-snodesync");
+
+    if (fReindex || fImporting)
+        return;
+    if (::ChainstateActive().IsInitialBlockDownload())
+        return;
+    if (ShutdownRequested())
+        return;
+
+    static unsigned int c2 = 0;
 
     systemnodeSync.Process(connman);
-
     {
-
         c2++;
 
         snodeman.Check();
@@ -102,3 +111,4 @@ void ThreadNodeSync(CConnman& connman)
         }
     }
 }
+

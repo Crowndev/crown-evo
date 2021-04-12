@@ -2050,7 +2050,8 @@ bool AppInitMain(const util::Ref& context, NodeContext& node, interfaces::BlockA
         banman->DumpBanlist();
     }, DUMP_BANS_INTERVAL);
 
-    node.scheduler->scheduleEvery(std::bind(&ThreadNodeSync, std::ref(*node.connman)), std::chrono::milliseconds{1000});
+    node.scheduler->scheduleEvery(std::bind(&ThreadMasternodeSync, std::ref(*node.connman)), std::chrono::milliseconds{1000});
+    node.scheduler->scheduleEvery(std::bind(&ThreadSystemnodeSync, std::ref(*node.connman)), std::chrono::milliseconds{1000});
 
 #if HAVE_SYSTEM
     StartupNotify(args);

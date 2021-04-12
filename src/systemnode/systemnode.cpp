@@ -454,7 +454,6 @@ bool CSystemnodeBroadcast::CheckAndUpdate(int& nDos, CConnman& connman)
     if (!legacySigner.VerifyMessage(pubkey, sig, strMessage, errorMessage)) {
         if (addr.LegacyToString(true) != addr.LegacyToString(false)) {
             strMessage = addr.LegacyToString(true) + boost::lexical_cast<std::string>(sigTime) + vchPubKey + vchPubKey2 + boost::lexical_cast<std::string>(protocolVersion);
-
             if (!legacySigner.VerifyMessage(pubkey, sig, strMessage, errorMessage)) {
                 LogPrintf("snb - Got bad systemnode address signature, sanitized error: %s\n", SanitizeString(errorMessage));
                 return false;
@@ -463,8 +462,6 @@ bool CSystemnodeBroadcast::CheckAndUpdate(int& nDos, CConnman& connman)
             LogPrintf("snb - Got bad systemnode address signature, sanitized error: %s\n", SanitizeString(errorMessage));
             return false;
         }
-
-        LogPrintf("snb - Got bad Systemnode address signature, sanitized error: %s\n", SanitizeString(errorMessage));
     }
 
     //! or do it like this for all nets...

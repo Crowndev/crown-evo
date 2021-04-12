@@ -42,7 +42,7 @@ static constexpr int64_t ORPHAN_TX_EXPIRE_INTERVAL = 5 * 60;
 /** How long to cache transactions in mapRelay for normal relay */
 static constexpr std::chrono::seconds RELAY_TX_CACHE_TIME = std::chrono::minutes{15};
 /** How long a transaction has to be in the mempool before it can unconditionally be relayed (even when not in mapRelay). */
-static constexpr std::chrono::seconds UNCONDITIONAL_RELAY_DELAY = std::chrono::minutes{2};
+static constexpr std::chrono::seconds UNCONDITIONAL_RELAY_DELAY = std::chrono::seconds{5};
 /** Headers download timeout expressed in microseconds
  *  Timeout = base + per_header * (expected number of headers) */
 static constexpr int64_t HEADERS_DOWNLOAD_TIMEOUT_BASE = 15 * 60 * 1000000; // 15 minutes
@@ -75,7 +75,7 @@ static const unsigned int MAX_LOCATOR_SZ = 101;
 static const unsigned int MAX_INV_SZ = 50000;
 /** Maximum number of in-flight transaction requests from a peer. It is not a hard limit, but the threshold at which
  *  point the OVERLOADED_PEER_TX_DELAY kicks in. */
-static constexpr int32_t MAX_PEER_TX_REQUEST_IN_FLIGHT = 1000;
+static constexpr int32_t MAX_PEER_TX_REQUEST_IN_FLIGHT = 10000;
 /** Maximum number of transactions to consider for requesting, per peer. It provides a reasonable DoS limit to
  *  per-peer memory usage spent on announcements, while covering peers continuously sending INVs at the maximum
  *  rate (by our own policy, see INVENTORY_BROADCAST_PER_SECOND) for several minutes, while not receiving
@@ -127,7 +127,7 @@ static constexpr std::chrono::seconds AVG_ADDRESS_BROADCAST_INTERVAL{30};
 static const unsigned int INVENTORY_BROADCAST_INTERVAL = 5;
 /** Maximum rate of inventory items to send per second.
  *  Limits the impact of low-fee transaction floods. */
-static constexpr unsigned int INVENTORY_BROADCAST_PER_SECOND = 7;
+static constexpr unsigned int INVENTORY_BROADCAST_PER_SECOND = 350;
 /** Maximum number of inventory items to send per transmission. */
 static constexpr unsigned int INVENTORY_BROADCAST_MAX = INVENTORY_BROADCAST_PER_SECOND * INVENTORY_BROADCAST_INTERVAL;
 /** The number of most recently announced transactions a peer can request. */

@@ -24,7 +24,7 @@ std::string COutPoint::ToStringShort() const
 
 uint256 COutPoint::GetHash() const
 {
-    return SerializeHashSingle(*this);
+    return Hash(BEGIN(hash), END(hash), BEGIN(n), END(n));
 }
 
 CTxIn::CTxIn(COutPoint prevoutIn, CScript scriptSigIn, uint32_t nSequenceIn)

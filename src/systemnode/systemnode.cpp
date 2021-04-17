@@ -449,11 +449,11 @@ bool CSystemnodeBroadcast::CheckAndUpdate(int& nDos, CConnman& connman)
     std::string errorMessage = "";
     std::string vchPubKey(pubkey.begin(), pubkey.end());
     std::string vchPubKey2(pubkey2.begin(), pubkey2.end());
-    strMessage = addr.LegacyToString(false) + boost::lexical_cast<std::string>(sigTime) + vchPubKey + vchPubKey2 + boost::lexical_cast<std::string>(protocolVersion);
+    strMessage = addr.ToString(false) + boost::lexical_cast<std::string>(sigTime) + vchPubKey + vchPubKey2 + boost::lexical_cast<std::string>(protocolVersion);
 
     if (!legacySigner.VerifyMessage(pubkey, sig, strMessage, errorMessage)) {
-        if (addr.LegacyToString(true) != addr.LegacyToString(false)) {
-            strMessage = addr.LegacyToString(true) + boost::lexical_cast<std::string>(sigTime) + vchPubKey + vchPubKey2 + boost::lexical_cast<std::string>(protocolVersion);
+        if (addr.ToString(true) != addr.ToString(false)) {
+            strMessage = addr.ToString() + boost::lexical_cast<std::string>(sigTime) + vchPubKey + vchPubKey2 + boost::lexical_cast<std::string>(protocolVersion);
             if (!legacySigner.VerifyMessage(pubkey, sig, strMessage, errorMessage)) {
                 LogPrintf("snb - Got bad systemnode address signature, sanitized error: %s\n", SanitizeString(errorMessage));
                 return false;
@@ -739,7 +739,7 @@ bool CSystemnodeBroadcast::Sign(const CKey& keyCollateralAddress)
 
     sigTime = GetAdjustedTime();
 
-    std::string strMessage = addr.LegacyToString(false) + boost::lexical_cast<std::string>(sigTime) + vchPubKey + vchPubKey2 + boost::lexical_cast<std::string>(protocolVersion);
+    std::string strMessage = addr.ToString(false) + boost::lexical_cast<std::string>(sigTime) + vchPubKey + vchPubKey2 + boost::lexical_cast<std::string>(protocolVersion);
 
     if (!legacySigner.SignMessage(strMessage, sig, keyCollateralAddress)) {
         LogPrint(BCLog::SYSTEMNODE, "CSystemnodeBroadcast::Sign() - Error: %s\n", errorMessage);
@@ -756,7 +756,7 @@ bool CSystemnodeBroadcast::VerifySignature() const
     std::string vchPubKey(pubkey.begin(), pubkey.end());
     std::string vchPubKey2(pubkey2.begin(), pubkey2.end());
 
-    std::string strMessage = addr.LegacyToString(true) + boost::lexical_cast<std::string>(sigTime) + vchPubKey + vchPubKey2 + boost::lexical_cast<std::string>(protocolVersion);
+    std::string strMessage = addr.ToString(true) + boost::lexical_cast<std::string>(sigTime) + vchPubKey + vchPubKey2 + boost::lexical_cast<std::string>(protocolVersion);
 
     if (!legacySigner.VerifyMessage(pubkey, sig, strMessage, errorMessage)) {
         LogPrint(BCLog::SYSTEMNODE, "CSystemnodeBroadcast::VerifySignature() - Error: %s\n", errorMessage);

@@ -48,7 +48,7 @@ bool CMasternodeMan::Add(const CMasternode& mn)
 
     CMasternode* pmn = Find(mn.vin);
     if (!pmn) {
-        LogPrint(BCLog::MASTERNODE, "CMasternodeMan: Adding new Masternode %s - %i now\n", mn.addr.LegacyToString(), size() + 1);
+        LogPrint(BCLog::MASTERNODE, "CMasternodeMan: Adding new Masternode %s - %i now\n", mn.addr.ToString(), size() + 1);
         vMasternodes.push_back(mn);
         return true;
     }
@@ -92,7 +92,7 @@ void CMasternodeMan::CheckAndRemove(bool forceExpiredRemoval)
     while (it != vMasternodes.end()) {
         if ((*it).activeState == CMasternode::MASTERNODE_REMOVE || (*it).activeState == CMasternode::MASTERNODE_VIN_SPENT || (forceExpiredRemoval && (*it).activeState == CMasternode::MASTERNODE_EXPIRED)) {
 
-            LogPrint(BCLog::MASTERNODE, "CMasternodeMan: Removing inactive Masternode %s - %i now\n", (*it).addr.LegacyToString(), size() - 1);
+            LogPrint(BCLog::MASTERNODE, "CMasternodeMan: Removing inactive Masternode %s - %i now\n", (*it).addr.ToString(), size() - 1);
 
             //erase all of the broadcasts we've seen from this vin
             // -- if we missed a few pings and the node was removed, this will allow is to get it back without them
@@ -211,7 +211,7 @@ void CMasternodeMan::DsegUpdate(CNode* pnode, CConnman& connman)
         std::map<CNetAddr, int64_t>::iterator it = mWeAskedForMasternodeList.find(pnode->addr);
         if (it != mWeAskedForMasternodeList.end()) {
             if (GetTime() < (*it).second) {
-                LogPrint(BCLog::MASTERNODE, "CMasternodeMan::DsegUpdate -- we already asked %s for the list; skipping...\n", pnode->addr.LegacyToString());
+                LogPrint(BCLog::MASTERNODE, "CMasternodeMan::DsegUpdate -- we already asked %s for the list; skipping...\n", pnode->addr.ToString());
                 return;
             }
         }
@@ -506,7 +506,7 @@ void CMasternodeMan::ProcessMasternodeConnections(CConnman& connman)
         if (pnode->fMasternode) {
             if (legacySigner.pSubmittedToMasternode && pnode->addr == legacySigner.pSubmittedToMasternode->addr)
                 continue;
-            LogPrint(BCLog::MASTERNODE, "Closing Masternode connection %s \n", pnode->addr.LegacyToString());
+            LogPrint(BCLog::MASTERNODE, "Closing Masternode connection %s \n", pnode->addr.ToString());
             pnode->fMasternode = false;
             pnode->Release();
         }
@@ -600,7 +600,7 @@ void CMasternodeMan::ProcessMessage(CNode* pfrom, const std::string& strCommand,
         int nInvCount = 0;
         for (const auto& mn : vMasternodes) {
             if (mn.IsEnabled()) {
-                LogPrint(BCLog::MASTERNODE, "dseg - Sending Masternode entry - %s \n", mn.addr.LegacyToString());
+                LogPrint(BCLog::MASTERNODE, "dseg - Sending Masternode entry - %s \n", mn.addr.ToString());
                 if (vin == CTxIn() || vin == mn.vin) {
                     CMasternodeBroadcast mnb = CMasternodeBroadcast(mn);
                     uint256 hash = mnb.GetHash();
@@ -610,7 +610,7 @@ void CMasternodeMan::ProcessMessage(CNode* pfrom, const std::string& strCommand,
                         mapSeenMasternodeBroadcast.insert(make_pair(hash, mnb));
                     }
                     if (vin == mn.vin) {
-                        LogPrint(BCLog::MASTERNODE, "dseg - Sent 1 Masternode entries to %s\n", pfrom->addr.LegacyToString());
+                        LogPrint(BCLog::MASTERNODE, "dseg - Sent 1 Masternode entries to %s\n", pfrom->addr.ToString());
                         return;
                     }
                 }
@@ -620,7 +620,7 @@ void CMasternodeMan::ProcessMessage(CNode* pfrom, const std::string& strCommand,
         if (vin == CTxIn()) {
             const CNetMsgMaker msgMaker(PROTOCOL_VERSION);
             connman->PushMessage(pfrom, msgMaker.Make(NetMsgType::MNSYNCSTATUS, MASTERNODE_SYNC_LIST, nInvCount));
-            LogPrint(BCLog::MASTERNODE, "dseg - Sent %d Masternode entries to %s\n", nInvCount, pfrom->addr.LegacyToString());
+            LogPrint(BCLog::MASTERNODE, "dseg - Sent %d Masternode entries to %s\n", nInvCount, pfrom->addr.ToString());
         }
     }
 }
@@ -632,7 +632,7 @@ void CMasternodeMan::Remove(CTxIn vin)
     vector<CMasternode>::iterator it = vMasternodes.begin();
     while (it != vMasternodes.end()) {
         if ((*it).vin == vin) {
-            LogPrint(BCLog::MASTERNODE, "CMasternodeMan: Removing Masternode %s - %i now\n", (*it).addr.LegacyToString(), size() - 1);
+            LogPrint(BCLog::MASTERNODE, "CMasternodeMan: Removing Masternode %s - %i now\n", (*it).addr.ToString(), size() - 1);
             vMasternodes.erase(it);
             break;
         }
@@ -655,7 +655,7 @@ void CMasternodeMan::UpdateMasternodeList(CMasternodeBroadcast mnb, CConnman& co
     mapSeenMasternodeBroadcast.insert(make_pair(mnb.GetHash(), mnb));
     masternodeSync.AddedMasternodeList(mnb.GetHash());
 
-    LogPrint(BCLog::MASTERNODE, "CMasternodeMan::UpdateMasternodeList() - addr: %s\n    vin: %s\n", mnb.addr.LegacyToString(), mnb.vin.ToString());
+    LogPrint(BCLog::MASTERNODE, "CMasternodeMan::UpdateMasternodeList() - addr: %s\n    vin: %s\n", mnb.addr.ToString(), mnb.vin.ToString());
 
     CMasternode* pmn = Find(mnb.vin);
     if (!pmn) {
@@ -682,7 +682,7 @@ bool CMasternodeMan::CheckMnbAndUpdateMasternodeList(CMasternodeBroadcast mnb, i
 
     if (!mnb.IsValidNetAddr()) {
         LogPrint(BCLog::MASTERNODE, "CMasternodeBroadcast::CheckMnbAndUpdateMasternodeList -- Invalid addr, rejected: masternode=%s  sigTime=%lld  addr=%s\n",
-            mnb.vin.prevout.ToStringShort(), mnb.sigTime, mnb.addr.LegacyToString());
+            mnb.vin.prevout.ToStringShort(), mnb.sigTime, mnb.addr.ToString());
         return false;
     }
 
@@ -692,7 +692,7 @@ bool CMasternodeMan::CheckMnbAndUpdateMasternodeList(CMasternodeBroadcast mnb, i
     }
 
     if (snodeman.Find(mnb.addr)) {
-        LogPrint(BCLog::MASTERNODE, "CMasternodeMan::CheckMnbAndUpdateMasternodeList - There is already a systemnode with the same ip: %s\n", mnb.addr.LegacyToString());
+        LogPrint(BCLog::MASTERNODE, "CMasternodeMan::CheckMnbAndUpdateMasternodeList - There is already a systemnode with the same ip: %s\n", mnb.addr.ToString());
         return false;
     }
 
@@ -708,7 +708,7 @@ bool CMasternodeMan::CheckMnbAndUpdateMasternodeList(CMasternodeBroadcast mnb, i
     if (mnb.CheckInputsAndAdd(nDos, connman)) {
         masternodeSync.AddedMasternodeList(mnbHash);
     } else {
-        LogPrint(BCLog::MASTERNODE, "CMasternodeMan::CheckMnbAndUpdateMasternodeList - Rejected Masternode entry %s\n", mnb.addr.LegacyToString());
+        LogPrint(BCLog::MASTERNODE, "CMasternodeMan::CheckMnbAndUpdateMasternodeList - Rejected Masternode entry %s\n", mnb.addr.ToString());
         return false;
     }
 

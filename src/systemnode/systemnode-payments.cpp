@@ -97,7 +97,7 @@ void CSystemnodePayments::ProcessMessageSystemnodePayments(CNode* pfrom, const s
         }
         netfulfilledman.AddFulfilledRequest(pfrom->addr, NetMsgType::GETSNWINNERS);
         systemnodePayments.Sync(pfrom, nCountNeeded, *connman);
-        LogPrint(BCLog::SYSTEMNODE, "snget - Sent Systemnode winners to %s\n", pfrom->addr.LegacyToString().c_str());
+        LogPrint(BCLog::SYSTEMNODE, "snget - Sent Systemnode winners to %s\n", pfrom->addr.ToString().c_str());
     } else if (strCommand == NetMsgType::SNWINNER) {
         //this is required in litemodef
         CSystemnodePaymentWinner winner;

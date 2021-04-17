@@ -213,7 +213,7 @@ void CMasternodePayments::ProcessMessageMasternodePayments(CNode* pfrom, const s
         }
         netfulfilledman.AddFulfilledRequest(pfrom->addr, NetMsgType::GETMNWINNERS);
         masternodePayments.Sync(pfrom, nCountNeeded, *connman);
-        LogPrint(BCLog::MASTERNODE, "mnget - Sent Masternode winners to %s\n", pfrom->addr.LegacyToString().c_str());
+        LogPrint(BCLog::MASTERNODE, "mnget - Sent Masternode winners to %s\n", pfrom->addr.ToString().c_str());
     } else if (strCommand == NetMsgType::MNWINNER) {
         //this is required in litemodef
         CMasternodePaymentWinner winner;

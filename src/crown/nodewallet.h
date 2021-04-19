@@ -7,14 +7,21 @@
 #ifndef CROWN_NODEWALLET_H
 #define CROWN_NODEWALLET_H
 
+#include <consensus/validation.h>
 #include <masternode/activemasternode.h>
 #include <masternode/masternode-budget.h>
 #include <masternode/masternode-payments.h>
+#include <masternode/masternode-sync.h>
 #include <masternode/masternodeman.h>
+#include <miner.h>
+#include <node/context.h>
 #include <pos/kernel.h>
 #include <pos/stakeminer.h>
+#include <rpc/blockchain.h>
+#include <shutdown.h>
 #include <systemnode/activesystemnode.h>
 #include <systemnode/systemnode-payments.h>
+#include <systemnode/systemnode-sync.h>
 #include <systemnode/systemnodeman.h>
 #include <util/translation.h>
 #include <wallet/coincontrol.h>
@@ -32,6 +39,9 @@ public:
     uint256 GenerateStakeModifier(const CBlockIndex* prewardBlockIndex) const;
     bool GetRecentStakePointers(std::vector<StakePointer>& vStakePointers);
 };
+
+void GetScriptForMining(CScript& script, std::shared_ptr<CWallet> wallet = GetMainWallet());
+void NodeMinter(const CChainParams& chainparams, CConnman& connman);
 
 extern NodeWallet currentNode;
 

@@ -79,8 +79,10 @@ void CSystemnodeMan::ProcessSystemnodeConnections(CConnman& connman)
 
 void CSystemnodeMan::ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStream& vRecv, CConnman* connman)
 {
-    if (!systemnodeSync.IsBlockchainSynced())
-        return;
+    if (!gArgs.GetBoolArg("-jumpstart", false)) {
+        if (!systemnodeSync.IsBlockchainSynced())
+            return;
+    }
 
     //! systemnode broadcast
     if (strCommand == NetMsgType::SNBROADCAST) {
@@ -453,7 +455,8 @@ void CSystemnodeMan::Clear()
 
 void CSystemnodeMan::Check()
 {
-    LOCK2(cs_main, cs);
+    LOCK(cs);
+
     for (auto& sn : vSystemnodes) {
         sn.Check();
     }

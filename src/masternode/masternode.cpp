@@ -441,10 +441,6 @@ bool CMasternodeBroadcast::Create(std::string strService, std::string strKeyMast
 
 bool CMasternodeBroadcast::Create(CTxIn txin, CService service, CKey keyCollateralAddress, CPubKey pubKeyCollateralAddress, CKey keyMasternodeNew, CPubKey pubKeyMasternodeNew, bool fSignOver, std::string& strErrorMessage, CMasternodeBroadcast& mnb)
 {
-    // wait for reindex and/or import to finish
-    if (fImporting || fReindex)
-        return false;
-
     CMasternodePing mnp(txin);
     if (!mnp.Sign(keyMasternodeNew, pubKeyMasternodeNew)) {
         strErrorMessage = strprintf("Failed to sign ping, txin: %s", txin.ToString());
@@ -543,7 +539,6 @@ bool CMasternodeBroadcast::CheckAndUpdate(int& nDos, CConnman& connman) const
             LogPrintf("mnb - Got bad Masternode address signature, sanitized error: %s\n", SanitizeString(errorMessage));
             return false;
         }
-        LogPrintf("mnb - Got bad Masternode address signature, sanitized error: %s\n", SanitizeString(errorMessage));
     }
 
     //! or do it like this for all nets...
@@ -666,7 +661,9 @@ bool CMasternodeBroadcast::CheckInputsAndAdd(int& nDoS, CConnman& connman) const
 void CMasternodeBroadcast::Relay(CConnman& connman) const
 {
     CInv inv(MSG_MASTERNODE_ANNOUNCE, GetHash());
-    connman.RelayInv(inv);
+    connman.ForEachNode([&inv](CNode* pnode) {
+        pnode->PushInventory(inv);
+    });
 }
 
 bool CMasternodeBroadcast::Sign(const CKey& keyCollateralAddress)
@@ -857,7 +854,9 @@ bool CMasternodePing::CheckAndUpdate(int& nDos, CConnman& connman, bool fRequire
 void CMasternodePing::Relay(CConnman& connman) const
 {
     CInv inv(MSG_MASTERNODE_PING, GetHash());
-    connman.RelayInv(inv);
+    connman.ForEachNode([&inv](CNode* pnode) {
+        pnode->PushInventory(inv);
+    });
 }
 
 CMasternode::CollateralStatus CMasternode::CheckCollateral(const COutPoint& outpoint)

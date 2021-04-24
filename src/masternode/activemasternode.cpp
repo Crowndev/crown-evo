@@ -23,7 +23,7 @@ void CActiveMasternode::ManageStatus(CConnman& connman)
     LogPrintf("CActiveMasternode::ManageStatus() - Begin\n");
 
     //need correct blocks to send ping
-    if (!masternodeSync.IsBlockchainSynced()) {
+    if (!masternodeSync.IsBlockchainSynced() || !masternodeSync.IsSynced()) {
         status = ACTIVE_MASTERNODE_SYNC_IN_PROCESS;
         LogPrintf("CActiveMasternode::ManageStatus() - %s\n", GetStatus());
         return;

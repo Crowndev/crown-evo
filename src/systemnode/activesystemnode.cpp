@@ -1,3 +1,4 @@
+// Copyright (c) 2014-2015 The Dash developers
 // Copyright (c) 2014-2018 The Crown developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
@@ -22,7 +23,7 @@ void CActiveSystemnode::ManageStatus(CConnman& connman)
     LogPrintf("CActiveSystemnode::ManageStatus() - Begin\n");
 
     //need correct blocks to send ping
-    if (!systemnodeSync.IsBlockchainSynced()) {
+    if (!systemnodeSync.IsBlockchainSynced() || !systemnodeSync.IsSynced()) {
         status = ACTIVE_SYSTEMNODE_SYNC_IN_PROCESS;
         LogPrintf("CActiveSystemnode::ManageStatus() - %s\n", GetStatus());
         return;
@@ -84,13 +85,13 @@ void CActiveSystemnode::ManageStatus(CConnman& connman)
         }
 
         if (Params().NetworkIDString() == CBaseChainParams::MAIN) {
-            if (service.GetPort() != 9340) {
-                notCapableReason = strprintf("Invalid port: %u - only 9340 is supported on mainnet.", service.GetPort());
+            if (service.GetPort() != Params().GetDefaultPort()) {
+                notCapableReason = strprintf("Invalid port: %u - only %u is supported on mainnet.", service.GetPort(), Params().GetDefaultPort());
                 LogPrintf("CActiveSystemnode::ManageStatus() - not capable: %s\n", notCapableReason);
                 return;
             }
-        } else if (service.GetPort() == 9340) {
-            notCapableReason = strprintf("Invalid port: %u - 9340 is only supported on mainnet.", service.GetPort());
+        } else if (service.GetPort() == Params().GetDefaultPort()) {
+            notCapableReason = strprintf("Invalid port: %u - %u is only supported on mainnet.", service.GetPort(), Params().GetDefaultPort());
             LogPrintf("CActiveSystemnode::ManageStatus() - not capable: %s\n", notCapableReason);
             return;
         }
@@ -137,9 +138,9 @@ void CActiveSystemnode::ManageStatus(CConnman& connman)
                 return;
             }
 
-            CSystemnodeBroadcast mnb;
+            CSystemnodeBroadcast snb;
             bool fSignOver = true;
-            if (!CSystemnodeBroadcast::Create(vin, service, keyCollateralAddress, pubKeyCollateralAddress, keySystemnode, pubKeySystemnode, fSignOver, errorMessage, mnb)) {
+            if (!CSystemnodeBroadcast::Create(vin, service, keyCollateralAddress, pubKeyCollateralAddress, keySystemnode, pubKeySystemnode, fSignOver, errorMessage, snb)) {
                 notCapableReason = "Error on CreateBroadcast: " + errorMessage;
                 LogPrintf("Register::ManageStatus() - %s\n", notCapableReason);
                 return;
@@ -147,11 +148,11 @@ void CActiveSystemnode::ManageStatus(CConnman& connman)
 
             //update to Systemnode list
             LogPrintf("CActiveSystemnode::ManageStatus() - Update Systemnode List\n");
-            snodeman.UpdateSystemnodeList(mnb, connman);
+            snodeman.UpdateSystemnodeList(snb, connman);
 
             //send to all peers
             LogPrintf("CActiveSystemnode::ManageStatus() - Relay broadcast vin = %s\n", vin.ToString());
-            mnb.Relay(connman);
+            snb.Relay(connman);
 
             LogPrintf("CActiveSystemnode::ManageStatus() - Is capable Systemnode!\n");
             status = ACTIVE_SYSTEMNODE_STARTED;
@@ -170,7 +171,7 @@ void CActiveSystemnode::ManageStatus(CConnman& connman)
     }
 }
 
-std::string CActiveSystemnode::GetStatus()
+std::string CActiveSystemnode::GetStatus() const
 {
     switch (status) {
     case ACTIVE_SYSTEMNODE_INITIAL:
@@ -205,30 +206,30 @@ bool CActiveSystemnode::SendSystemnodePing(std::string& errorMessage, CConnman& 
 
     LogPrintf("CActiveSystemnode::SendSystemnodePing() - Relay Systemnode Ping vin = %s\n", vin.ToString());
 
-    CSystemnodePing mnp(vin);
-    if (!mnp.Sign(keySystemnode, pubKeySystemnode)) {
+    CSystemnodePing snp(vin);
+    if (!snp.Sign(keySystemnode, pubKeySystemnode)) {
         errorMessage = "Couldn't sign Systemnode Ping";
         return false;
     }
 
     // Update lastPing for our systemnode in Systemnode list
-    CSystemnode* pmn = snodeman.Find(vin);
-    if (pmn) {
-        if (pmn->IsPingedWithin(SYSTEMNODE_PING_SECONDS, mnp.sigTime)) {
+    CSystemnode* psn = snodeman.Find(vin);
+    if (psn) {
+        if (psn->IsPingedWithin(SYSTEMNODE_PING_SECONDS, snp.sigTime)) {
             errorMessage = "Too early to send Systemnode Ping";
             return false;
         }
 
-        pmn->lastPing = mnp;
-        snodeman.mapSeenSystemnodePing.insert(make_pair(mnp.GetHash(), mnp));
+        psn->lastPing = snp;
+        snodeman.mapSeenSystemnodePing.insert(make_pair(snp.GetHash(), snp));
 
         //snodeman.mapSeenSystemnodeBroadcast.lastPing is probably outdated, so we'll update it
-        CSystemnodeBroadcast mnb(*pmn);
-        uint256 hash = mnb.GetHash();
+        CSystemnodeBroadcast snb(*psn);
+        uint256 hash = snb.GetHash();
         if (snodeman.mapSeenSystemnodeBroadcast.count(hash))
-            snodeman.mapSeenSystemnodeBroadcast[hash].lastPing = mnp;
+            snodeman.mapSeenSystemnodeBroadcast[hash].lastPing = snp;
 
-        mnp.Relay(connman);
+        snp.Relay(connman);
 
         return true;
     } else {
@@ -248,7 +249,7 @@ bool CActiveSystemnode::EnableHotColdSystemNode(const CTxIn& newVin, const CServ
 
     status = ACTIVE_SYSTEMNODE_STARTED;
 
-    //The values below are needed for signing mnping messages going forward
+    //The values below are needed for signing snping messages going forward
     vin = newVin;
     service = newService;
 

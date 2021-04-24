@@ -481,7 +481,9 @@ bool CSystemnodePayments::AddWinningSystemnode(CSystemnodePaymentWinner& winnerI
 void CSystemnodePaymentWinner::Relay(CConnman& connman)
 {
     CInv inv(MSG_SYSTEMNODE_WINNER, GetHash());
-    connman.RelayInv(inv);
+    connman.ForEachNode([&inv](CNode* pnode) {
+        pnode->PushInventory(inv);
+    });
 }
 
 bool CSystemnodePaymentWinner::SignatureValid()

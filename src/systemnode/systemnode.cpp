@@ -1,3 +1,4 @@
+// Copyright (c) 2014-2015 The Dash developers
 // Copyright (c) 2014-2018 The Crown developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
@@ -47,13 +48,15 @@ bool CSystemnodePing::Sign(const CKey& keySystemnode, const CPubKey& pubKeySyste
     return true;
 }
 
-void CSystemnodePing::Relay(CConnman& connman)
+void CSystemnodePing::Relay(CConnman& connman) const
 {
     CInv inv(MSG_SYSTEMNODE_PING, GetHash());
-    connman.RelayInv(inv);
+    connman.ForEachNode([&inv](CNode* pnode) {
+        pnode->PushInventory(inv);
+    });
 }
 
-bool CSystemnodePing::CheckAndUpdate(int& nDos, CConnman& connman, bool fRequireEnabled, bool fCheckSigTimeOnly)
+bool CSystemnodePing::CheckAndUpdate(int& nDos, CConnman& connman, bool fRequireEnabled, bool fCheckSigTimeOnly) const
 {
     if (sigTime > GetAdjustedTime() + 60 * 60) {
         LogPrint(BCLog::SYSTEMNODE, "CSystemnodePing::CheckAndUpdate - Signature rejected, too far into the future %s\n", vin.ToString());
@@ -201,7 +204,7 @@ CSystemnode::CSystemnode(const CSystemnodeBroadcast& snb)
     lastTimeChecked = 0;
 }
 
-bool CSystemnode::IsValidNetAddr()
+bool CSystemnode::IsValidNetAddr() const
 {
     return (addr.IsIPv4() && addr.IsRoutable());
 }
@@ -238,7 +241,7 @@ arith_uint256 CSystemnode::CalculateScore(int64_t nBlockHeight) const
 //
 // When a new systemnode broadcast is sent, update our information
 //
-bool CSystemnode::UpdateFromNewBroadcast(CSystemnodeBroadcast& snb, CConnman& connman)
+bool CSystemnode::UpdateFromNewBroadcast(const CSystemnodeBroadcast& snb, CConnman& connman)
 {
     if (snb.sigTime > sigTime) {
         pubkey2 = snb.pubkey2;
@@ -402,7 +405,7 @@ bool CSystemnode::GetRecentPaymentBlocks(std::vector<const CBlockIndex*>& vPayme
 // CSystemnodeBroadcast
 //
 
-bool CSystemnodeBroadcast::CheckAndUpdate(int& nDos, CConnman& connman)
+bool CSystemnodeBroadcast::CheckAndUpdate(int& nDos, CConnman& connman) const
 {
     nDos = 0;
 
@@ -452,7 +455,7 @@ bool CSystemnodeBroadcast::CheckAndUpdate(int& nDos, CConnman& connman)
     strMessage = addr.ToString(false) + boost::lexical_cast<std::string>(sigTime) + vchPubKey + vchPubKey2 + boost::lexical_cast<std::string>(protocolVersion);
 
     if (!legacySigner.VerifyMessage(pubkey, sig, strMessage, errorMessage)) {
-        if (addr.ToString(true) != addr.ToString(false)) {
+        if (addr.ToString() != addr.ToString(false)) {
             strMessage = addr.ToString() + boost::lexical_cast<std::string>(sigTime) + vchPubKey + vchPubKey2 + boost::lexical_cast<std::string>(protocolVersion);
             if (!legacySigner.VerifyMessage(pubkey, sig, strMessage, errorMessage)) {
                 LogPrintf("snb - Got bad systemnode address signature, sanitized error: %s\n", SanitizeString(errorMessage));
@@ -504,7 +507,7 @@ bool CSystemnodeBroadcast::CheckAndUpdate(int& nDos, CConnman& connman)
     return true;
 }
 
-bool CSystemnodeBroadcast::CheckInputsAndAdd(int& nDoS, CConnman& connman)
+bool CSystemnodeBroadcast::CheckInputsAndAdd(int& nDoS, CConnman& connman) const
 {
     // we are a systemnode with the same vin (i.e. already activated) and this snb is ours (matches our systemnode privkey)
     // so nothing to do here for us
@@ -584,7 +587,9 @@ bool CSystemnodeBroadcast::CheckInputsAndAdd(int& nDoS, CConnman& connman)
 void CSystemnodeBroadcast::Relay(CConnman& connman) const
 {
     CInv inv(MSG_SYSTEMNODE_ANNOUNCE, GetHash());
-    connman.RelayInv(inv);
+    connman.ForEachNode([&inv](CNode* pnode) {
+        pnode->PushInventory(inv);
+    });
 }
 
 CSystemnodeBroadcast::CSystemnodeBroadcast()
@@ -688,10 +693,6 @@ bool CSystemnodeBroadcast::Create(std::string strService, std::string strKeySyst
 
 bool CSystemnodeBroadcast::Create(CTxIn txin, CService service, CKey keyCollateralAddress, CPubKey pubKeyCollateralAddress, CKey keySystemnodeNew, CPubKey pubKeySystemnodeNew, bool fSignOver, std::string& strErrorMessage, CSystemnodeBroadcast& snb)
 {
-    // wait for reindex and/or import to finish
-    if (fImporting || fReindex)
-        return false;
-
     CSystemnodePing snp(txin);
     if (!snp.Sign(keySystemnodeNew, pubKeySystemnodeNew)) {
         strErrorMessage = strprintf("Failed to sign ping, txin: %s", txin.ToString());

@@ -52,7 +52,7 @@ public:
 
     /// Manage status of main Systemnode
     void ManageStatus(CConnman& connman);
-    std::string GetStatus();
+    std::string GetStatus() const;
 
     /// Enable cold wallet mode (run a Systemnode with no funds)
     bool EnableHotColdSystemNode(const CTxIn& vin, const CService& addr);

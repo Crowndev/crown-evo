@@ -51,10 +51,10 @@ public:
         READWRITE(obj.vchSig);
     }
 
-    bool CheckAndUpdate(int& nDos, CConnman& connman, bool fRequireEnabled = true, bool fCheckSigTimeOnly = false);
+    bool CheckAndUpdate(int& nDos, CConnman& connman, bool fRequireEnabled = true, bool fCheckSigTimeOnly = false) const;
     bool Sign(const CKey& keySystemnode, const CPubKey& pubKeySystemnode);
     bool VerifySignature(const CPubKey& pubKeySystemnode, int& nDos) const;
-    void Relay(CConnman& connman);
+    void Relay(CConnman& connman) const;
 
     uint256 GetHash() const
     {
@@ -192,18 +192,30 @@ public:
     static CollateralStatus CheckCollateral(const COutPoint& outpoint, int& nHeightRet);
 
     int64_t SecondsSincePayment() const;
-    bool UpdateFromNewBroadcast(CSystemnodeBroadcast& snb, CConnman& connman);
+    bool UpdateFromNewBroadcast(const CSystemnodeBroadcast& snb, CConnman& connman);
     void Check(bool forceCheck = false);
+
     bool IsBroadcastedWithin(int seconds) const
     {
         return (GetAdjustedTime() - sigTime) < seconds;
     }
+
+    bool IsPingedWithin(int seconds, int64_t now = -1) const
+    {
+        now == -1 ? now = GetAdjustedTime() : now;
+
+        return (lastPing == CSystemnodePing())
+            ? false
+            : now - lastPing.sigTime < seconds;
+    }
+
     bool IsEnabled() const
     {
         return activeState == SYSTEMNODE_ENABLED;
     }
-    bool IsInputAssociatedWithPubkey();
-    bool IsValidNetAddr();
+
+    bool IsValidNetAddr() const;
+
     int GetSystemnodeInputAge()
     {
         if (::ChainActive().Tip() == nullptr)
@@ -216,14 +228,7 @@ public:
 
         return cacheInputAge + (::ChainActive().Tip()->nHeight - cacheInputAgeBlock);
     }
-    bool IsPingedWithin(int seconds, int64_t now = -1) const
-    {
-        now == -1 ? now = GetAdjustedTime() : now;
 
-        return (lastPing == CSystemnodePing())
-            ? false
-            : now - lastPing.sigTime < seconds;
-    }
     std::string Status() const
     {
         std::string strStatus = "ACTIVE";
@@ -241,6 +246,7 @@ public:
 
         return strStatus;
     }
+
     int64_t GetLastPaid() const;
 
     bool GetRecentPaymentBlocks(std::vector<const CBlockIndex*>& vPaymentBlocks, bool limitMostRecent = false) const;
@@ -260,8 +266,8 @@ public:
     static bool Create(CTxIn txin, CService service, CKey keyCollateral, CPubKey pubKeyCollateral, CKey keySystemnodeNew, CPubKey pubKeySystemnodeNew, bool fSignOver, std::string& strErrorMessage, CSystemnodeBroadcast& snb);
     static bool Create(std::string strService, std::string strKey, std::string strTxHash, std::string strOutputIndex, std::string& strErrorMessage, CSystemnodeBroadcast& snb, bool fOffline = false);
 
-    bool CheckAndUpdate(int& nDoS, CConnman& connman);
-    bool CheckInputsAndAdd(int& nDos, CConnman& connman);
+    bool CheckAndUpdate(int& nDoS, CConnman& connman) const;
+    bool CheckInputsAndAdd(int& nDos, CConnman& connman) const;
     bool Sign(const CKey& keyCollateralAddress);
     bool VerifySignature() const;
     void Relay(CConnman& connman) const;

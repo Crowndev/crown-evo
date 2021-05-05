@@ -6,6 +6,8 @@
 #ifndef MASTERNODE_SYNC_H
 #define MASTERNODE_SYNC_H
 
+#include <net.h>
+
 #define MASTERNODE_SYNC_INITIAL 0
 #define MASTERNODE_SYNC_SPORKS 1
 #define MASTERNODE_SYNC_LIST 2

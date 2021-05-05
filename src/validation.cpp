@@ -22,6 +22,7 @@
 #include <key_io.h>
 #include <logging.h>
 #include <logging/timer.h>
+#include <node/context.h>
 #include <node/ui_interface.h>
 #include <optional.h>
 #include <policy/fees.h>
@@ -31,6 +32,7 @@
 #include <primitives/block.h>
 #include <primitives/transaction.h>
 #include <random.h>
+#include <rpc/blockchain.h>
 #include <reverse_iterator.h>
 #include <script/script.h>
 #include <script/sigcache.h>
@@ -51,8 +53,10 @@
 #include <validationinterface.h>
 #include <warnings.h>
 
+#include <masternode/masternode-sync.h>
 #include <masternode/masternode-payments.h>
 #include <masternode/masternode-budget.h>
+#include <systemnode/systemnode-sync.h>
 #include <systemnode/systemnode-payments.h>
 
 #include <string>
@@ -4168,6 +4172,8 @@ bool ChainstateManager::ProcessNewBlock(const CChainParams& chainparams, const s
 {
     AssertLockNotHeld(cs_main);
 
+    int nHeight;
+
     {
         CBlockIndex *pindex = nullptr;
         if (fNewBlock) *fNewBlock = false;
@@ -4188,6 +4194,14 @@ bool ChainstateManager::ProcessNewBlock(const CChainParams& chainparams, const s
             GetMainSignals().BlockChecked(*pblock, state);
             return error("%s: AcceptBlock FAILED (%s)", __func__, state.ToString());
         }
+
+        nHeight = pindex->nHeight;
+    }
+
+    if (masternodeSync.IsSynced() && systemnodeSync.IsSynced()) {
+        masternodePayments.ProcessBlock(nHeight + 10, *g_rpc_node->connman);
+        systemnodePayments.ProcessBlock(nHeight + 10, *g_rpc_node->connman);
+        budget.NewBlock(*g_rpc_node->connman);
     }
 
     NotifyHeaderTip();

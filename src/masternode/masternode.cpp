@@ -56,6 +56,19 @@ bool GetBlockHash(uint256& hash, int nBlockHeight)
     return false;
 }
 
+void vecHash(uint256& hash, std::vector<uint256> vPrevBlockHash)
+{
+    bool firstHash = true;
+    for (std::vector<uint256>::const_iterator it(vPrevBlockHash.begin()); it != vPrevBlockHash.end(); ++it) {
+        if (firstHash) {
+            hash = Hash(*it, hash);
+            firstHash = false;
+        } else {
+            hash = Hash(hash, *it);
+        }
+    }
+}
+
 CMasternode::CMasternode()
 {
     LOCK(cs);
@@ -748,6 +761,17 @@ bool CMasternodePing::Sign(const CKey& keyMasternode, const CPubKey& pubKeyMaste
         return false;
     }
 
+    uint256 hash;
+    vecHash(hash, vPrevBlockHash);
+    if(!legacySigner.SignMessage(hash.GetHex(), vchSigPrevBlocks, keyMasternode)) {
+        LogPrintf("CMasternodePing::Sign() - Error signing previous blocks: %s\n", errorMessage);
+        return false;
+    }
+
+    if(!legacySigner.VerifyMessage(pubKeyMasternode, vchSigPrevBlocks, hash.GetHex(), errorMessage)) {
+        LogPrintf("CMasternodePing::Sign() - Error: %s\n", errorMessage);
+        return false;
+    }
     return true;
 }
 
@@ -759,6 +783,17 @@ bool CMasternodePing::VerifySignature(const CPubKey& pubKeyMasternode, int& nDos
     if (!legacySigner.VerifyMessage(pubKeyMasternode, vchSig, strMessage, errorMessage)) {
         LogPrint(BCLog::MASTERNODE, "CMasternodePing::VerifySignature - Got bad Masternode ping signature %s Error: %s\n", vin.ToString(), errorMessage);
         return false;
+    }
+
+    //Also check signature of previous blockhashes
+    if (nVersion > 1) {
+        uint256 hash;
+        vecHash(hash, vPrevBlockHash);
+        if (!legacySigner.VerifyMessage(pubKeyMasternode, vchSigPrevBlocks, hash.GetHex(), errorMessage)) {
+            LogPrintf("CMasternodePing::VerifySignature - Got bad Masternode signature for previous blocks %s Error: %s\n", vin.ToString(), errorMessage);
+            nDos = 33;
+            return false;
+        }
     }
 
     return true;

@@ -160,6 +160,8 @@ public:
         return (nValue == -1);
     }
 
+    uint256 GetHash() const;
+
     friend bool operator==(const CTxOut& a, const CTxOut& b)
     {
         return (a.nValue == b.nValue &&

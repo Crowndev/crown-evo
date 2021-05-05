@@ -61,6 +61,7 @@ void ThreadMasternodeSync(CConnman& connman)
     static unsigned int c1 = 0;
 
     masternodeSync.Process(connman);
+    if (masternodeSync.IsBlockchainSynced())
     {
         c1++;
 
@@ -94,6 +95,7 @@ void ThreadSystemnodeSync(CConnman& connman)
     static unsigned int c2 = 0;
 
     systemnodeSync.Process(connman);
+    if (systemnodeSync.IsBlockchainSynced())
     {
         c2++;
 
@@ -108,6 +110,7 @@ void ThreadSystemnodeSync(CConnman& connman)
             snodeman.CheckAndRemove();
             snodeman.ProcessSystemnodeConnections(connman);
             systemnodePayments.CheckAndRemove();
+            instantSend.CheckAndRemove();
         }
     }
 }

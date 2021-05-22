@@ -40,17 +40,6 @@ private:
     // which Masternodes we've asked for
     std::map<COutPoint, int64_t> mWeAskedForMasternodeListEntry;
 
-    // these maps are used for masternode recovery from MASTERNODE_NEW_START_REQUIRED state
-    std::map<uint256, std::pair<int64_t, std::set<CNetAddr>>> mMnbRecoveryRequests;
-    std::map<uint256, std::vector<CMasternodeBroadcast>> mMnbRecoveryGoodReplies;
-    std::list<std::pair<CService, uint256>> listScheduledMnbRequestConnections;
-
-    /// Set when masternodes are added, cleared when CGovernanceManager is notified
-    bool fMasternodesAdded;
-
-    /// Set when masternodes are removed, cleared when CGovernanceManager is notified
-    bool fMasternodesRemoved;
-
 public:
     // Keep track of all broadcasts I've seen
     map<uint256, CMasternodeBroadcast> mapSeenMasternodeBroadcast;

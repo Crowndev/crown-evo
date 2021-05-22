@@ -75,7 +75,8 @@ void CMasternodeMan::AskForMN(CNode* pnode, const CTxIn& vin, CConnman& connman)
 
 void CMasternodeMan::Check()
 {
-    LOCK2(cs_main, cs);
+    LOCK(cs);
+
     for (auto& mn : vMasternodes) {
         mn.Check();
     }
@@ -83,9 +84,9 @@ void CMasternodeMan::Check()
 
 void CMasternodeMan::CheckAndRemove(bool forceExpiredRemoval)
 {
-    LOCK2(cs_main, cs);
-
     Check();
+
+    LOCK(cs);
 
     //remove inactive and outdated
     vector<CMasternode>::iterator it = vMasternodes.begin();
@@ -508,7 +509,7 @@ void CMasternodeMan::ProcessMasternodeConnections(CConnman& connman)
                 continue;
             LogPrint(BCLog::MASTERNODE, "Closing Masternode connection %s \n", pnode->addr.ToString());
             pnode->fMasternode = false;
-            pnode->Release();
+            pnode->fDisconnect = true;
         }
     }
 }

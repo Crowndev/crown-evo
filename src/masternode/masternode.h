@@ -262,7 +262,7 @@ public:
             return 0;
 
         if (cacheInputAge == 0) {
-            cacheInputAge = GetUTXOConfirmations(vin.prevout);
+            cacheInputAge = GetInputAge(vin);
             cacheInputAgeBlock = ::ChainActive().Tip()->nHeight;
         }
 

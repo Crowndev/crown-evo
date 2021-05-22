@@ -153,6 +153,8 @@ void NodeMinter(const CChainParams& chainparams, CConnman& connman)
     util::ThreadRename("crown-minter");
 
     auto pwallet = GetMainWallet();
+    if (!pwallet)
+        return;
 
     if (ShutdownRequested())
         return;

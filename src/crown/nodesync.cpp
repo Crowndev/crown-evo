@@ -57,11 +57,12 @@ void ThreadMasternodeSync(CConnman& connman)
         return;
     if (ShutdownRequested())
         return;
+    if (!masternodeSync.IsBlockchainSynced())
+        return;
 
     static unsigned int c1 = 0;
 
     masternodeSync.Process(connman);
-    if (masternodeSync.IsBlockchainSynced())
     {
         c1++;
 
@@ -91,11 +92,12 @@ void ThreadSystemnodeSync(CConnman& connman)
         return;
     if (ShutdownRequested())
         return;
+    if (!systemnodeSync.IsBlockchainSynced())
+        return;
 
     static unsigned int c2 = 0;
 
     systemnodeSync.Process(connman);
-    if (systemnodeSync.IsBlockchainSynced())
     {
         c2++;
 

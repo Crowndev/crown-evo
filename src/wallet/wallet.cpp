@@ -74,8 +74,8 @@ bool UseInstantSend() {
 std::shared_ptr<CWallet> GetMainWallet()
 {
     LOCK(cs_wallets);
-    if (!vpwallets.empty())
-        return vpwallets.at(0);
+    for (const auto& wallet : vpwallets)
+        return wallet;
     return nullptr;
 }
 

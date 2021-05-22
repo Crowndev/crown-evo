@@ -3823,6 +3823,7 @@ void PeerManager::ProcessMessage(CNode& pfrom, const std::string& msg_type, CDat
             std::vector<CInv> vGetData = {CInv(MSG_BLOCK, hashBlock)};
             m_connman.PushMessage(&pfrom, msgMaker.Make(NetMsgType::GETDATA, vGetData));
         }
+        return;
     }
 
     if (msg_type == NetMsgType::REJECT)
@@ -3863,6 +3864,7 @@ void PeerManager::ProcessMessage(CNode& pfrom, const std::string& msg_type, CDat
                 }
             }
         }
+        return;
     }
 
     if (msg_type == NetMsgType::NOTFOUND) {

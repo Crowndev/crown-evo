@@ -139,6 +139,7 @@ void CMasternodeSync::GetNextAsset()
 {
     switch (RequestedMasternodeAssets) {
     case (MASTERNODE_SYNC_INITIAL):
+    case (MASTERNODE_SYNC_FAILED): // should never be used here actually, use Reset() instead
         ClearFulfilledRequest(*g_rpc_node->connman);
         RequestedMasternodeAssets = MASTERNODE_SYNC_SPORKS;
         break;
@@ -260,6 +261,7 @@ void CMasternodeSync::Process(CConnman& connman)
 
     if (!IsBlockchainSynced() && RequestedMasternodeAssets > MASTERNODE_SYNC_SPORKS)
         return;
+
     if (RequestedMasternodeAssets == MASTERNODE_SYNC_INITIAL)
         GetNextAsset();
 
@@ -269,7 +271,7 @@ void CMasternodeSync::Process(CConnman& connman)
             if (netfulfilledman.HasFulfilledRequest(pnode->addr, "getspork"))
                 continue;
             netfulfilledman.AddFulfilledRequest(pnode->addr, "getspork");
-            connman.PushMessage(pnode, msgMaker.Make(NetMsgType::GETSPORKS));
+            connman.PushMessage(pnode, CNetMsgMaker(pnode->GetCommonVersion()).Make(NetMsgType::GETSPORKS));
             if (RequestedMasternodeAttempt >= 2)
                 GetNextAsset();
             RequestedMasternodeAttempt++;
@@ -345,41 +347,38 @@ void CMasternodeSync::Process(CConnman& connman)
             }
         }
 
-        if (pnode->nVersion >= MIN_BUDGET_PEER_PROTO_VERSION) {
+        if (RequestedMasternodeAssets == MASTERNODE_SYNC_BUDGET) {
+            //we'll start rejecting votes if we accidentally get set as synced too soon
+            if (lastBudgetItem > 0 && lastBudgetItem < GetTime() - MASTERNODE_SYNC_TIMEOUT * 2 && RequestedMasternodeAttempt >= MASTERNODE_SYNC_THRESHOLD) { //hasn't received a new item in the last five seconds, so we'll move to the
+                // Hasn't received a new item in the last five seconds, so we'll move to the
+                GetNextAsset();
 
-            if (RequestedMasternodeAssets == MASTERNODE_SYNC_BUDGET) {
-                //we'll start rejecting votes if we accidentally get set as synced too soon
-                if (lastBudgetItem > 0 && lastBudgetItem < GetTime() - MASTERNODE_SYNC_TIMEOUT * 2 && RequestedMasternodeAttempt >= MASTERNODE_SYNC_THRESHOLD) { //hasn't received a new item in the last five seconds, so we'll move to the
-                    // Hasn't received a new item in the last five seconds, so we'll move to the
-                    GetNextAsset();
-
-                    //try to activate our masternode if possible
-                    activeMasternode.ManageStatus(connman);
-
-                    return;
-                }
-
-                // timeout
-                if (lastBudgetItem == 0 && (RequestedMasternodeAttempt >= MASTERNODE_SYNC_THRESHOLD * 3 || GetTime() - nAssetSyncStarted > MASTERNODE_SYNC_TIMEOUT * 5)) {
-                    // maybe there is no budgets at all, so just finish syncing
-                    GetNextAsset();
-                    activeMasternode.ManageStatus(connman);
-                    return;
-                }
-
-                if (netfulfilledman.HasFulfilledRequest(pnode->addr, "busync"))
-                    continue;
-                netfulfilledman.AddFulfilledRequest(pnode->addr, "busync");
-
-                if (RequestedMasternodeAttempt >= MASTERNODE_SYNC_THRESHOLD * 3)
-                    return;
-
-                uint256 n = uint256();
-                connman.PushMessage(pnode, msgMaker.Make(NetMsgType::BUDGETVOTESYNC, n));
-                RequestedMasternodeAttempt++;
+                //try to activate our masternode if possible
+                activeMasternode.ManageStatus(connman);
 
                 return;
             }
+
+            // timeout
+            if (lastBudgetItem == 0 && (RequestedMasternodeAttempt >= MASTERNODE_SYNC_THRESHOLD * 3 || GetTime() - nAssetSyncStarted > MASTERNODE_SYNC_TIMEOUT * 5)) {
+                // maybe there is no budgets at all, so just finish syncing
+                GetNextAsset();
+                activeMasternode.ManageStatus(connman);
+                return;
+            }
+
+            if (netfulfilledman.HasFulfilledRequest(pnode->addr, "busync"))
+                continue;
+            netfulfilledman.AddFulfilledRequest(pnode->addr, "busync");
+
+            if (RequestedMasternodeAttempt >= MASTERNODE_SYNC_THRESHOLD * 3)
+                return;
+
+            uint256 n = uint256();
+            connman.PushMessage(pnode, CNetMsgMaker(pnode->GetCommonVersion()).Make(NetMsgType::BUDGETVOTESYNC, n));
+            RequestedMasternodeAttempt++;
+
+            return;
         }
     }
 }

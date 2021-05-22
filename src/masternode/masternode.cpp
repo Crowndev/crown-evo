@@ -214,9 +214,6 @@ void CMasternode::Check(bool forceCheck)
 
     //test if the collateral is still good
     if (!unitTest) {
-        TRY_LOCK(cs_main, lockMain);
-        if (!lockMain)
-            return;
         CollateralStatus err = CheckCollateral(vin.prevout);
         if (err == COLLATERAL_UTXO_NOT_FOUND) {
             activeState = MASTERNODE_VIN_SPENT;
@@ -896,6 +893,8 @@ void CMasternodePing::Relay(CConnman& connman) const
 
 CMasternode::CollateralStatus CMasternode::CheckCollateral(const COutPoint& outpoint)
 {
+    LOCK(cs_main);
+
     int nHeight;
     return CheckCollateral(outpoint, nHeight);
 }

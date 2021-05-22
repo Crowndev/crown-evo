@@ -526,9 +526,9 @@ int CSystemnodeMan::GetSystemnodeRank(const CTxIn& vin, int64_t nBlockHeight, in
 
 void CSystemnodeMan::CheckAndRemove(bool forceExpiredRemoval)
 {
-    LOCK2(cs_main, cs);
-
     Check();
+
+    LOCK(cs);
 
     //remove inactive and outdated
     vector<CSystemnode>::iterator it = vSystemnodes.begin();

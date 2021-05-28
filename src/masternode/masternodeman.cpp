@@ -6,6 +6,7 @@
 #include <crown/legacysigner.h>
 #include <net_processing.h>
 #include <netmessagemaker.h>
+#include <nodediag.h>
 
 /** Masternode manager */
 CMasternodeMan mnodeman;
@@ -529,6 +530,8 @@ void CMasternodeMan::ProcessMessage(CNode* pfrom, const std::string& strCommand,
             mnb.lastPing.nVersion = 2;
         }
         vRecv >> mnb;
+        if (nodeDiag)
+            masternodeDiag(&mnb, nullptr);
 
         int nDoS = 0;
         if (CheckMnbAndUpdateMasternodeList(mnb, nDoS, *connman)) {
@@ -548,6 +551,8 @@ void CMasternodeMan::ProcessMessage(CNode* pfrom, const std::string& strCommand,
             mnp.nVersion = 1;
         }
         vRecv >> mnp;
+        if (nodeDiag)
+            masternodeDiag(nullptr, &mnp);
 
         LogPrint(BCLog::MASTERNODE, "mnp - Masternode ping, vin: %s\n", mnp.vin.ToString());
 

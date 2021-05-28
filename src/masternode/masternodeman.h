@@ -49,6 +49,9 @@ public:
     // keep track of dsq count to prevent masternodes from gaming legacySigner queue
     int64_t nDsqCount;
 
+    // Set when low-level node diagnostics are requested
+    bool nodeDiag;
+
     SERIALIZE_METHODS(CMasternodeMan, obj)
     {
         LOCK(obj.cs);

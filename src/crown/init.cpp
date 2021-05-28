@@ -9,6 +9,9 @@ void loadNodeConfiguration()
     masternodeConfig.clear();
     systemnodeConfig.clear();
 
+    mnodeman.nodeDiag = gArgs.GetBoolArg("-diagnode", DEFAULT_NODEDIAG);
+    snodeman.nodeDiag = gArgs.GetBoolArg("-diagnode", DEFAULT_NODEDIAG);
+
     // parse masternode.conf
     std::string strErr;
     if (!masternodeConfig.read(strErr)) {

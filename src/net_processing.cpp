@@ -4655,14 +4655,14 @@ bool PeerManager::SendMessages(CNode* pto)
         if (!pto->fClient && ((fFetch && !pto->m_limited_node) || !::ChainstateActive().IsInitialBlockDownload()) && state.nBlocksInFlight < MAX_BLOCKS_IN_TRANSIT_PER_PEER) {
             std::vector<const CBlockIndex*> vToDownload;
             NodeId staller = -1;
-            while (!pto->listAskForBlocks.empty()) {
-                const CInv& inv = pto->listAskForBlocks.front();
+            while (!pto->deqAskForBlocks.empty()) {
+                const CInv& inv = pto->deqAskForBlocks.front();
                 //Only request if this block is not already in the chain
                 if (!(m_chainman.BlockIndex().count(inv.hash) && ::ChainActive().Contains(m_chainman.BlockIndex().at(inv.hash)))) {
                     vGetData.push_back(inv);
                     MarkBlockAsInFlight(m_mempool, pto->GetId(), inv.hash);
                 }
-                pto->listAskForBlocks.pop_front();
+                pto->deqAskForBlocks.pop_front();
             }
             if (state.nBlocksInFlight == 0 && staller != -1) {
                 if (State(staller)->nStallingSince == 0) {

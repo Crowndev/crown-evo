@@ -3067,9 +3067,9 @@ CNode::~CNode()
 
 void CNode::AskForBlock(const CInv& inv)
 {
-    if (listAskForBlocks.size() > MAPASKFOR_MAX_SZ)
+    if (deqAskForBlocks.size() > DEQASKFOR_MAX)
         return;
-    listAskForBlocks.emplace_back(inv);
+    deqAskForBlocks.emplace_back(inv);
 }
 
 bool CConnman::NodeFullyConnected(const CNode* pnode)

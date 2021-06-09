@@ -65,7 +65,7 @@ public:
     void AddedBudgetItem(uint256 hash);
     void GetNextAsset();
     std::string GetSyncStatus();
-    void ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStream& vRecv, CConnman* connman);
+    void ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStream& vRecv, CConnman* connman, bool& target);
     bool IsBudgetFinEmpty();
     bool IsBudgetPropEmpty();
 

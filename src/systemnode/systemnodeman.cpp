@@ -3,6 +3,7 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <crown/legacysigner.h>
+#include <mn_processing.h>
 #include <net_processing.h>
 #include <netmessagemaker.h>
 #include <nodediag.h>
@@ -78,7 +79,7 @@ void CSystemnodeMan::ProcessSystemnodeConnections(CConnman& connman)
     }
 }
 
-void CSystemnodeMan::ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStream& vRecv, CConnman* connman)
+void CSystemnodeMan::ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStream& vRecv, CConnman* connman, bool& target)
 {
     if (!gArgs.GetBoolArg("-jumpstart", false)) {
         if (!systemnodeSync.IsBlockchainSynced())
@@ -87,6 +88,7 @@ void CSystemnodeMan::ProcessMessage(CNode* pfrom, const std::string& strCommand,
 
     //! systemnode broadcast
     if (strCommand == NetMsgType::SNBROADCAST) {
+        SET_CONDITION_FLAG(target);
         CSystemnodeBroadcast snb;
         vRecv >> snb;
         if (nodeDiag)
@@ -103,7 +105,8 @@ void CSystemnodeMan::ProcessMessage(CNode* pfrom, const std::string& strCommand,
     }
 
     //! systemnode ping
-    else if (strCommand == NetMsgType::SNPING) {
+    if (strCommand == NetMsgType::SNPING) {
+        SET_CONDITION_FLAG(target);
         CSystemnodePing snp;
         vRecv >> snp;
         if (nodeDiag)
@@ -135,7 +138,8 @@ void CSystemnodeMan::ProcessMessage(CNode* pfrom, const std::string& strCommand,
         AskForSN(pfrom, snp.vin, *connman);
     }
 
-    else if (strCommand == NetMsgType::SNDSEG) {
+    if (strCommand == NetMsgType::SNDSEG) {
+        SET_CONDITION_FLAG(target);
         CTxIn vin;
         vRecv >> vin;
 

@@ -4,6 +4,7 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <crown/legacysigner.h>
+#include <mn_processing.h>
 #include <net_processing.h>
 #include <netmessagemaker.h>
 #include <nodediag.h>
@@ -515,13 +516,18 @@ void CMasternodeMan::ProcessMasternodeConnections(CConnman& connman)
     }
 }
 
-void CMasternodeMan::ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStream& vRecv, CConnman* connman)
+void CMasternodeMan::ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStream& vRecv, CConnman* connman, bool& target)
 {
-    if (!masternodeSync.IsBlockchainSynced())
-        return;
 
-    //! masternode broadcast
+    if (!gArgs.GetBoolArg("-jumpstart", false))
+    {
+        if(!masternodeSync.IsBlockchainSynced()) return;
+    }
+
+    LOCK(cs_process_message);
+
     if (strCommand == NetMsgType::MNBROADCAST || strCommand == NetMsgType::MNBROADCAST2) {
+        SET_CONDITION_FLAG(target);
         CMasternodeBroadcast mnb;
         if (strCommand == NetMsgType::MNBROADCAST) {
             //Set to old version for old serialization
@@ -543,8 +549,8 @@ void CMasternodeMan::ProcessMessage(CNode* pfrom, const std::string& strCommand,
         }
     }
 
-    //! masternode ping
-    else if (strCommand == NetMsgType::MNPING || strCommand == NetMsgType::MNPING2) {
+    if (strCommand == NetMsgType::MNPING || strCommand == NetMsgType::MNPING2) {
+        SET_CONDITION_FLAG(target);
         CMasternodePing mnp;
         if (strCommand == NetMsgType::MNPING) {
             //Set to old version for old serialization
@@ -556,13 +562,12 @@ void CMasternodeMan::ProcessMessage(CNode* pfrom, const std::string& strCommand,
 
         LogPrint(BCLog::MASTERNODE, "mnp - Masternode ping, vin: %s\n", mnp.vin.ToString());
 
-        if (mapSeenMasternodePing.count(mnp.GetHash()))
-            return;
+        if (mapSeenMasternodePing.count(mnp.GetHash())) return;
         mapSeenMasternodePing.insert(make_pair(mnp.GetHash(), mnp));
 
         int nDoS = 0;
-        if (mnp.CheckAndUpdate(nDoS, *connman))
-            return;
+        LOCK(cs_main);
+        if (mnp.CheckAndUpdate(nDoS, *connman)) return;
 
         if (nDoS > 0) {
             // if anything significant failed, mark that node
@@ -571,8 +576,7 @@ void CMasternodeMan::ProcessMessage(CNode* pfrom, const std::string& strCommand,
             // if nothing significant failed, search existing Masternode list
             CMasternode* pmn = Find(mnp.vin);
             // if it's known, don't ask for the mnb, just return
-            if (pmn)
-                return;
+            if (pmn) return;
         }
 
         // something significant is broken or mn is unknown,
@@ -581,8 +585,8 @@ void CMasternodeMan::ProcessMessage(CNode* pfrom, const std::string& strCommand,
     }
 
     //! masternode list
-    else if (strCommand == NetMsgType::DSEG) {
-
+    if (strCommand == NetMsgType::DSEG) {
+        SET_CONDITION_FLAG(target);
         CTxIn vin;
         vRecv >> vin;
 
@@ -650,7 +654,11 @@ std::string CMasternodeMan::ToString() const
 {
     std::ostringstream info;
 
-    info << "Masternodes: " << (int)vMasternodes.size() << ", peers who asked us for Masternode list: " << (int)mAskedUsForMasternodeList.size() << ", peers we asked for Masternode list: " << (int)mWeAskedForMasternodeList.size() << ", entries in Masternode list we asked for: " << (int)mWeAskedForMasternodeListEntry.size() << ", nDsqCount: " << (int)nDsqCount;
+    info << "Masternodes: " << (int)vMasternodes.size() <<
+            ", peers who asked us for Masternode list: " << (int)mAskedUsForMasternodeList.size() <<
+            ", peers we asked for Masternode list: " << (int)mWeAskedForMasternodeList.size() <<
+            ", entries in Masternode list we asked for: " << (int)mWeAskedForMasternodeListEntry.size() <<
+            ", nDsqCount: " << (int)nDsqCount;
 
     return info.str();
 }
@@ -685,7 +693,6 @@ bool CMasternodeMan::CheckMnbAndUpdateMasternodeList(CMasternodeBroadcast mnb, i
     mapSeenMasternodeBroadcast.insert(make_pair(mnbHash, mnb));
 
     LogPrint(BCLog::MASTERNODE, "CMasternodeMan::CheckMnbAndUpdateMasternodeList - Masternode broadcast, vin: %s new\n", mnb.vin.ToString());
-
     if (!mnb.IsValidNetAddr()) {
         LogPrint(BCLog::MASTERNODE, "CMasternodeBroadcast::CheckMnbAndUpdateMasternodeList -- Invalid addr, rejected: masternode=%s  sigTime=%lld  addr=%s\n",
             mnb.vin.prevout.ToStringShort(), mnb.sigTime, mnb.addr.ToString());

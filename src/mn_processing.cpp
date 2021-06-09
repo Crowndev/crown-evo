@@ -216,19 +216,24 @@ void ProcessGetDataMasternodeTypes(CNode* pfrom, const CChainParams& chainparams
     }
 }
 
+#define RETURN_ON_CONDITION(condition)  \
+        if (condition) { return true; }
+
 bool ProcessMessageMasternodeTypes(CNode* pfrom, const std::string& msg_type, CDataStream& vRecv, const CChainParams& chainparams, CTxMemPool& mempool, CConnman* connman, BanMan* banman, const std::atomic<bool>& interruptMsgProc)
 {
-    {
-            mnodeman.ProcessMessage(pfrom, msg_type, vRecv, connman);
-            snodeman.ProcessMessage(pfrom, msg_type, vRecv, connman);
-            budget.ProcessMessage(pfrom, msg_type, vRecv, connman);
-            masternodePayments.ProcessMessageMasternodePayments(pfrom, msg_type, vRecv, connman);
-            systemnodePayments.ProcessMessageSystemnodePayments(pfrom, msg_type, vRecv, connman);
-            instantSend.ProcessMessage(pfrom, msg_type, vRecv, connman);
-            ProcessSpork(pfrom, connman, msg_type, vRecv);
-            masternodeSync.ProcessMessage(pfrom, msg_type, vRecv, connman);
-            systemnodeSync.ProcessMessage(pfrom, msg_type, vRecv, connman);
-    }
+    bool target = false;
+
+    mnodeman.ProcessMessage(pfrom, msg_type, vRecv, connman, target); RETURN_ON_CONDITION(target);
+    snodeman.ProcessMessage(pfrom, msg_type, vRecv, connman, target); RETURN_ON_CONDITION(target);
+    budget.ProcessMessage(pfrom, msg_type, vRecv, connman, target); RETURN_ON_CONDITION(target);
+    masternodePayments.ProcessMessageMasternodePayments(pfrom, msg_type, vRecv, connman, target); RETURN_ON_CONDITION(target);
+    systemnodePayments.ProcessMessageSystemnodePayments(pfrom, msg_type, vRecv, connman, target); RETURN_ON_CONDITION(target);
+    instantSend.ProcessMessage(pfrom, msg_type, vRecv, connman, target); RETURN_ON_CONDITION(target);
+    masternodeSync.ProcessMessage(pfrom, msg_type, vRecv, connman, target); RETURN_ON_CONDITION(target);
+    systemnodeSync.ProcessMessage(pfrom, msg_type, vRecv, connman, target); RETURN_ON_CONDITION(target);
+
+    //! not very performance critical
+    ProcessSpork(pfrom, connman, msg_type, vRecv);
 
     return true;
 }

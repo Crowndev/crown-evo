@@ -117,7 +117,7 @@ public:
 
     void ProcessMasternodeConnections(CConnman& connman);
 
-    void ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStream& vRecv, CConnman* connman);
+    void ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStream& vRecv, CConnman* connman, bool& target);
 
     /// Return the number of (unique) Masternodes
     int size() { return vMasternodes.size(); }

@@ -57,7 +57,7 @@ public:
     void AddedSystemnodeWinner(uint256 hash);
     void GetNextAsset();
     std::string GetSyncStatus();
-    void ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStream& vRecv, CConnman* connman);
+    void ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStream& vRecv, CConnman* connman, bool& target);
 
     void Reset();
     void Process(CConnman& connman);

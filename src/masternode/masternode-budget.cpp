@@ -8,6 +8,7 @@
 #include <crown/legacysigner.h>
 #include <crown/nodewallet.h>
 #include <index/txindex.h>
+#include <mn_processing.h>
 #include <net_processing.h>
 #include <netfulfilledman.h>
 #include <netmessagemaker.h>
@@ -786,7 +787,7 @@ void CBudgetManager::NewBlock(CConnman& connman)
     LogPrint(BCLog::MASTERNODE, "CBudgetManager::NewBlock - PASSED\n");
 }
 
-void CBudgetManager::ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStream& vRecv, CConnman* connman)
+void CBudgetManager::ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStream& vRecv, CConnman* connman, bool& target)
 {
     if (!masternodeSync.IsBlockchainSynced())
         return;
@@ -794,6 +795,7 @@ void CBudgetManager::ProcessMessage(CNode* pfrom, const std::string& strCommand,
     LOCK(cs_budget);
 
     if (strCommand == NetMsgType::BUDGETVOTESYNC) {
+        SET_CONDITION_FLAG(target);
         uint256 nProp;
         vRecv >> nProp;
 
@@ -813,6 +815,7 @@ void CBudgetManager::ProcessMessage(CNode* pfrom, const std::string& strCommand,
     }
 
     if (strCommand == NetMsgType::BUDGETPROPOSAL) {
+        SET_CONDITION_FLAG(target);
         CBudgetProposalBroadcast budgetProposalBroadcast;
         vRecv >> budgetProposalBroadcast;
 
@@ -853,6 +856,7 @@ void CBudgetManager::ProcessMessage(CNode* pfrom, const std::string& strCommand,
     }
 
     if (strCommand == NetMsgType::BUDGETVOTE) {
+        SET_CONDITION_FLAG(target);
         CBudgetVote vote;
         vRecv >> vote;
         vote.fValid = true;
@@ -892,6 +896,7 @@ void CBudgetManager::ProcessMessage(CNode* pfrom, const std::string& strCommand,
     }
 
     if (strCommand == NetMsgType::FINALBUDGET) {
+        SET_CONDITION_FLAG(target);
         BudgetDraftBroadcast budgetDraftBroadcast;
         vRecv >> budgetDraftBroadcast;
 
@@ -951,6 +956,7 @@ void CBudgetManager::ProcessMessage(CNode* pfrom, const std::string& strCommand,
     }
 
     if (strCommand == NetMsgType::FINALBUDGETVOTE) {
+        SET_CONDITION_FLAG(target);
         BudgetDraftVote vote;
         vRecv >> vote;
         vote.fValid = true;

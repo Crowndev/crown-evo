@@ -5,6 +5,7 @@
 
 #include <crown/spork.h>
 #include <masternode/masternode-budget.h>
+#include <mn_processing.h>
 #include <netfulfilledman.h>
 #include <netmessagemaker.h>
 #include <node/context.h>
@@ -182,9 +183,10 @@ std::string CMasternodeSync::GetSyncStatus()
     return "";
 }
 
-void CMasternodeSync::ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStream& vRecv, CConnman* connman)
+void CMasternodeSync::ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStream& vRecv, CConnman* connman, bool& target)
 {
     if (strCommand == NetMsgType::MNSYNCSTATUS) {
+        SET_CONDITION_FLAG(target);
 
         int nItemID;
         int nCount;

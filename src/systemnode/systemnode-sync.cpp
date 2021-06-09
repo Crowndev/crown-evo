@@ -3,6 +3,7 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <crown/spork.h>
+#include <mn_processing.h>
 #include <netfulfilledman.h>
 #include <netmessagemaker.h>
 #include <node/context.h>
@@ -145,10 +146,10 @@ std::string CSystemnodeSync::GetSyncStatus()
     return "";
 }
 
-void CSystemnodeSync::ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStream& vRecv, CConnman* connman)
+void CSystemnodeSync::ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStream& vRecv, CConnman* connman, bool& target)
 {
     if (strCommand == NetMsgType::SNSYNCSTATUS) {
-
+        SET_CONDITION_FLAG(target);
         if (IsSynced())
             return;
 

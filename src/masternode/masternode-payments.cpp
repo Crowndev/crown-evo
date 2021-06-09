@@ -5,6 +5,7 @@
 
 #include <crown/spork.h>
 #include <masternode/masternode-budget.h>
+#include <mn_processing.h>
 #include <net_processing.h>
 #include <netfulfilledman.h>
 #include <netmessagemaker.h>
@@ -194,13 +195,13 @@ int CMasternodePayments::GetMinMasternodePaymentsProto()
         : MIN_MASTERNODE_PAYMENT_PROTO_VERSION_PREV;
 }
 
-void CMasternodePayments::ProcessMessageMasternodePayments(CNode* pfrom, const std::string& strCommand, CDataStream& vRecv, CConnman* connman)
+void CMasternodePayments::ProcessMessageMasternodePayments(CNode* pfrom, const std::string& strCommand, CDataStream& vRecv, CConnman* connman, bool& target)
 {
     if (!masternodeSync.IsBlockchainSynced())
         return;
 
     if (strCommand == NetMsgType::GETMNWINNERS) {
-
+        SET_CONDITION_FLAG(target);
         int nCountNeeded;
         vRecv >> nCountNeeded;
 
@@ -214,8 +215,10 @@ void CMasternodePayments::ProcessMessageMasternodePayments(CNode* pfrom, const s
         netfulfilledman.AddFulfilledRequest(pfrom->addr, NetMsgType::GETMNWINNERS);
         masternodePayments.Sync(pfrom, nCountNeeded, *connman);
         LogPrint(BCLog::MASTERNODE, "mnget - Sent Masternode winners to %s\n", pfrom->addr.ToString().c_str());
-    } else if (strCommand == NetMsgType::MNWINNER) {
-        //this is required in litemodef
+    }
+
+    if (strCommand == NetMsgType::MNWINNER) {
+        SET_CONDITION_FLAG(target);
         CMasternodePaymentWinner winner;
         vRecv >> winner;
 

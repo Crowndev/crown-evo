@@ -145,7 +145,7 @@ public:
     void MarkSynced();
     void Sync(CNode* node, uint256 nProp, CConnman& connman, bool fPartial = false) const;
 
-    void ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStream& vRecv, CConnman* connman);
+    void ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStream& vRecv, CConnman* connman, bool& target);
 
     void NewBlock(CConnman& connman);
 

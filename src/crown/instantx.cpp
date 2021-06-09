@@ -5,6 +5,7 @@
 
 #include <consensus/validation.h>
 #include <crown/instantx.h>
+#include <mn_processing.h>
 #include <netmessagemaker.h>
 #include <node/context.h>
 #include <rpc/blockchain.h>
@@ -19,7 +20,7 @@ CInstantSend instantSend;
 //         Send "txvote", CTransaction, Signature, Approve
 //step 3.) Top 1 masternode, waits for INSTANTX_SIGNATURES_REQUIRED messages. Upon success, sends "txlock'
 
-void CInstantSend::ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStream& vRecv, CConnman* connman)
+void CInstantSend::ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStream& vRecv, CConnman* connman, bool& target)
 {
     if (!IsSporkActive(SPORK_2_INSTANTX))
         return;
@@ -28,6 +29,8 @@ void CInstantSend::ProcessMessage(CNode* pfrom, const std::string& strCommand, C
 
     //! instantsend
     if (strCommand == NetMsgType::IX) {
+
+        SET_CONDITION_FLAG(target);
         CMutableTransaction tx;
         vRecv >> tx;
 
@@ -103,6 +106,8 @@ void CInstantSend::ProcessMessage(CNode* pfrom, const std::string& strCommand, C
 
     //! instantx lock vote
     if (strCommand == NetMsgType::IXLOCKVOTE) {
+
+        SET_CONDITION_FLAG(target);
         CConsensusVote ctx;
         vRecv >> ctx;
 
@@ -150,6 +155,8 @@ void CInstantSend::ProcessMessage(CNode* pfrom, const std::string& strCommand, C
 
     //! instantx lock list
     if (strCommand == NetMsgType::IXLOCKLIST) {
+
+        SET_CONDITION_FLAG(target);
         std::map<uint256, CConsensusVote>::const_iterator it = mapTxLockVote.begin();
         for (; it != mapTxLockVote.end(); ++it) {
             CInv inv(MSG_TXLOCK_VOTE, it->second.GetHash());

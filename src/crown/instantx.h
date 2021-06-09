@@ -37,7 +37,7 @@ class CInstantSend {
 public:
     RecursiveMutex cs_instantsend;
 
-    void ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStream& vRecv, CConnman* connman);
+    void ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStream& vRecv, CConnman* connman, bool& target);
     void CheckAndRemove();
     void Clear();
     int64_t CreateNewLock(const CMutableTransaction& tx);

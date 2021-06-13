@@ -192,7 +192,7 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
         if (Params().NetworkIDString() == "test" && GetAdjustedTime() - ::ChainActive().Tip()->nTime < 30)
             UninterruptibleSleep(std::chrono::milliseconds(30000));
 
-        if (currentNode.CreateCoinStake(nHeight, nBits, nTime, txCoinStake, nTxNewTime, stakePointer)) {
+        if (GetMainWallet()->CreateCoinStake(nHeight, nBits, nTime, txCoinStake, nTxNewTime, stakePointer)) {
             pblock->nTime = nTxNewTime;
             pblock->vtx.clear();
             coinbaseTx.vout[0].scriptPubKey = CScript();

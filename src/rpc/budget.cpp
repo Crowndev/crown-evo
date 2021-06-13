@@ -123,7 +123,7 @@ UniValue mnbudget(const JSONRPCRequest& request)
             return "Proposal is not valid - " + budgetProposalBroadcast.GetHash().ToString() + " - " + strError;
 
         CTransactionRef wtx;
-        if (!currentNode.GetBudgetSystemCollateralTX(wtx, budgetProposalBroadcast.GetHash())) {
+        if (!GetMainWallet()->GetBudgetSystemCollateralTX(wtx, budgetProposalBroadcast.GetHash())) {
             return "Error making collateral transaction for proposal. Please check your wallet balance and make sure your wallet is unlocked.";
         }
 

@@ -17,6 +17,7 @@
 #include <qt/createsystemnodedialog.h>
 #include <qt/datetablewidgetitem.h>
 #include <qt/guiutil.h>
+#include <qt/privatekeywidget.h>
 #include <qt/optionsmodel.h>
 #include <qt/startmissingdialog.h>
 #include <qt/walletmodel.h>
@@ -93,18 +94,25 @@ void SystemnodeList::notReady()
      return;
 }
 
-void SystemnodeList::setClientModel(ClientModel* model)
+void SystemnodeList::setClientModel(ClientModel *model)
 {
-    this->clientModel = model;
-    if(model) {
-        // try to update list when systemnode count changes
-        connect(clientModel, SIGNAL(strSystemnodesChanged(QString)), this, SLOT(updateNodeList()));
+    if (this->clientModel == NULL)
+    {
+        this->clientModel = model;
+        if(model)
+        {
+            // try to update list when systemnode count changes
+            connect(clientModel, SIGNAL(strSystemnodesChanged(QString)), this, SLOT(updateNodeList()));
+        }
     }
 }
 
-void SystemnodeList::setWalletModel(WalletModel* model)
+void SystemnodeList::setWalletModel(WalletModel *model)
 {
-    this->walletModel = model;
+    if (this->walletModel == NULL)
+    {
+        this->walletModel = model;
+    }
 }
 
 void SystemnodeList::showContextMenu(const QPoint& point)
@@ -208,6 +216,7 @@ void SystemnodeList::updateMySystemnodeInfo(QString strAlias, QString strAddr, Q
 
     QTableWidgetItem* aliasItem = new QTableWidgetItem(strAlias);
     QTableWidgetItem* addrItem = new QTableWidgetItem(pmn ? QString::fromStdString(pmn->addr.ToString()) : strAddr);
+    PrivateKeyWidget *privateKeyWidget = new PrivateKeyWidget(privkey);
     QTableWidgetItem* protocolItem = new QTableWidgetItem(QString::number(pmn ? pmn->protocolVersion : -1));
     QTableWidgetItem* statusItem = new QTableWidgetItem(QString::fromStdString(pmn ? pmn->Status() : "MISSING"));
     QTableWidgetItem* activeSecondsItem = new QTableWidgetItem(QString::fromStdString(DurationToDHMS(pmn ? (int64_t)(pmn->lastPing.sigTime - pmn->sigTime) : 0)));
@@ -216,11 +225,13 @@ void SystemnodeList::updateMySystemnodeInfo(QString strAlias, QString strAddr, Q
 
     ui->tableWidgetMySystemnodes->setItem(nNewRow, 0, aliasItem);
     ui->tableWidgetMySystemnodes->setItem(nNewRow, 1, addrItem);
-    ui->tableWidgetMySystemnodes->setItem(nNewRow, 2, protocolItem);
-    ui->tableWidgetMySystemnodes->setItem(nNewRow, 3, statusItem);
-    ui->tableWidgetMySystemnodes->setItem(nNewRow, 4, activeSecondsItem);
-    ui->tableWidgetMySystemnodes->setItem(nNewRow, 5, lastSeenItem);
-    ui->tableWidgetMySystemnodes->setItem(nNewRow, 6, pubkeyItem);
+    ui->tableWidgetMySystemnodes->setCellWidget(nNewRow, 2, privateKeyWidget);
+    ui->tableWidgetMySystemnodes->setColumnWidth(2, 150);
+    ui->tableWidgetMySystemnodes->setItem(nNewRow, 3, protocolItem);
+    ui->tableWidgetMySystemnodes->setItem(nNewRow, 4, statusItem);
+    ui->tableWidgetMySystemnodes->setItem(nNewRow, 5, activeSecondsItem);
+    ui->tableWidgetMySystemnodes->setItem(nNewRow, 6, lastSeenItem);
+    ui->tableWidgetMySystemnodes->setItem(nNewRow, 7, pubkeyItem);
 }
 
 void SystemnodeList::updateMyNodeList(bool fForce)

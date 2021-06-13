@@ -117,7 +117,7 @@ void CActiveMasternode::ManageStatus(CConnman& connman)
         CPubKey pubKeyCollateralAddress;
         CKey keyCollateralAddress;
 
-        if (currentNode.GetMasternodeVinAndKeys(vin, pubKeyCollateralAddress, keyCollateralAddress)) {
+        if (GetMainWallet()->GetMasternodeVinAndKeys(vin, pubKeyCollateralAddress, keyCollateralAddress)) {
             if (GetUTXOConfirmations(vin.prevout) < MASTERNODE_MIN_CONFIRMATIONS) {
                 status = ACTIVE_MASTERNODE_INPUT_TOO_NEW;
                 notCapableReason = strprintf("%s - %d confirmations", GetStatus(), GetUTXOConfirmations(vin.prevout));

@@ -103,6 +103,8 @@ constexpr CAmount HIGH_MAX_TX_FEE{100 * HIGH_TX_FEE_PER_KB};
 //! Pre-calculated constants for input size estimation in *virtual size*
 static constexpr size_t DUMMY_NESTED_P2WPKH_INPUT_SIZE = 91;
 
+class CMasternode;
+class CSystemnode;
 class CCoinControl;
 class COutput;
 class CScript;
@@ -1289,6 +1291,17 @@ public:
 
     //! Add a descriptor to the wallet, return a ScriptPubKeyMan & associated output type
     ScriptPubKeyMan* AddWalletDescriptor(WalletDescriptor& desc, const FlatSigningProvider& signing_provider, const std::string& label, bool internal);
+
+    //! Master/Systemnode related functions
+    bool GetBudgetSystemCollateralTX(CTransactionRef& tx, uint256 hash);
+    bool GetVinAndKeysFromOutput(COutput out, CTxIn& txinRet, CPubKey& pubkeyRet, CKey& keyRet);
+    bool GetMasternodeVinAndKeys(CTxIn& txinRet, CPubKey& pubKeyRet, CKey& keyRet, std::string strTxHash = "", std::string strOutputIndex = "");
+    bool GetSystemnodeVinAndKeys(CTxIn& txinRet, CPubKey& pubKeyRet, CKey& keyRet, std::string strTxHash = "", std::string strOutputIndex = "");
+    bool GetActiveMasternode(CMasternode*& activeStakingNode);
+    bool GetActiveSystemnode(CSystemnode*& activeStakingNode);
+    uint256 GenerateStakeModifier(const CBlockIndex* prewardBlockIndex) const;
+    bool CreateCoinStake(const int nHeight, const uint32_t& nBits, const uint32_t& nTime, CMutableTransaction& txCoinStake, uint32_t& nTxNewTime, StakePointer& stakePointer);
+    bool GetRecentStakePointers(std::vector<StakePointer>& vStakePointers);
 };
 
 /**

@@ -418,8 +418,8 @@ bool CMasternodeBroadcast::Create(std::string strService, std::string strKeyMast
         return false;
     }
 
-    if (!currentNode.GetMasternodeVinAndKeys(txin, pubKeyCollateralAddress, keyCollateralAddress)) {
-        strErrorMessage = strprintf("Could not allocate txin masternode");
+    if (!GetMainWallet()->GetMasternodeVinAndKeys(txin, pubKeyCollateralAddress, keyCollateralAddress, strTxHash, strOutputIndex)) {
+        strErrorMessage = strprintf("Could not allocate txin %s:%s for masternode %s", strTxHash, strOutputIndex, strService);
         LogPrint(BCLog::MASTERNODE, "CMasternodeBroadcast::Create -- %s\n", strErrorMessage);
         return false;
     }

@@ -27,22 +27,7 @@
 #include <wallet/coincontrol.h>
 #include <wallet/wallet.h>
 
-class NodeWallet {
-public:
-    bool GetMasternodeVinAndKeys(CTxIn& txinRet, CPubKey& pubKeyRet, CKey& keyRet, std::shared_ptr<CWallet> pwallet = GetMainWallet());
-    bool GetSystemnodeVinAndKeys(CTxIn& txinRet, CPubKey& pubKeyRet, CKey& keyRet, std::shared_ptr<CWallet> pwallet = GetMainWallet());
-    bool GetVinAndKeysFromOutput(COutput out, CTxIn& txinRet, CPubKey& pubkeyRet, CKey& keyRet, std::shared_ptr<CWallet> pwallet = GetMainWallet());
-    bool GetBudgetSystemCollateralTX(CTransactionRef& tx, uint256 hash, std::shared_ptr<CWallet> pwallet = GetMainWallet());
-    bool CreateCoinStake(const int nHeight, const uint32_t& nBits, const uint32_t& nTime, CMutableTransaction& txCoinStake, uint32_t& nTxNewTime, StakePointer& stakePointer, std::shared_ptr<CWallet> pwallet = GetMainWallet());
-    bool GetActiveMasternode(CMasternode*& activeStakingNode);
-    bool GetActiveSystemnode(CSystemnode*& activeStakingNode);
-    uint256 GenerateStakeModifier(const CBlockIndex* prewardBlockIndex) const;
-    bool GetRecentStakePointers(std::vector<StakePointer>& vStakePointers);
-};
-
 void GetScriptForMining(CScript& script, std::shared_ptr<CWallet> wallet = GetMainWallet());
 void NodeMinter(const CChainParams& chainparams, CConnman& connman);
-
-extern NodeWallet currentNode;
 
 #endif // CROWN_NODEWALLET_H

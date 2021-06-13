@@ -709,7 +709,7 @@ static RPCHelpMan getstakepointers()
         [&](const RPCHelpMan& self, const JSONRPCRequest& request) -> UniValue
 {
     std::vector<StakePointer> vStakePointers;
-    currentNode.GetRecentStakePointers(vStakePointers);
+    GetMainWallet()->GetRecentStakePointers(vStakePointers);
 
     UniValue ret(UniValue::VARR);
 

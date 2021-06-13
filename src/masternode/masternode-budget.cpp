@@ -232,7 +232,7 @@ void CBudgetManager::SubmitBudgetDraft(CConnman& connman)
 
     if (!mapCollateralTxids.count(tempBudget.GetHash())) {
         CTransactionRef wtx;
-        if (!currentNode.GetBudgetSystemCollateralTX(wtx, tempBudget.GetHash())) {
+        if (!GetMainWallet()->GetBudgetSystemCollateralTX(wtx, tempBudget.GetHash())) {
             LogPrint(BCLog::MASTERNODE, "CBudgetManager::SubmitBudgetDraft - Can't make collateral transaction\n");
             return;
         }

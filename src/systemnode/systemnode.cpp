@@ -657,8 +657,8 @@ bool CSystemnodeBroadcast::Create(std::string strService, std::string strKeySyst
         return false;
     }
 
-    if (!currentNode.GetSystemnodeVinAndKeys(txin, pubKeyCollateralAddress, keyCollateralAddress)) {
-        strErrorMessage = strprintf("Could not allocate txin for systemnode");
+    if (!GetMainWallet()->GetSystemnodeVinAndKeys(txin, pubKeyCollateralAddress, keyCollateralAddress, strTxHash, strOutputIndex)) {
+        strErrorMessage = strprintf("Could not allocate txin %s:%s for systemnode %s", strTxHash, strOutputIndex, strService);
         LogPrint(BCLog::SYSTEMNODE, "CSystemnodeBroadcast::Create -- %s\n", strErrorMessage);
         return false;
     }

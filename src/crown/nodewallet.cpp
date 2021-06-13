@@ -6,44 +6,54 @@
 
 #include <crown/nodewallet.h>
 
-class NodeWallet;
-NodeWallet currentNode;
-
-bool NodeWallet::GetMasternodeVinAndKeys(CTxIn& txinRet, CPubKey& pubKeyRet, CKey& keyRet, std::shared_ptr<CWallet> pwallet)
+bool CWallet::GetMasternodeVinAndKeys(CTxIn& txinRet, CPubKey& pubKeyRet, CKey& keyRet, std::string strTxHash, std::string strOutputIndex)
 {
-    if (!pwallet)
-        return false;
-
+    LOCK(cs_wallet);
     std::vector<COutput> vPossibleCoins;
-    pwallet->AvailableCoins(vPossibleCoins, true, nullptr, Params().GetConsensus().nMasternodeCollateral, Params().GetConsensus().nMasternodeCollateral);
+    AvailableCoins(vPossibleCoins, true, nullptr, Params().GetConsensus().nMasternodeCollateral, Params().GetConsensus().nMasternodeCollateral);
     if (vPossibleCoins.empty()) {
-        LogPrintf("NodeWallet::GetMasternodeVinAndKeys -- Could not locate any valid masternode vin\n");
+        LogPrintf("CWallet::GetMasternodeVinAndKeys -- Could not locate any valid masternode vin\n");
         return false;
     }
 
-    return GetVinAndKeysFromOutput(vPossibleCoins[0], txinRet, pubKeyRet, keyRet);
+    uint256 txHash = uint256S(strTxHash);
+    int nOutputIndex = atoi(strOutputIndex.c_str());
+
+    for (COutput& out : vPossibleCoins) {
+        if (out.tx->GetHash() == txHash && out.i == nOutputIndex) {
+            return GetVinAndKeysFromOutput(out, txinRet, pubKeyRet, keyRet);
+        }
+    }
+
+    LogPrintf("CWallet::GetMasternodeVinAndKeys - Could not locate specified masternode vin\n");
+    return false;
 }
 
-bool NodeWallet::GetSystemnodeVinAndKeys(CTxIn& txinRet, CPubKey& pubKeyRet, CKey& keyRet, std::shared_ptr<CWallet> pwallet)
+bool CWallet::GetSystemnodeVinAndKeys(CTxIn& txinRet, CPubKey& pubKeyRet, CKey& keyRet, std::string strTxHash, std::string strOutputIndex)
 {
-    if (!pwallet)
-        return false;
-
+    LOCK(cs_wallet);
     std::vector<COutput> vPossibleCoins;
-    pwallet->AvailableCoins(vPossibleCoins, true, nullptr, Params().GetConsensus().nSystemnodeCollateral, Params().GetConsensus().nSystemnodeCollateral);
+    AvailableCoins(vPossibleCoins, true, nullptr, Params().GetConsensus().nSystemnodeCollateral, Params().GetConsensus().nSystemnodeCollateral);
     if (vPossibleCoins.empty()) {
-        LogPrintf("NodeWallet::GetSystemnodeVinAndKeys -- Could not locate any valid systemnode vin\n");
+        LogPrintf("CWallet::GetSystemnodeVinAndKeys -- Could not locate any valid systemnode vin\n");
         return false;
     }
 
-    return GetVinAndKeysFromOutput(vPossibleCoins[0], txinRet, pubKeyRet, keyRet);
+    uint256 txHash = uint256S(strTxHash);
+    int nOutputIndex = atoi(strOutputIndex.c_str());
+
+    for (COutput& out : vPossibleCoins) {
+        if (out.tx->GetHash() == txHash && out.i == nOutputIndex) {
+            return GetVinAndKeysFromOutput(out, txinRet, pubKeyRet, keyRet);
+        }
+    }
+
+    LogPrintf("CWallet::GetSystemnodeVinAndKeys - Could not locate specified systemnode vin\n");
+    return false;
 }
 
-bool NodeWallet::GetVinAndKeysFromOutput(COutput out, CTxIn& txinRet, CPubKey& pubkeyRet, CKey& keyRet, std::shared_ptr<CWallet> pwallet)
+bool CWallet::GetVinAndKeysFromOutput(COutput out, CTxIn& txinRet, CPubKey& pubkeyRet, CKey& keyRet)
 {
-    if (!pwallet)
-        return false;
-
     CScript pubScript;
     CKeyID keyID;
 
@@ -59,7 +69,7 @@ bool NodeWallet::GetVinAndKeysFromOutput(COutput out, CTxIn& txinRet, CPubKey& p
         return false;
     }
 
-    LegacyScriptPubKeyMan* spk_man = pwallet->GetLegacyScriptPubKeyMan();
+    LegacyScriptPubKeyMan* spk_man = GetLegacyScriptPubKeyMan();
     if (!spk_man) {
         LogPrintf("GetVinFromOutput -- This type of wallet does not support this command\n");
         return false;
@@ -74,11 +84,8 @@ bool NodeWallet::GetVinAndKeysFromOutput(COutput out, CTxIn& txinRet, CPubKey& p
     return true;
 }
 
-bool NodeWallet::GetBudgetSystemCollateralTX(CTransactionRef& tx, uint256 hash, std::shared_ptr<CWallet> pwallet)
+bool CWallet::GetBudgetSystemCollateralTX(CTransactionRef& tx, uint256 hash)
 {
-    if (!pwallet)
-        return false;
-
     const CAmount BUDGET_FEE_TX = (25 * COIN);
 
     CScript scriptChange;
@@ -93,10 +100,10 @@ bool NodeWallet::GetBudgetSystemCollateralTX(CTransactionRef& tx, uint256 hash, 
     bilingual_str error;
     FeeCalculation fee_calc_out;
 
-    return pwallet->CreateTransaction(vecSend, tx, nFeeRequired, nChangePosRet, error, coinControl, fee_calc_out);
+    return CreateTransaction(vecSend, tx, nFeeRequired, nChangePosRet, error, coinControl, fee_calc_out);
 }
 
-bool NodeWallet::GetActiveMasternode(CMasternode*& activeStakingNode)
+bool CWallet::GetActiveMasternode(CMasternode*& activeStakingNode)
 {
     activeStakingNode = nullptr;
     if (activeMasternode.status == ACTIVE_MASTERNODE_STARTED)
@@ -104,7 +111,7 @@ bool NodeWallet::GetActiveMasternode(CMasternode*& activeStakingNode)
     return activeStakingNode != nullptr;
 }
 
-bool NodeWallet::GetActiveSystemnode(CSystemnode*& activeStakingNode)
+bool CWallet::GetActiveSystemnode(CSystemnode*& activeStakingNode)
 {
     activeStakingNode = nullptr;
     if (activeSystemnode.status == ACTIVE_SYSTEMNODE_STARTED)
@@ -112,7 +119,7 @@ bool NodeWallet::GetActiveSystemnode(CSystemnode*& activeStakingNode)
     return activeStakingNode != nullptr;
 }
 
-uint256 NodeWallet::GenerateStakeModifier(const CBlockIndex* prewardBlockIndex) const
+uint256 CWallet::GenerateStakeModifier(const CBlockIndex* prewardBlockIndex) const
 {
     if (!prewardBlockIndex)
         return uint256();
@@ -226,11 +233,8 @@ void NodeMinter(const CChainParams& chainparams, CConnman& connman)
 }
 
 #define STAKE_SEARCH_INTERVAL 30
-bool NodeWallet::CreateCoinStake(const int nHeight, const uint32_t& nBits, const uint32_t& nTime, CMutableTransaction& txCoinStake, uint32_t& nTxNewTime, StakePointer& stakePointer, std::shared_ptr<CWallet> pwallet)
+bool CWallet::CreateCoinStake(const int nHeight, const uint32_t& nBits, const uint32_t& nTime, CMutableTransaction& txCoinStake, uint32_t& nTxNewTime, StakePointer& stakePointer)
 {
-    if (!pwallet)
-        return false;
-
     CTxIn* pvinActiveNode;
     CPubKey* ppubkeyActiveNode;
     int nActiveNodeInputHeight;
@@ -376,7 +380,7 @@ bool GetPointers(stakingnode* pstaker, std::vector<StakePointer>& vStakePointers
     return found;
 }
 
-bool NodeWallet::GetRecentStakePointers(std::vector<StakePointer>& vStakePointers)
+bool CWallet::GetRecentStakePointers(std::vector<StakePointer>& vStakePointers)
 {
     if (fMasterNode) {
         // find pointer to active CMasternode object

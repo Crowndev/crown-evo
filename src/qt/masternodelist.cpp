@@ -17,6 +17,7 @@
 #include <qt/clientmodel.h>
 #include <qt/createmasternodedialog.h>
 #include <qt/datetablewidgetitem.h>
+#include <qt/privatekeywidget.h>
 #include <qt/guiutil.h>
 #include <qt/optionsmodel.h>
 #include <qt/startmissingdialog.h>
@@ -114,18 +115,25 @@ void MasternodeList::notReady()
      return;
 }
 
-void MasternodeList::setClientModel(ClientModel* model)
+void MasternodeList::setClientModel(ClientModel *model)
 {
-    this->clientModel = model;
-    if(model) {
-        // try to update list when masternode count changes
-        connect(clientModel, SIGNAL(strMasternodesChanged(QString)), this, SLOT(updateNodeList()));
+    if (this->clientModel == NULL)
+    {
+        this->clientModel = model;
+        if(model)
+        {
+            // try to update list when masternode count changes
+            connect(clientModel, SIGNAL(strMasternodesChanged(QString)), this, SLOT(updateNodeList()));
+        }
     }
 }
 
-void MasternodeList::setWalletModel(WalletModel* model)
+void MasternodeList::setWalletModel(WalletModel *model)
 {
-    this->walletModel = model;
+    if (this->walletModel == NULL)
+    {
+        this->walletModel = model;
+    }
 }
 
 void MasternodeList::showContextMenu(const QPoint& point)
@@ -161,8 +169,6 @@ void MasternodeList::StartAlias(std::string strAlias)
     QMessageBox msg;
     msg.setText(QString::fromStdString(strStatusHtml));
     msg.exec();
-
-    updateMyNodeList(true);
 }
 
 void MasternodeList::StartAll(std::string strCommand)
@@ -229,6 +235,7 @@ void MasternodeList::updateMyMasternodeInfo(QString strAlias, QString strAddr, Q
 
     QTableWidgetItem* aliasItem = new QTableWidgetItem(strAlias);
     QTableWidgetItem* addrItem = new QTableWidgetItem(pmn ? QString::fromStdString(pmn->addr.ToString()) : strAddr);
+    PrivateKeyWidget *privateKeyWidget = new PrivateKeyWidget(privkey);
     QTableWidgetItem* protocolItem = new QTableWidgetItem(QString::number(pmn ? pmn->protocolVersion : -1));
     QTableWidgetItem* statusItem = new QTableWidgetItem(QString::fromStdString(pmn ? pmn->Status() : "MISSING"));
     QTableWidgetItem* activeSecondsItem = new QTableWidgetItem(QString::fromStdString(DurationToDHMS(pmn ? (int64_t)(pmn->lastPing.sigTime - pmn->sigTime) : 0)));
@@ -237,11 +244,13 @@ void MasternodeList::updateMyMasternodeInfo(QString strAlias, QString strAddr, Q
 
     ui->tableWidgetMyMasternodes->setItem(nNewRow, 0, aliasItem);
     ui->tableWidgetMyMasternodes->setItem(nNewRow, 1, addrItem);
-    ui->tableWidgetMyMasternodes->setItem(nNewRow, 2, protocolItem);
-    ui->tableWidgetMyMasternodes->setItem(nNewRow, 3, statusItem);
-    ui->tableWidgetMyMasternodes->setItem(nNewRow, 4, activeSecondsItem);
-    ui->tableWidgetMyMasternodes->setItem(nNewRow, 5, lastSeenItem);
-    ui->tableWidgetMyMasternodes->setItem(nNewRow, 6, pubkeyItem);
+    ui->tableWidgetMyMasternodes->setCellWidget(nNewRow, 2, privateKeyWidget);
+    ui->tableWidgetMyMasternodes->setColumnWidth(2, 150);
+    ui->tableWidgetMyMasternodes->setItem(nNewRow, 3, protocolItem);
+    ui->tableWidgetMyMasternodes->setItem(nNewRow, 4, statusItem);
+    ui->tableWidgetMyMasternodes->setItem(nNewRow, 5, activeSecondsItem);
+    ui->tableWidgetMyMasternodes->setItem(nNewRow, 6, lastSeenItem);
+    ui->tableWidgetMyMasternodes->setItem(nNewRow, 7, pubkeyItem);
 }
 
 void MasternodeList::updateMyNodeList(bool fForce)

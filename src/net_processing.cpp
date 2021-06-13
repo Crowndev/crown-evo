@@ -1555,7 +1555,7 @@ void RelayTransaction(const uint256& txid, const uint256& wtxid, const CConnman&
 
 static void RelayAddress(const CAddress& addr, bool fReachable, const CConnman& connman)
 {
-    unsigned int nRelayNodes = fReachable ? 2 : 1; // limited relaying of addresses outside our network(s)
+    if (!fReachable && !addr.IsRelayable()) return;
 
     // Relay to a limited number of other nodes
     // Use deterministic randomness to send to the same nodes for 24 hours
@@ -1563,6 +1563,9 @@ static void RelayAddress(const CAddress& addr, bool fReachable, const CConnman& 
     uint64_t hashAddr = addr.GetHash();
     const CSipHasher hasher = connman.GetDeterministicRandomizer(RANDOMIZER_ID_ADDRESS_RELAY).Write(hashAddr << 32).Write((GetTime() + hashAddr) / (24 * 60 * 60));
     FastRandomContext insecure_rand;
+
+    // Relay reachable addresses to 2 peers. Unreachable addresses are relayed randomly to 1 or 2 peers.
+    unsigned int nRelayNodes = (fReachable || (hasher.Finalize() & 1)) ? 2 : 1;
 
     std::array<std::pair<uint64_t, CNode*>,2> best{{{0, nullptr}, {0, nullptr}}};
     assert(nRelayNodes <= best.size());
@@ -1782,55 +1785,49 @@ void static ProcessGetData(CNode& pfrom, Peer& peer, const CChainParams& chainpa
     // Get last mempool request time
     const std::chrono::seconds mempool_req = pfrom.m_tx_relay != nullptr ? pfrom.m_tx_relay->m_last_mempool_req.load()
                                                                           : std::chrono::seconds::min();
-    {
-        LOCK(cs_main);
+    // Process as many TX items from the front of the getdata queue as
+    // possible, since they're common and it's efficient to batch process
+    // them.
+    while (it != peer.m_getdata_requests.end()) {
 
-        // Process as many TX items from the front of the getdata queue as
-        // possible, since they're common and it's efficient to batch process
-        // them.
-        while (it != peer.m_getdata_requests.end()) {
-            if (interruptMsgProc)
-                return;
-            // The send buffer provides backpressure. If there's no space in
-            // the buffer, pause processing until the next call.
-            if (pfrom.fPauseSend)
-                break;
+        if (interruptMsgProc) return;
+        // The send buffer provides backpressure. If there's no space in
+        // the buffer, pause processing until the next call.
+        if (pfrom.fPauseSend) break;
 
-            const CInv &inv = *it++;
+        const CInv &inv = *it++;
 
-            if (pfrom.m_tx_relay == nullptr) {
-                // Ignore GETDATA requests for transactions from blocks-only peers.
-                continue;
-            }
+        if (pfrom.m_tx_relay == nullptr) {
+            // Ignore GETDATA requests for transactions from blocks-only peers.
+            continue;
+        }
 
-            // Send stream from relay memory
-            bool push = false;
-            auto mi = mapRelay.find(inv.hash);
-            int nSendFlags = (inv.type == MSG_TX ? SERIALIZE_TRANSACTION_NO_WITNESS : 0);
-            if (mi != mapRelay.end()) {
-                connman.PushMessage(&pfrom, msgMaker.Make(nSendFlags, NetMsgType::TX, *mi->second));
+        // Send stream from relay memory
+        bool push = false;
+        auto mi = mapRelay.find(inv.hash);
+        int nSendFlags = (inv.type == MSG_TX ? SERIALIZE_TRANSACTION_NO_WITNESS : 0);
+        if (mi != mapRelay.end()) {
+            connman.PushMessage(&pfrom, msgMaker.Make(nSendFlags, NetMsgType::TX, *mi->second));
+            push = true;
+        } else {
+            auto txinfo = mempool.info(inv.hash);
+            // To protect privacy, do not answer getdata using the mempool when
+            // that TX couldn't have been INVed in reply to a MEMPOOL request,
+            // or when it's too recent to have expired from mapRelay.
+            if (txinfo.tx && (
+                 (mempool_req.count() && txinfo.m_time <= mempool_req)))
+            {
+                connman.PushMessage(&pfrom, msgMaker.Make(nSendFlags, NetMsgType::TX, *txinfo.tx));
                 push = true;
-            } else {
-                auto txinfo = mempool.info(inv.hash);
-                // To protect privacy, do not answer getdata using the mempool when
-                // that TX couldn't have been INVed in reply to a MEMPOOL request,
-                // or when it's too recent to have expired from mapRelay.
-                if (txinfo.tx && (
-                     (mempool_req.count() && txinfo.m_time <= mempool_req)))
-                {
-                    connman.PushMessage(&pfrom, msgMaker.Make(nSendFlags, NetMsgType::TX, *txinfo.tx));
-                    push = true;
-                }
-            }
-
-            if (inv.IsMnSnMsg())
-                ProcessGetDataMasternodeTypes(&pfrom, chainparams, &connman, mempool, inv, push);
-
-            if (!push) {
-                vNotFound.push_back(inv);
             }
         }
-    } // release cs_main
+
+        ProcessGetDataMasternodeTypes(&pfrom, chainparams, &connman, mempool, inv, push);
+
+        if (!push) {
+            vNotFound.push_back(inv);
+        }
+    }
 
     // Only process one BLOCK item per call, since they're uncommon and can be
     // expensive to process.

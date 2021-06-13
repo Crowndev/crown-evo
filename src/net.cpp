@@ -28,6 +28,10 @@
 #include <fcntl.h>
 #endif
 
+#if HAVE_DECL_GETIFADDRS && HAVE_DECL_FREEIFADDRS
+#include <ifaddrs.h>
+#endif
+
 #ifdef USE_POLL
 #include <poll.h>
 #endif
@@ -2448,8 +2452,9 @@ NodeId CConnman::GetNewNodeId()
 
 
 bool CConnman::Bind(const CService &addr, unsigned int flags, NetPermissionFlags permissions) {
-    if (!(flags & BF_EXPLICIT) && !IsReachable(addr))
+    if (!(flags & BF_EXPLICIT) && !IsReachable(addr)) {
         return false;
+    }
     bilingual_str strError;
     if (!BindListenPort(addr, strError, permissions)) {
         if ((flags & BF_REPORT_ERROR) && clientInterface) {
@@ -2458,7 +2463,7 @@ bool CConnman::Bind(const CService &addr, unsigned int flags, NetPermissionFlags
         return false;
     }
 
-    if (addr.IsRoutable() && fDiscover && !(flags & BF_DONT_ADVERTISE) && !(permissions & PF_NOBAN)) {
+    if (addr.IsRoutable() && fDiscover && !(flags & BF_DONT_ADVERTISE) && !NetPermissions::HasFlag(permissions, NetPermissionFlags::PF_NOBAN)) {
         AddLocal(addr, LOCAL_BIND);
     }
 
@@ -2627,7 +2632,7 @@ static CNetCleanup instance_of_cnetcleanup;
 void CConnman::Interrupt()
 {
     {
-        std::lock_guard<std::mutex> lock(mutexMsgProc);
+        LOCK(mutexMsgProc);
         flagInterruptMsgProc = true;
     }
     condMsgProc.notify_all();
@@ -3172,10 +3177,9 @@ uint64_t CConnman::CalculateKeyedNetGroup(const CAddress& ad) const
 
 std::vector<CNode*> CConnman::CopyNodeVector()
 {
-    std::vector<CNode*> vecNodesCopy;
     LOCK(cs_vNodes);
-    for(size_t i = 0; i < vNodes.size(); ++i) {
-        CNode* pnode = vNodes[i];
+    std::vector<CNode*> vecNodesCopy;
+    for (auto&& pnode : vNodes) {
         LogPrint(BCLog::NET, "CConnman::CopyNodeVector -- adding node: peer=%d addr=%s nRefCount=%d fNetworkNode=%d fInbound=%d fMasternode=%d\n",
                   pnode->id, pnode->addr.ToString(), pnode->GetRefCount(), pnode->fNetworkNode, pnode->fInbound, pnode->fMasternode);
         pnode->AddRef();
@@ -3187,8 +3191,7 @@ std::vector<CNode*> CConnman::CopyNodeVector()
 void CConnman::ReleaseNodeVector(const std::vector<CNode*>& vecNodes)
 {
     LOCK(cs_vNodes);
-    for(size_t i = 0; i < vecNodes.size(); ++i) {
-        CNode* pnode = vecNodes[i];
+    for (auto&& pnode : vNodes) {
         LogPrint(BCLog::NET, "CConnman::ReleaseNodeVector -- releasing node: peer=%d addr=%s nRefCount=%d fNetworkNode=%d fInbound=%d fMasternode=%d\n",
                   pnode->id, pnode->addr.ToString(), pnode->GetRefCount(), pnode->fNetworkNode, pnode->fInbound, pnode->fMasternode);
         pnode->Release();

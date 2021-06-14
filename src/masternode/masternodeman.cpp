@@ -518,13 +518,10 @@ void CMasternodeMan::ProcessMasternodeConnections(CConnman& connman)
 
 void CMasternodeMan::ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStream& vRecv, CConnman* connman, bool& target)
 {
-
     if (!gArgs.GetBoolArg("-jumpstart", false))
     {
         if(!masternodeSync.IsBlockchainSynced()) return;
     }
-
-    LOCK(cs_process_message);
 
     if (strCommand == NetMsgType::MNBROADCAST || strCommand == NetMsgType::MNBROADCAST2) {
         SET_CONDITION_FLAG(target);
@@ -566,7 +563,6 @@ void CMasternodeMan::ProcessMessage(CNode* pfrom, const std::string& strCommand,
         mapSeenMasternodePing.insert(make_pair(mnp.GetHash(), mnp));
 
         int nDoS = 0;
-        LOCK(cs_main);
         if (mnp.CheckAndUpdate(nDoS, *connman)) return;
 
         if (nDoS > 0) {

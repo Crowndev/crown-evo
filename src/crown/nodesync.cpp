@@ -112,7 +112,6 @@ void ThreadSystemnodeSync(CConnman& connman)
             snodeman.CheckAndRemove();
             snodeman.ProcessSystemnodeConnections(connman);
             systemnodePayments.CheckAndRemove();
-            instantSend.CheckAndRemove();
         }
     }
 }

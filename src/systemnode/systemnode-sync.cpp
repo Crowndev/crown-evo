@@ -150,12 +150,11 @@ void CSystemnodeSync::ProcessMessage(CNode* pfrom, const std::string& strCommand
 {
     if (strCommand == NetMsgType::SNSYNCSTATUS) {
         SET_CONDITION_FLAG(target);
-        if (IsSynced())
-            return;
-
         int nItemID;
         int nCount;
         vRecv >> nItemID >> nCount;
+
+        if(RequestedSystemnodeAssets >= SYSTEMNODE_SYNC_FINISHED) return;
 
         //this means we will receive no further communication
         switch (nItemID) {

@@ -5,7 +5,7 @@
 #include <systemnode/systemnodeman.h>
 #include <util/system.h>
 
-bool host_filter{true};
+bool host_filter{false};
 
 std::string host_address()
 {

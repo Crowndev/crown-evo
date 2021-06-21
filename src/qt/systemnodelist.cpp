@@ -126,17 +126,17 @@ void SystemnodeList::StartAlias(std::string strAlias)
     std::string strStatusHtml;
     strStatusHtml += "<center>Alias: " + strAlias;
 
-    for (CNodeEntry mne : systemnodeConfig.getEntries()) {
-        if (mne.getAlias() == strAlias) {
+    for (CNodeEntry sne : systemnodeConfig.getEntries()) {
+        if (sne.getAlias() == strAlias) {
             std::string strError;
-            CSystemnodeBroadcast mnb;
+            CSystemnodeBroadcast snb;
 
-            bool fSuccess = CSystemnodeBroadcast::Create(mne.getIp(), mne.getPrivKey(), mne.getTxHash(), mne.getOutputIndex(), strError, mnb);
+            bool fSuccess = CSystemnodeBroadcast::Create(sne.getIp(), sne.getPrivKey(), sne.getTxHash(), sne.getOutputIndex(), strError, snb);
 
             if (fSuccess) {
                 strStatusHtml += "<br>Successfully started systemnode.";
-                snodeman.UpdateSystemnodeList(mnb, *g_rpc_node->connman);
-                mnb.Relay(*g_rpc_node->connman);
+                snodeman.UpdateSystemnodeList(snb, *g_rpc_node->connman);
+                snb.Relay(*g_rpc_node->connman);
             } else {
                 strStatusHtml += "<br>Failed to start systemnode.<br>Error: " + strError;
             }
@@ -159,24 +159,24 @@ void SystemnodeList::StartAll(std::string strCommand)
     int nCountFailed = 0;
     std::string strFailedHtml;
 
-    for (CNodeEntry mne : systemnodeConfig.getEntries()) {
+    for (CNodeEntry sne : systemnodeConfig.getEntries()) {
         std::string strError;
-        CSystemnodeBroadcast mnb;
+        CSystemnodeBroadcast snb;
 
-        CTxIn txin = CTxIn(uint256S(mne.getTxHash()), uint32_t(atoi(mne.getOutputIndex().c_str())));
+        CTxIn txin = CTxIn(uint256S(sne.getTxHash()), uint32_t(atoi(sne.getOutputIndex().c_str())));
         CSystemnode* pmn = snodeman.Find(txin);
 
         if (strCommand == "start-missing" && pmn) continue;
 
-        bool fSuccess = CSystemnodeBroadcast::Create(mne.getIp(), mne.getPrivKey(), mne.getTxHash(), mne.getOutputIndex(), strError, mnb);
+        bool fSuccess = CSystemnodeBroadcast::Create(sne.getIp(), sne.getPrivKey(), sne.getTxHash(), sne.getOutputIndex(), strError, snb);
 
         if (fSuccess) {
             nCountSuccessful++;
-            snodeman.UpdateSystemnodeList(mnb, *g_rpc_node->connman);
-            mnb.Relay(*g_rpc_node->connman);
+            snodeman.UpdateSystemnodeList(snb, *g_rpc_node->connman);
+            snb.Relay(*g_rpc_node->connman);
         } else {
             nCountFailed++;
-            strFailedHtml += "\nFailed to start " + mne.getAlias() + ". Error: " + strError;
+            strFailedHtml += "\nFailed to start " + sne.getAlias() + ". Error: " + strError;
         }
         nTotal++;
     }
@@ -247,11 +247,11 @@ void SystemnodeList::updateMyNodeList(bool fForce)
     nTimeMyListUpdated = GetTime();
 
     ui->tableWidgetMySystemnodes->setSortingEnabled(false);
-    for (CNodeEntry mne : systemnodeConfig.getEntries()) {
-        CTxIn txin = CTxIn(uint256S(mne.getTxHash()), uint32_t(atoi(mne.getOutputIndex().c_str())));
+    for (CNodeEntry sne : systemnodeConfig.getEntries()) {
+        CTxIn txin = CTxIn(uint256S(sne.getTxHash()), uint32_t(atoi(sne.getOutputIndex().c_str())));
         CSystemnode* pmn = snodeman.Find(txin);
-        updateMySystemnodeInfo(QString::fromStdString(mne.getAlias()), QString::fromStdString(mne.getIp()), QString::fromStdString(mne.getPrivKey()), QString::fromStdString(mne.getTxHash()),
-            QString::fromStdString(mne.getOutputIndex()), pmn);
+        updateMySystemnodeInfo(QString::fromStdString(sne.getAlias()), QString::fromStdString(sne.getIp()), QString::fromStdString(sne.getPrivKey()), QString::fromStdString(sne.getTxHash()),
+            QString::fromStdString(sne.getOutputIndex()), pmn);
     }
     ui->tableWidgetMySystemnodes->setSortingEnabled(true);
 
@@ -302,16 +302,16 @@ void SystemnodeList::updateNodeList()
     ui->tableWidgetSystemnodes->setRowCount(0);
     std::vector<CSystemnode> vSystemnodes = snodeman.GetFullSystemnodeVector();
 
-    for (CSystemnode& mn : vSystemnodes)
+    for (CSystemnode& sn : vSystemnodes)
     {
         // populate list
         // Address, Protocol, Status, Active Seconds, Last Seen, Pub Key
-        QTableWidgetItem *addressItem = new QTableWidgetItem(QString::fromStdString(mn.addr.ToString()));
-        QTableWidgetItem *protocolItem = new QTableWidgetItem(QString::number(mn.protocolVersion));
-        QTableWidgetItem *statusItem = new QTableWidgetItem(QString::fromStdString(mn.Status()));
-        QTableWidgetItem *activeSecondsItem = new QTableWidgetItem(QString::fromStdString(DurationToDHMS(mn.lastPing.sigTime - mn.sigTime)));
-        QTableWidgetItem *lastSeenItem = new QTableWidgetItem(QString::fromStdString(DateTimeStrFormat("%Y-%m-%d %H:%M", mn.lastPing.sigTime + QDateTime::currentDateTime().offsetFromUtc())));
-        QTableWidgetItem *pubkeyItem = new QTableWidgetItem(QString::fromStdString(EncodeDestination(PKHash(mn.pubkey))));
+        QTableWidgetItem *addressItem = new QTableWidgetItem(QString::fromStdString(sn.addr.ToString()));
+        QTableWidgetItem *protocolItem = new QTableWidgetItem(QString::number(sn.protocolVersion));
+        QTableWidgetItem *statusItem = new QTableWidgetItem(QString::fromStdString(sn.Status()));
+        QTableWidgetItem *activeSecondsItem = new QTableWidgetItem(QString::fromStdString(DurationToDHMS(sn.lastPing.sigTime - sn.sigTime)));
+        QTableWidgetItem *lastSeenItem = new QTableWidgetItem(QString::fromStdString(DateTimeStrFormat("%Y-%m-%d %H:%M", sn.lastPing.sigTime + QDateTime::currentDateTime().offsetFromUtc())));
+        QTableWidgetItem *pubkeyItem = new QTableWidgetItem(QString::fromStdString(EncodeDestination(PKHash(sn.pubkey))));
 
         if (strCurrentFilter != "")
         {

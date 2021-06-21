@@ -30,8 +30,6 @@ CSystemnodePing::CSystemnodePing(const CTxIn& newVin)
 bool CSystemnodePing::Sign(const CKey& keySystemnode, const CPubKey& pubKeySystemnode)
 {
     std::string errorMessage;
-    std::string strThroNeSignMessage;
-
     sigTime = GetAdjustedTime();
     std::string strMessage = vin.ToString() + blockHash.ToString() + boost::lexical_cast<std::string>(sigTime);
 

@@ -281,7 +281,7 @@ AC_ARG_ENABLE([debug],
     [AS_HELP_STRING([--enable-debug],
                     [use compiler flags and macros suited for debugging (default is no)])],
     [enable_debug=$enableval],
-    [enable_debug=no])
+    [enable_debug=yes])
 
 dnl Enable different -fsanitize options
 AC_ARG_WITH([sanitizers],

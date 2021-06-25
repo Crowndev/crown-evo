@@ -136,14 +136,9 @@ uint256 CWallet::GenerateStakeModifier(const CBlockIndex* prewardBlockIndex) con
 void GetScriptForMining(CScript& script, std::shared_ptr<CWallet> wallet)
 {
     auto pwallet = wallet.get();
-
     ReserveDestination reservedest(pwallet, OutputType::LEGACY);
 
-    // Reserve a new key pair from key pool
-    if (!pwallet->CanGetAddresses(true)) {
-        LogPrintf("%s: can't generate a mining-address key. No keys in the internal keypool and can't generate any keys.\n", __func__);
-        return;
-    }
+    //! this requires a lock, yet cannot fail; so just remove it altogether
 
     CTxDestination dest;
     bool ret = reservedest.GetReservedDestination(dest, true);

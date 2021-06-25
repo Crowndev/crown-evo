@@ -6,6 +6,8 @@
 #include <consensus/validation.h>
 #include <crown/instantx.h>
 #include <mn_processing.h>
+#include <masternode/masternode-sync.h>
+#include <systemnode/systemnode-sync.h>
 #include <netmessagemaker.h>
 #include <node/context.h>
 #include <rpc/blockchain.h>
@@ -417,9 +419,12 @@ int64_t CInstantSend::GetAverageVoteTime() const
 
 void CInstantSend::CheckAndRemove()
 {
-    LOCK(cs);
-    if (!::ChainActive().Tip())
+    if (!masternodeSync.IsSynced() ||
+        !systemnodeSync.IsSynced()) {
         return;
+    }
+
+    LOCK(cs_instantsend);
 
     std::map<uint256, CTransactionLock>::iterator it = mapTxLocks.begin();
 
